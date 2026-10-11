@@ -1119,7 +1119,7 @@ const ISPECIAL=Object.keys(IROLES);
 const GUESS_OPTS={villager:'村人',labtech:'臨床検査技師',stunt:'スタントマン',sheriff:'シェリフ',mayor:'村長',sci:'サイエンティスト',redhood:'ナイス赤ずきん',mad:'狂人',meyer:'メイヤー',balance:'天秤',home:'自宅警備員',nguesser:'ゲッサー',sage:'賢者',chicken:'チキン',noct:'夜行性',noise:'ノイズメーカー',doppel:'ドッペル',heir:'継承者',qed:'Q,E,D',neu:'第三陣営'};
 const NROLES={
   killer:{n:'キラー',d:'第三陣営の基本役職。キルできる（間隔長め）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば単独勝利'},
-  god:{n:'神',d:'全員の役職が見える。サボタージュは直せない。生きていれば、誰かが勝った時に横取り勝利（優先度+4）'},
+  god:{n:'神',d:'全員の役職が見える。サボタージュは直せない。自分のタスクを全部終わらせて生きていれば、誰かが勝った時に横取り勝利（優先度+4）。タスクが残っていると横取りできない'},
   tuna:{n:'マグロ',d:'3秒以上止まると死ぬ。生きていれば、誰かが勝った時に横取り勝利（優先度+5）'},
   cupid:{n:'キューピッド',d:'Fで1回だけ、指定した相手ともう1人をラバーズにする（2人目を選ばなければランダム）。ラバーズが勝てば一緒に勝利'},
   arson:{n:'アーソニスト',d:'Fで近くの人にオイルをかける（15秒ごと）。生きている全員にかけたら G「燃やす」で全員を燃やして単独勝利。死んだら必ず負け'},
@@ -1355,6 +1355,7 @@ function die(v,killer){
     if(L===P){S.killedT=2.6;splash('後追い…',`ラバーズの${v.name}が死んだので、あなたも後を追った`,'#ff7ab8',{body:{id:L.id}},null);}
     else if(v===P||P.lover===L.id||!P.alive||canSee(P,L.x,L.y))toast(`💔 ${L.name}は${v.name}の後を追った…`);}}
 }
+const godReady=e=>e.tasks.length>0&&e.tasks.every(t=>t.done);
 function papaInView(e){return S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&o.inVent==null&&dist(e,o)<380&&canSee(e,o.x,o.y));}
 // 写真の画像: マップ（床・壁）と、写った人を描く
 function renderPhoto(r,ids){
@@ -2787,7 +2788,7 @@ function endGame(w,reason,wid){
   const chickenSafe=w==='crew'&&S.ents.some(e=>e.alive&&e.role==='chicken');
   if(chickenSafe)reason+='（チキンが生き残ったので横取りされない）';
   if(!['arson','lovers','teru','vulture'].includes(w)&&!chickenSafe){
-    const L=S.ents.filter(e=>e.lover!=null),tuna=S.ents.find(e=>e.alive&&e.nrole==='tuna'),god=S.ents.find(e=>e.alive&&e.nrole==='god');
+    const L=S.ents.filter(e=>e.lover!=null),tuna=S.ents.find(e=>e.alive&&e.nrole==='tuna'),god=S.ents.find(e=>e.alive&&e.nrole==='god'&&godReady(e));
     if(L.length&&L.every(e=>e.alive)){reason+=` …しかしラバーズ（${L.map(e=>e.name).join('♥')}）が横取り勝利！`;w='lovers';}
     else if(tuna){reason+=` …しかしマグロの${tuna.name}が横取り勝利！`;w='tuna';wid=tuna.id;}
     else if(god){reason+=` …しかし神の${god.name}が横取り勝利！`;w='god';wid=god.id;}
@@ -3394,7 +3395,7 @@ function updateHud(){
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
-  else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='papa'?`<li style="color:#ffd23d">${papaCam?'📷 構え中: マウスで四角を動かして F で撮影 ／ ':''}📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
+  else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='god'?`<li style="color:#ffe08a">${godReady(P)?'✨ タスク完了！ 生きていれば横取りできる':`✨ 横取りまで タスク ${P.tasks.filter(t=>t.done).length}/${P.tasks.length}`}</li>`:''}${P.nrole==='papa'?`<li style="color:#ffd23d">${papaCam?'📷 構え中: マウスで四角を動かして F で撮影 ／ ':''}📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
   else h+=(P.role==='mad'?`<li style="color:${P.madmate?'#ff5a5a':'#7fb4ff'}">${P.madmate?'😈 マッドメイト: インポスターが勝てば勝ち、負ければ負け（誰がインポスターかは分からない）':`赤くなるまで ${Math.round((P.madT||0)*100)}%`}</li>`:'')+(P.role==='avenger'&&P.avAwake&&P.alive?`<li style="color:#ff8a5a">⚔ 報復の相手: ${S.ents[P.avTarget].name}${S.ents[P.avTarget].alive?'（キルすれば'+(P.avWhy==='lover'?'ラバーズとキューピッドの':'村陣営の')+'勝利）':'（もう死んでいる）'}</li>`:'')+`<li style="color:#9be7ff">${ROLES[roleKey(P)].d}${P.sheriff&&P.role!=='sheriff'?' ／ シェリフ: 村陣営以外をキルできる':''}</li>`+(P.role==='stunt'?`<li>防御: 残り${P.shield}回</li>`:'')+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
