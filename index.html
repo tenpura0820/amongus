@@ -309,6 +309,7 @@ button{touch-action:manipulation}
   <div id="sabMenu" hidden>
     <button data-sab="lights">💡 停電させる</button>
     <button data-sab="reactor">☢ リアクター崩壊</button>
+    <button data-sab="mush" id="sabMush">🍄 キノコの混乱</button>
   </div>
   <div id="ventNav" hidden></div>
   <div id="actions">
@@ -431,7 +432,7 @@ const SKELD_BTN={x:1500,y:340};
 const SKELD_SABP={lights:{x:980,y:960,n:'電気室'},reactor:{x:80,y:810,n:'リアクター'}};
 // 部屋の位置と「どの部屋がつながっているか」から、通路・タスク・ベント・ボタンを自動で作る
 function genMap(spec){
-  const rooms=spec.rooms.map(([n,x,y,w,h,f])=>({n,x,y,w,h,f:f||'#7d8794'}));
+  const rooms=spec.rooms.map(([n,x,y,w,h,f,hi])=>({n,x,y,w,h,f:f||'#7d8794',high:!!hi}));
   const byN=n=>rooms.find(r=>r.n===n),HW=110,halls=[];
   for(const[a,b]of spec.links){
     const A=byN(a),B=byN(b),ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
@@ -447,7 +448,7 @@ function genMap(spec){
     vents.push({x:r.x+80,y:r.y+r.h-45,net:i%3});
   });
   const L=byN(spec.lights),X=byN(spec.reactor);
-  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,
+  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,fungle:!!spec.fungle,ladderSpec:spec.ladders||null,
     btn:{x:hub.x+hub.w/2,y:hub.y+hub.h/2-40},
     sabp:{lights:{x:L.x+L.w/2,y:L.y+70,n:L.n},reactor:{x:X.x+X.w/2,y:X.y+70,n:X.n}}};
 }
@@ -471,6 +472,18 @@ const MAPS=[
     ['発着場',2150,1600,550,400,'#7d8794']],
     links:[['広場','北ゲート'],['広場','電力室'],['広場','採掘場'],['広場','食料庫'],['北ゲート','溶岩研究所'],['北ゲート','観測所'],['溶岩研究所','電力室'],
       ['観測所','採掘場'],['電力室','冷却コア'],['冷却コア','食料庫'],['食料庫','発着場'],['採掘場','発着場']]}),
+  // ファングル（ジャングルの島）。高台（通信室・見張り台）へは梯子かグラップラーでしか行けない。キノコの混乱はこのマップだけ
+  genMap({name:'🍄 ファングル',fungle:true,W:3800,H:2300,hub:'キャンプファイヤー',lights:'下部エンジン',reactor:'リアクター',rooms:[
+    ['キャンプファイヤー',900,900,600,450,'#8a7a5c'],['降下艇',900,1650,500,380,'#7e8a99'],['ビーチ',150,1700,550,450,'#c9b27a'],['スプラッシュゾーン',150,1050,450,450,'#5f8fa8'],
+    ['キッチン',1550,1750,550,380,'#9aa4b2'],['会議室',150,300,450,380,'#8c95a3'],['倉庫',850,250,500,380,'#8a8378'],['研究室',1550,200,550,400,'#8aa3ab'],
+    ['リアクター',2150,150,500,400,'#6d7884'],['ジャングル',1700,900,900,600,'#4f7a45'],['温室',2800,800,450,380,'#6f9a62'],['寝室',2900,1700,450,380,'#8f8a9a'],
+    ['下部エンジン',2350,1850,500,350,'#76706a'],['採掘場',3300,1250,450,400,'#8a7a68'],
+    ['通信室',2950,250,380,300,'#6f8296',1],['見張り台',3350,780,330,250,'#6f8296',1]],
+    links:[['キャンプファイヤー','降下艇'],['キャンプファイヤー','スプラッシュゾーン'],['スプラッシュゾーン','ビーチ'],['ビーチ','降下艇'],['降下艇','キッチン'],
+      ['キャンプファイヤー','会議室'],['会議室','倉庫'],['倉庫','研究室'],['キャンプファイヤー','ジャングル'],['研究室','ジャングル'],['研究室','リアクター'],
+      ['ジャングル','キッチン'],['ジャングル','温室'],['ジャングル','下部エンジン'],['下部エンジン','寝室'],['寝室','採掘場'],['ジャングル','採掘場']],
+    // L=梯子 G=グラップラー（ロープで一気に移動）
+    ladders:[['温室','通信室','L'],['採掘場','見張り台','L'],['見張り台','ジャングル','G'],['通信室','リアクター','G']]}),
 ];
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=70;   // キルできる距離
@@ -753,6 +766,9 @@ function drawCostume(c,k,ph){
       for(const sx of[-12,14]){O(poly([[sx-6,-58],[sx-2,-82],[sx+5,-58]]),'#3a1010',3);}
       c.fillStyle='rgba(255,30,30,.85)';c.beginPath();rr(c,6,-50,20,6,3);c.fill();
       c.strokeStyle='rgba(255,60,40,.9)';c.lineWidth=3;c.beginPath();c.moveTo(-14,-30);c.lineTo(-4,-36);c.lineTo(2,-26);c.stroke();break;}
+    case 'mush':{
+      c.beginPath();c.ellipse(4,-60,30,17,0,Math.PI,0);c.closePath();c.fillStyle='#d84a3a';c.fill();c.lineWidth=4;c.strokeStyle='#000';c.stroke();
+      c.fillStyle='#fff';for(const[x,y,r]of[[-12,-66,4],[4,-72,5],[18,-65,4]]){c.beginPath();c.arc(x,y,r,0,TAU);c.fill();}break;}
     case 'broly':{
       // 逆立った金色の髪とヘッドバンド（オリジナルのイラスト）
       const hair=[[-20,-50],[-30,-82],[-12,-64],[-14,-96],[0,-68],[4,-102],[10,-68],[20,-96],[18,-62],[32,-80],[22,-50]];
@@ -816,6 +832,20 @@ function drawMapCanvas(){
   const disc=(x,y,r,f,s='#000')=>{c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=f;c.fill();c.lineWidth=4;c.strokeStyle=s;c.stroke();};
   const box=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(x,y,w,h);c.lineWidth=4;c.strokeStyle='#000';c.strokeRect(x,y,w,h);};
   disc(BTN.x,BTN.y,62,'#c9d2df');
+  if(MAPS[MAPI].fungle){
+    let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+    const tree=(x,y,r)=>{disc(x,y,r,'#2f5d2a');disc(x-r*.3,y-r*.3,r*.55,'#3f7a36','rgba(0,0,0,0)');};
+    const shroom=(x,y,r,f)=>{c.fillStyle='#efe6d0';c.strokeStyle='#000';c.lineWidth=3;c.fillRect(x-r*.25,y-r*.2,r*.5,r*.9);c.strokeRect(x-r*.25,y-r*.2,r*.5,r*.9);
+      c.beginPath();c.ellipse(x,y-r*.2,r,r*.6,0,Math.PI,0);c.closePath();c.fillStyle=f;c.fill();c.stroke();c.fillStyle='#fff';for(const[dx,dy]of[[-.45,-.45],[.1,-.6],[.5,-.35]]){c.beginPath();c.arc(x+dx*r,y+dy*r,r*.13,0,TAU);c.fill();}};
+    const inR=n=>ROOMS.find(r=>r.n===n);
+    const free=(x,y)=>Math.hypot(x-BTN.x,y-BTN.y)>130&&STATIONS.every(s=>Math.hypot(s.x-x,s.y-y)>90)&&VENTS.every(v=>Math.hypot(v.x-x,v.y-y)>80);
+    const scatter=(n,k,f)=>{const r=inR(n);if(!r)return;for(let i=0;i<k;i++){const x=r.x+40+rnd()*(r.w-80),y=r.y+50+rnd()*(r.h-90);if(free(x,y))f(x,y);}};
+    scatter('ジャングル',14,(x,y)=>tree(x,y,26+rnd()*16));scatter('温室',6,(x,y)=>shroom(x,y,22,'#d84a3a'));scatter('採掘場',6,(x,y)=>disc(x,y,14+rnd()*12,'#7a6a58'));
+    scatter('ビーチ',18,(x,y)=>{c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.arc(x,y,4,0,TAU);c.fill();});scatter('スプラッシュゾーン',5,(x,y)=>disc(x,y,26,'#7fb8d8','#2a4a60'));
+    for(const n of ['キャンプファイヤー','会議室','研究室','寝室','見張り台','通信室'])scatter(n,2,(x,y)=>shroom(x,y,18,pick(['#d84a3a','#c06ad8','#e0a030'])));
+    // キャンプファイヤー
+    const h=inR('キャンプファイヤー');if(h){const fx=h.x+h.w-110,fy=h.y+h.h-90;disc(fx,fy,34,'#5a4030');c.fillStyle='#ff8a24';c.beginPath();c.moveTo(fx-18,fy+6);c.quadraticCurveTo(fx,fy-50,fx+18,fy+6);c.fill();c.fillStyle='#ffd23d';c.beginPath();c.moveTo(fx-9,fy+6);c.quadraticCurveTo(fx,fy-25,fx+9,fy+6);c.fill();}
+  }
   if(MAPS[MAPI].skeld){
   c.save();c.scale(MAP_SCALE,MAP_SCALE);
   for(const[x,y]of[[1330,220],[1670,220],[1330,470],[1670,470]])disc(x,y,42,'#c9d2df');
@@ -848,6 +878,16 @@ function drawMapCanvas(){
 // ハシゴでしか行けない高い足場（見張り台）を作り、ハシゴはそこにだけ置く
 function makePlatforms(m){
   if(m.plats)return;
+  if(m.ladderSpec){
+    const byN=n=>ROOMS.find(r=>r.n===n);
+    m.plats=m.ladderSpec.map(([lo,hi,k])=>{const A=byN(lo),B=byN(hi);
+      if(k==='G'){const ca={x:A.x+A.w/2,y:A.y+A.h/2},cb={x:B.x+B.w/2,y:B.y+B.h/2};
+        const near=(R_,t)=>({x:clamp(t.x,R_.x+60,R_.x+R_.w-60),y:clamp(t.y,R_.y+60,R_.y+R_.h-40)});
+        return{a:near(A,cb),b:near(B,ca),room:lo,top:hi,g:true};}
+      const cx=(Math.max(A.x,B.x)+Math.min(A.x+A.w,B.x+B.w))/2,up=B.y<A.y;
+      return{a:{x:cx,y:up?A.y+50:A.y+A.h-35},b:{x:cx,y:up?B.y+B.h-35:B.y+45},room:lo,top:hi};});
+    return;
+  }
   const rects=[...ROOMS,...HALLS],PWd=230,PHt=150,out=[];
   const apart=(p,r,g)=>p.x>r.x+r.w+g||p.x+p.w<r.x-g||p.y>r.y+r.h+g||p.y+p.h<r.y-g;
   const free=p=>p.x>40&&p.y>100&&p.x+p.w<MAPW-40&&p.y+p.h<MAPH-30&&rects.every(r=>apart(p,r,80))&&out.every(o=>apart(p,o.p,120));
@@ -1099,6 +1139,11 @@ function startGame(cfg){
   if(ents[0].isNeu&&cfg.role.startsWith('neu:')){const r=cfg.role.slice(4);ents[0].nrole=r;npool=npool.filter(x=>x!==r);neuIds.splice(neuIds.indexOf(0),1);}
   for(const id of neuIds){if(!npool.length)break;ents[id].nrole=npool.shift();}
   for(const e of ents){if(e.nrole==='cupid')e.abUses=1;if(e.nrole==='arson'){e.oil=new Set();e.abCd=10;}}
+  // Verityがいる試合には、必ず賢者がいる
+  if(ents.some(e=>e.nrole==='verity')&&!ents.some(e=>e.role==='sage')){
+    const c=ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role.startsWith('crew:'))).sort((a,b)=>(a.role==='villager'?0:1)-(b.role==='villager'?0:1)||(a.id===0?1:0)-(b.id===0?1:0))[0];
+    if(c)c.role='sage';
+  }
   for(const e of ents){initRole(e);if(e.role==='home')e.tasks=[];}
   for(const e of ents){if(e.role==='stunt')e.shield=1;if(e.role==='sheriff'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='labtech'||e.role==='mayor')e.abUses=1;}
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
@@ -1141,7 +1186,7 @@ function ladderRoute(cs,cg){let any=null;for(const L of LADDERS){const ca=compOf
 function nearLadder(e){for(const L of LADDERS){if(dist(e,L.a)<55)return{L,to:L.b};if(dist(e,L.b)<55)return{L,to:L.a};}return null;}
 function startClimb(e,L,to){
   if(NET.client){rpc('climb',[e,LADDERS.indexOf(L),to===L.b]);return;}
-  if(!e.alive||e.climb)return;e.climb={t:0,dur:1.3,from:{x:e.x,y:e.y},to:{x:to.x,y:to.y},L};e.path=null;e.moving=false;
+  if(!e.alive||e.climb)return;e.climb={t:0,dur:L.g?Math.max(.6,Math.hypot(L.a.x-L.b.x,L.a.y-L.b.y)/1100):1.3,from:{x:e.x,y:e.y},to:{x:to.x,y:to.y},L};if(L.g&&(e===me()||canSee(me(),e.x,e.y)))snd('vent');e.path=null;e.moving=false;
 }
 function followPath(e,dt){
   if(!e.path||!e.path.length){e.moving=false;return;}
@@ -1377,7 +1422,7 @@ function doGuess(g,t,k){if(NET.client){rpc('doGuess',[g,t,k]);return;}
   meetingDeath(v,`💀 ${v.name}が突然倒れた…`,hit?g:null,'mystery',knows?`（${P===g?'あなただけ':'神の目'}）${secret}`:null);
 }
 // ===== 追加インポスター役職の能力 =====
-const faceOf=e=>e.disguise&&e.disguise.t>0&&S.ents[e.disguise.id]?S.ents[e.disguise.id]:e;
+const faceOf=e=>S&&S.mushT>0&&S.mushMap&&S.mushMap[e.id]!=null&&e.alive?S.ents[S.mushMap[e.id]]:e.disguise&&e.disguise.t>0&&S.ents[e.disguise.id]?S.ents[e.disguise.id]:e;
 function nearTarget(e,r){let best=null,bd=r||KILLR;for(const o of S.ents){if(o===e||!o.alive||o.isImp||hid(o)||o.carriedBy!=null)continue;const d=dist(e,o);if(d<bd&&canSee(e,o.x,o.y)){bd=d;best=o;}}return best;}
 // その場でキル（テレポートしない）。見ていた人は「見えた顔」の人を犯人だと思う
 // ===== 村陣営の追加役職 =====
@@ -1630,6 +1675,7 @@ function imp2Update(dt){
   const P=me();
   if(S.crabT>0)S.crabT=Math.max(0,S.crabT-dt);
   if(S.lockT>0)S.lockT=Math.max(0,S.lockT-dt);
+  if(S.mushT>0){S.mushT=Math.max(0,S.mushT-dt);if(S.mushT<=0)toast('🍄 胞子が晴れた');}
   for(const e of S.ents)if(e.vform>0){e.vform=Math.max(0,e.vform-dt);if(e.vform<=0){tell(e,'変身が解けた');if(e===me())setupHud();}}
   for(const e of S.ents)if(e.irole==='serial'&&e.alive){e.serialT=(e.serialT||0)+dt;
     if(e.serialT>=60){e.serialT=0;die(e,null);if(e===P){S.killedT=2.6;splash('力尽きた…','シリアルキラーは60秒キルしないと死んでしまう','#ff3b3b',{body:{id:e.id}},null);}else tell(e,'シリアルキラーは60秒キルしないと死んでしまう…');
@@ -1735,7 +1781,18 @@ function exitVent(e){if(NET.client){rpc('exitVent',[e]);return;}
   for(const w of crewWitnesses(e.x,e.y,[e.id]))if(w.isBot){w.susp[e.id]=100;w.ai.sawVent=e.id;w.ai.urgent=true;}
   if(e===me()||canSee(me(),v.x,v.y))snd('vent');
 }
+const MUSH_T=20;
 function startSab(type){if(NET.client){rpc('startSab',[type]);return;}
+  if(type==='mush'){
+    if(!MAPS[MAPI].fungle||S.sab||S.sabCd>0||S.mushT>0)return;
+    // 生きている全員の見た目を入れ替える（自分自身の姿にはならない）。名前も見えなくなる
+    const al=S.ents.filter(e=>e.alive).map(e=>e.id),sh=shuffle([...al]);
+    for(let i=0;i<al.length;i++)if(sh[i]===al[i]&&al.length>1){const j=(i+1)%al.length;[sh[i],sh[j]]=[sh[j],sh[i]];}
+    S.mushMap={};al.forEach((id,i)=>S.mushMap[id]=sh[i]);S.mushT=MUSH_T;S.sabCd=MUSH_T+25;snd('sab');
+    toast('🍄 キノコの胞子が舞った！ 誰が誰だかわからない…');
+    for(const e of S.ents)if(e.isBot&&e.alive&&!e.isImp)botSay&&Math.random()<.25&&botSay(e,pick(['うわっ胞子！','誰が誰だかわからない…','キノコの混乱だ！ みんな近づかないで']));
+    return;
+  }
   if(S.sab||S.sabCd>0)return;
   S.sab={type,t:type==='reactor'?45:0,prog:0,fixers:[]};
   if(type==='lights'){
@@ -1801,7 +1858,7 @@ function impThink(e){
   const ai=e.ai;
   if(impRoleThink(e))return;
   ai.sabT=(ai.sabT??rand(25,60))-.25;
-  if(ai.sabT<=0){ai.sabT=rand(40,80);if(!S.sab&&S.sabCd<=0)startSab(Math.random()<.6?'lights':'reactor');}
+  if(ai.sabT<=0){ai.sabT=rand(40,80);if(!S.sab&&S.sabCd<=0)startSab(MAPS[MAPI].fungle&&Math.random()<.4?'mush':Math.random()<.6?'lights':'reactor');}
   if(ai.selfReport!=null){ai.selfReport-=.25;if(ai.selfReport<=0){const b=S.bodies.find(b=>b.id===ai.selfBody);ai.selfReport=null;if(b&&dist(e,b)<400){callMeeting(e,b);return;}}}
   if(ai.ventTo!=null){const v=VENTS[ai.ventTo];setGoal(e,v.x,v.y,'vent');if(dist(e,v)<20){const vi=ai.ventTo;ai.ventTo=null;enterVent(e,vi);e.ventT=rand(1,2.5);}return;}
   if(ai.flee>0){ai.flee-=.25;if(atGoal(e))wander(e);return;}
@@ -2178,7 +2235,7 @@ function callMeeting(caller,body){if(S.lockT>0){if(caller===me())toast(`🦵 変
   for(const e of S.ents){if(e.inVent!=null){e.inVent=null;}e.ai.mtRoom=nearRoom(e.x,e.y);e.carriedBy=null;e.carry=[];if(e.ctrl)e.ctrl=null;e.ctrlBy=null;e.drill=null;e.climb=null;e.ai.climbTo=null;}
   if(caller.isBot&&body)caller.ai.nearBody=caller.ai.nearBody||[];
   if(!body)caller.buttonUses--;
-  S.phase='meeting';S.sab=null;
+  S.phase='meeting';S.sab=null;S.mushT=0;
   const M={caller:caller.id,body,pre:2.4,t:0,stage:'discuss',q:[],votes:{},public:{},sel:null,counters:{},bodiesAll:[...S.bodies],log:[],claims:{},guessUsed:{}};
   for(const e of S.ents){e.ai.llmSpeaks=0;e.ai.llmAt=rand(2,5);e.ai.llmVoted=false;e.ai.guessAt=rand(5,14);e.cannon=null;}
   S.M=M;
@@ -2665,7 +2722,9 @@ function render(dt){
   if(P.alive){ctx.fillStyle='#c51111';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.arc(BTN.x,BTN.y,18,0,TAU);ctx.fill();ctx.stroke();}
   // bodies
   // ハシゴ
-  for(const l of LADDERS){const top=l.a.y<l.b.y?l.a:l.b,bot=top===l.a?l.b:l.a;ctx.save();ctx.strokeStyle='#000';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(top.x-16,top.y-10);ctx.lineTo(bot.x-16,bot.y+10);ctx.moveTo(top.x+16,top.y-10);ctx.lineTo(bot.x+16,bot.y+10);ctx.stroke();
+  for(const l of LADDERS.filter(l=>l.g)){ctx.save();ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(l.a.x,l.a.y-30);ctx.lineTo(l.b.x,l.b.y-30);ctx.stroke();ctx.strokeStyle='#b8925a';ctx.lineWidth=5;ctx.setLineDash([14,8]);ctx.stroke();ctx.setLineDash([]);
+    for(const q of [l.a,l.b]){ctx.fillStyle='#5a6476';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.rect(q.x-10,q.y-44,20,44);ctx.fill();ctx.stroke();ctx.fillStyle='#ffd23d';ctx.beginPath();ctx.arc(q.x,q.y-30,7,0,TAU);ctx.fill();ctx.stroke();}ctx.restore();}
+  for(const l of LADDERS.filter(l=>!l.g)){const top=l.a.y<l.b.y?l.a:l.b,bot=top===l.a?l.b:l.a;ctx.save();ctx.strokeStyle='#000';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(top.x-16,top.y-10);ctx.lineTo(bot.x-16,bot.y+10);ctx.moveTo(top.x+16,top.y-10);ctx.lineTo(bot.x+16,bot.y+10);ctx.stroke();
     ctx.strokeStyle='#c8a46a';ctx.lineWidth=5;ctx.stroke();ctx.beginPath();for(let y=top.y;y<=bot.y;y+=22){ctx.moveTo(top.x-16,y);ctx.lineTo(top.x+16,y);}ctx.stroke();ctx.restore();}
   // 薬莢（スナイパーの痕跡）
   for(const t of S.traces){ctx.save();ctx.globalAlpha=Math.min(1,t.t/5);ctx.fillStyle='#e0b040';ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.translate(t.x,t.y);ctx.rotate(.6);ctx.fillRect(-6,-3,12,6);ctx.strokeRect(-6,-3,12,6);ctx.restore();}
@@ -2699,7 +2758,7 @@ function render(dt){
   // 賢者ガード
   for(const e of vis)if(e.guardT>0){ctx.save();ctx.strokeStyle=`rgba(255,240,150,${.6+.3*Math.sin(tm*8)})`;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(e.x,e.y-28,46,56,0,0,TAU);ctx.stroke();ctx.restore();}
   for(const e of vis)if(e.berserk&&e.alive){ctx.save();const g=ctx.createRadialGradient(e.x,e.y-30,8,e.x,e.y-30,70);g.addColorStop(0,'rgba(255,40,20,.55)');g.addColorStop(1,'rgba(255,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y-30,70,0,TAU);ctx.fill();ctx.restore();}
-  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});
+  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});
     if(e.drill){ctx.save();ctx.translate(e.x,e.y-26);ctx.rotate(Math.atan2(e.drill.dy,e.drill.dx));ctx.fillStyle='#aab3c0';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(70,0);ctx.lineTo(20,-22);ctx.lineTo(20,22);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
     if(e.ctrlBy!=null&&(P.isImp||!P.alive)){ctx.font='20px system-ui';ctx.textAlign='center';ctx.fillText('🎮',e.x,e.y-70);}}
   ctx.globalAlpha=1;
@@ -2729,7 +2788,7 @@ function render(dt){
     const color=P.isImp&&e.isImp&&e!==P?'#ff6a6a':reveal?(e.team==='crew'?'#fff':TEAM[e.team].c):'#fff';
     const heart=!reveal&&(P.lover===e.id||(P.nrole==='cupid'&&e.lover!=null))?'♥':'';const oil=P.nrole==='arson'&&P.oil.has(e.id)?'🛢':'';
     const shown=P.isImp&&e.isImp?e:faceOf(e);
-    const label=(P.isImp&&e.isImp&&e!==P?'🔴':'')+(reveal?`${e.name}［${roleName(e)}］`:shown.name+heart)+oil+(P.isImp&&e.disguise?`（${faceOf(e).name}に変身中）`:'');
+    const label=(P.isImp&&e.isImp&&e!==P?'🔴':'')+(reveal?`${e.name}［${roleName(e)}］`:S.mushT>0&&e.alive&&e!==P&&!(P.isImp&&e.isImp)?'🍄？？？':shown.name+heart)+oil+(P.isImp&&e.disguise?`（${faceOf(e).name}に変身中）`:'');
     // 名前の後ろに半透明の帯（体の色のふち）を敷いて、暗い背景でも読めるようにする
     const w=ctx.measureText(label).width+16;
     ctx.fillStyle='rgba(8,10,20,.72)';ctx.strokeStyle=COLORS[e.color].b;ctx.lineWidth=2.5;
@@ -3133,7 +3192,8 @@ function updateHud(){
   else h+=(P.role==='mad'?`<li style="color:${P.madmate?'#ff5a5a':'#7fb4ff'}">${P.madmate?'😈 マッドメイト: インポスターが勝てば勝ち、負ければ負け（誰がインポスターかは分からない）':`赤くなるまで ${Math.round((P.madT||0)*100)}%`}</li>`:'')+`<li style="color:#9be7ff">${ROLES[P.role].d}${P.sheriff&&P.role!=='sheriff'?' ／ シェリフ: 村陣営以外をキルできる':''}</li>`+(P.role==='stunt'?`<li>防御: 残り${P.shield}回</li>`:'')+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
-  if(!S.sab&&S.crabT>0){al.hidden=false;al.textContent=`🦀 カニ発動中！ 横にしか歩けない（${Math.ceil(S.crabT)}秒）`;}
+  if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
+  else if(!S.sab&&S.crabT>0){al.hidden=false;al.textContent=`🦀 カニ発動中！ 横にしか歩けない（${Math.ceil(S.crabT)}秒）`;}
   else if(S.sab){al.hidden=false;al.textContent=S.sab.type==='lights'?`⚠ 停電発生！ ${SABP.lights.n}で修理せよ`:`☢ リアクター崩壊まで ${Math.ceil(S.sab.t)} 秒`;}else al.hidden=true;
   $('roomName').textContent=P.inVent!=null?'ベントの中':roomOf(P.x,P.y);
   const play=S.phase==='play'&&!S.modal&&S.killedT<=0;
@@ -3374,7 +3434,7 @@ function netTick(dt){
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
-      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
+      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
@@ -3460,7 +3520,7 @@ function applySnap(d){
   S.bodies=d.bodies.map(([id,x,y,color,room])=>({id,x,y,color,room}));
   S.sab=d.sab;S.taskDone=d.td;S.taskTotal=d.tt;S.impKnow=d.ik||{};S.cupid=d.cu;S.flash=d.flash||0;
   S.beams=d.beams.map(([x,y,dx,dy,L,t,thin])=>({x,y,dx,dy,L,t,thin}));
-  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;S.crabT=x.crab||0;}
+  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
@@ -3646,6 +3706,7 @@ $('pchatIn').addEventListener('keydown',e=>{if(e.code==='Escape'){$('pchatIn').b
 $('btnUse').onclick=doUse;$('btnReport').onclick=doReport;$('btnKill').onclick=doKillBtn;$('btnVent').onclick=doVent;
 $('btnSab').onclick=()=>{$('sabMenu').hidden=!$('sabMenu').hidden;};
 document.querySelectorAll('#sabMenu button').forEach(b=>b.onclick=()=>{startSab(b.dataset.sab);$('sabMenu').hidden=true;});
+setInterval(()=>{const b=$('sabMush');if(b)b.hidden=!MAPS[MAPI].fungle;},500);
 $('btnMap').onclick=toggleMap;$('mapov').onclick=()=>{$('mapov').hidden=true;};
 $('mClose').onclick=closeModal;
 document.querySelectorAll('#actions button,#topRight button,#sabMenu button').forEach(b=>b.addEventListener('click',()=>cv.focus()));
