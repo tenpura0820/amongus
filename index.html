@@ -2964,15 +2964,15 @@ function render(dt){
   // fog of war
   if(P.alive&&S.phase!=='review'){
     const r=visionR(P);
-    fctx.setTransform(1,0,0,1,0,0);fctx.globalCompositeOperation='source-over';fctx.fillStyle='rgba(3,4,10,.8)';fctx.fillRect(0,0,fog.width,fog.height);
+    fctx.setTransform(1,0,0,1,0,0);fctx.globalCompositeOperation='source-over';fctx.fillStyle='rgba(3,4,10,.62)';fctx.fillRect(0,0,fog.width,fog.height);   // 見えない所も、マップは薄く見える（人は見えない）
     fctx.globalCompositeOperation='destination-out';
     fctx.setTransform(dpr*sc,0,0,dpr*sc,dpr*(VW/2-cam.x*sc),dpr*(VH/2-cam.y*sc));
     const lite=matchMedia('(pointer:coarse)').matches,ox=V.x,oy=V.y-8,N=lite?120:220,stp=lite?10:6;
-    const g=fctx.createRadialGradient(ox,oy,r*.55,ox,oy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
+    const g=fctx.createRadialGradient(ox,oy,r*.8,ox,oy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
     fctx.fillStyle=g;fctx.beginPath();
     for(let i=0;i<N;i++){const a=i/N*TAU,ca=Math.cos(a),sa=Math.sin(a);let d=0;
       while(d<r){d+=stp;if(!wpt(ox+ca*d,oy+sa*d))break;}
-      d=Math.min(r,d+26);
+      d=Math.min(r,d+60);
       i?fctx.lineTo(ox+ca*d,oy+sa*d):fctx.moveTo(ox+ca*d,oy+sa*d);}
     fctx.closePath();fctx.fill();
     fctx.beginPath();fctx.arc(ox,oy,60,0,TAU);fctx.fillStyle='rgba(0,0,0,1)';fctx.fill();
