@@ -269,6 +269,7 @@ button{touch-action:manipulation}
       <label class="row">投票時間<input type="range" id="inVote" min="15" max="120" step="5" value="45"><b id="vVote">45s</b></label>
       <label class="row">第三陣営<input type="range" id="inNeu" min="0" max="12" value="5"><b id="vNeu">5</b></label>
       <label class="row">マップ<select id="inMap"></select></label>
+      <div class="row" id="fgBgRow">ファングルの背景<span><button type="button" class="mini" id="btnFgBg" style="width:auto;padding:0 10px">🖼 画像を読み込む</button> <button type="button" class="mini" id="btnFgBgDel" style="width:auto;padding:0 10px" hidden>消す</button><input type="file" id="inFgBg" accept="image/*" hidden> <small id="fgBgSt" style="opacity:.75"></small></span></div>
       <label class="row">あなたの陣営<select id="inRole"><option value="random">ランダム</option><option value="crew">村陣営（役職ランダム）</option><option value="crew:villager">村陣営: 村人</option><option value="crew:labtech">村陣営: 臨床検査技師</option><option value="crew:stunt">村陣営: スタントマン</option><option value="crew:sheriff">村陣営: シェリフ</option><option value="crew:mayor">村陣営: 村長</option><option value="crew:sci">村陣営: サイエンティスト</option><option value="crew:redhood">村陣営: ナイス赤ずきん</option><option value="crew:mad">村陣営: 狂人</option><option value="crew:meyer">村陣営: メイヤー</option><option value="crew:balance">村陣営: 天秤</option><option value="crew:home">村陣営: 自宅警備員</option><option value="crew:nguesser">村陣営: ゲッサー</option><option value="crew:sage">村陣営: 賢者</option><option value="crew:chicken">村陣営: チキン</option><option value="crew:noct">村陣営: 夜行性</option><option value="crew:noise">村陣営: ノイズメーカー</option><option value="crew:doppel">村陣営: ドッペル</option><option value="crew:heir">村陣営: 継承者</option><option value="crew:qed">村陣営: Q,E,D</option><option value="imp">インポスター（役職ランダム）</option><option value="imp:none">インポスター: 通常</option><option value="imp:guesser">インポスター: イビルゲッサー</option><option value="imp:vamp">インポスター: ヴァンパイア</option><option value="imp:cannon">インポスター: 波動砲</option><option value="imp:bomb">インポスター: 自爆魔</option><option value="imp:tele">インポスター: テレポーター</option><option value="imp:fraud">インポスター: 詐欺師</option><option value="imp:ventist">インポスター: イビルティスト</option><option value="imp:esci">インポスター: イビルサイエンティスト</option><option value="imp:viper">インポスター: バイパー</option><option value="imp:shift">インポスター: シェイプシフター</option><option value="imp:remote">インポスター: リモコン</option><option value="imp:rocket">インポスター: ロケット</option><option value="imp:gimlet">インポスター: ギムレット</option><option value="imp:bubble">インポスター: バブルランチャー</option><option value="imp:mine">インポスター: 扇状地</option><option value="imp:pusher">インポスター: 突き落と師</option><option value="imp:sniper">インポスター: スナイパー</option><option value="imp:snake">インポスター: ヘビ</option><option value="imp:crab">インポスター: カニ</option><option value="imp:double">インポスター: ダブルキラー</option><option value="imp:serial">インポスター: シリアルキラー</option><option value="imp:berserk">インポスター: バーサーカー</option><option value="neu">第三陣営（役職ランダム）</option><option value="neu:killer">第三陣営: キラー</option><option value="neu:god">第三陣営: 神</option><option value="neu:tuna">第三陣営: マグロ</option><option value="neu:cupid">第三陣営: キューピッド</option><option value="neu:opp">第三陣営: オポチュニスト</option><option value="neu:vulture">第三陣営: ヴァルチャー</option><option value="neu:verity">第三陣営: Verity</option><option value="neu:papa">第三陣営: パパラッチ</option><option value="neu:teru">第三陣営: てるてる</option><option value="neu:arson">第三陣営: アーソニスト</option></select></label>
       <div class="row" style="grid-template-columns:110px 1fr">村の役職<div id="roleToggles" class="roleToggles"></div></div>
       <div class="row" style="grid-template-columns:110px 1fr">インポスターの役職<div id="iroleToggles" class="roleToggles"></div></div>
@@ -448,9 +449,10 @@ function genMap(spec){
     if(i%2===0){const U=TYPES[k++%TYPES.length];st.push({t:U[0],n:U[1],x:r.x+r.w-70,y:r.y+r.h-50,hold:3});}
     vents.push({x:r.x+80,y:r.y+r.h-45,net:i%3});
   });
+  for(const[x,y,w,h,z]of spec.ground||[])halls.push({x,y,w,h,zone:z});
   const L=byN(spec.lights),X=byN(spec.reactor);
-  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,fungle:!!spec.fungle,ladderSpec:spec.ladders||null,
-    btn:{x:hub.x+hub.w/2,y:hub.y+hub.h/2-40},
+  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,fungle:!!spec.fungle,ladderSpec:spec.ladders||null,ladderPts:spec.ladderPts||null,
+    btn:spec.btn?{x:spec.btn[0],y:spec.btn[1]}:{x:hub.x+hub.w/2,y:hub.y+hub.h/2-40},
     sabp:{lights:{x:L.x+L.w/2,y:L.y+70,n:L.n},reactor:{x:X.x+X.w/2,y:X.y+70,n:X.n}}};
 }
 const MAPS=[
@@ -473,18 +475,17 @@ const MAPS=[
     ['発着場',2150,1600,550,400,'#7d8794']],
     links:[['広場','北ゲート'],['広場','電力室'],['広場','採掘場'],['広場','食料庫'],['北ゲート','溶岩研究所'],['北ゲート','観測所'],['溶岩研究所','電力室'],
       ['観測所','採掘場'],['電力室','冷却コア'],['冷却コア','食料庫'],['食料庫','発着場'],['採掘場','発着場']]}),
-  // ファングル（ジャングルの島）。左＝砂浜の居住区、下＝紫のキノコジャングル、右上＝山。山の上（高台・採掘場・通信室・見張り台）へは梯子かグラップラーでしか行けない。キノコの混乱はこのマップだけ
-  genMap({name:'🍄 ファングル',fungle:true,W:2752,H:2240,hub:'キャンプファイヤー',lights:'倉庫',reactor:'リアクター',rooms:[
-    ['キャンプファイヤー',720,960,400,352,'#e3c48c'],['降下艇',752,528,448,352,'#8a8f99'],['食堂',368,320,352,192,'#e8cf9c'],['寝室',448,560,240,160,'#e8cf9c'],
-    ['倉庫',1264,352,272,400,'#e8cf9c'],['会議室',1152,960,384,448,'#d9c49a'],['スプラッシュゾーン',240,1120,320,240,'#7fb8d8'],['遊戯室',448,1280,240,160,'#7fa88a'],
-    ['キッチン',400,1504,352,320,'#e8cf9c'],['ビーチ',112,1536,272,208,'#f0dcae'],['研究室',992,1600,272,224,'#c8d4dc'],['温室',1664,1520,272,320,'#b8d0c0'],
-    ['ジャングル',1312,1872,1280,272,'#8a4a68'],['森の小道',1968,1440,320,400,'#8a4a68'],['リアクター',2320,1536,288,240,'#6d8494'],['高台',1584,976,688,288,'#3f6b58',1],
-    ['上部エンジン',2304,992,240,192,'#8a7a68',1],['採掘場',1808,608,304,224,'#b07a3a',1],['通信室',2208,464,432,224,'#3f6b58',1],['見張り台',1600,64,544,288,'#3f6b58',1]],
-    links:[['キャンプファイヤー','降下艇'],['降下艇','食堂'],['寝室','キャンプファイヤー'],['キャンプファイヤー','倉庫'],['キャンプファイヤー','会議室'],['キャンプファイヤー','スプラッシュゾーン'],
-      ['スプラッシュゾーン','遊戯室'],['遊戯室','キッチン'],['キッチン','ビーチ'],['キッチン','研究室'],['会議室','研究室'],['研究室','ジャングル'],['温室','ジャングル'],['森の小道','ジャングル'],['森の小道','リアクター'],
-      ['高台','上部エンジン']],
-    // L=梯子 G=グラップラー（ロープで一気に移動）
-    ladders:[['温室','高台','L'],['森の小道','高台','L'],['高台','採掘場','L'],['上部エンジン','通信室','L'],['採掘場','見張り台','L'],['見張り台','ジャングル','G'],['通信室','採掘場','G']]}),
+  // ファングル（ジャングルの島）。参考画像の歩ける場所（砂浜・紫の道・山の草地）に合わせた配置。山の上へは梯子かグラップラーでしか行けない。キノコの混乱はこのマップだけ
+  genMap({name:'🍄 ファングル',fungle:true,W:3200,H:2400,hub:'キャンプファイヤー',lights:'倉庫',reactor:'リアクター',btn:[1190,1254],rooms:[
+    ['キャンプファイヤー',720,960,400,352,'#e3c48c'],['降下艇',768,544,416,336,'#8a8f99'],['食堂',368,816,336,256,'#e8cf9c'],['寝室',464,1136,208,118,'#e8cf9c'],
+    ['遊戯室',448,1280,240,160,'#7fa88a'],['スプラッシュゾーン',224,1216,224,192,'#7fb8d8'],['キッチン',400,1504,352,320,'#e8cf9c'],['ビーチ',112,1536,304,192,'#f0dcae'],
+    ['倉庫',1264,848,272,256,'#e8cf9c'],['会議室',1152,1168,384,240,'#d9c49a'],['研究室',998,1600,259,218,'#c8d4dc'],['温室',1670,1520,262,320,'#b8d0c0'],
+    ['リアクター',2320,1530,288,246,'#6d8494'],['高台',1590,976,675,278,'#3f6b58',1],['上部エンジン',2304,998,240,179,'#8a7a68',1],['採掘場',1814,614,291,211,'#b07a3a',1],
+    ['通信室',2214,470,419,211,'#3f6b58',1],['見張り台',1606,70,531,275,'#3f6b58',1]],
+    links:[],
+    ground:[[288,928,442,608,'b'],[688,858,854,109,'b'],[704,1296,454,214,'b'],[1082,1056,109,304,'b'],[1104,954,176,141,'b'],[755,1402,243,214,'b'],[384,1504,64,240,'b'],[880,1446,118,608,'j'],[960,1811,1702,128,'j'],[960,1440,1382,141,'j'],[1594,1440,83,499,'j'],[1926,1440,77,499,'j'],[2240,1440,90,499,'j'],[2278,1562,64,230,'j'],[2240,1030,83,122,'m']],
+    // L=梯子 G=グラップラー（ロープで一気に移動）。座標は拡大前
+    ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
 ];
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=70;   // キルできる距離
@@ -815,7 +816,12 @@ function drawStars(ox,oy,speed=0){
 const mapCv=document.createElement('canvas');
 // ===== ファングルの地面: 島・砂浜・キノコの森・段々の山を描く（四角い部屋の箱にしない） =====
 const FG_BUILD=['降下艇','食堂','倉庫','会議室','キッチン','研究室','温室','リアクター','寝室','遊戯室','上部エンジン','通信室'];
+// 自分の端末に読み込んだファングルの背景画像（公開サイトには入れない。この端末のブラウザにだけ保存）
+let FG_BG=null;
+function loadFgBg(){try{const u=localStorage.getItem('amongus-fungle-bg');if(!u){FG_BG=null;fgBgStatus();return;}const im=new Image();im.onload=()=>{FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src=u;}catch(e){}}
+function fgBgStatus(){const st=document.getElementById('fgBgSt'),del=document.getElementById('btnFgBgDel');if(st)st.textContent=FG_BG?'読み込み済み（この端末だけ）':'未設定（自動で描いた絵）';if(del)del.hidden=!FG_BG;}
 function drawFungleGround(c){
+  if(FG_BG){c.fillStyle='#efb24a';c.fillRect(0,0,MAPW,MAPH);c.drawImage(FG_BG,0,0,MAPW,MAPW*FG_BG.height/FG_BG.width);return;}
   let sd=11;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
   const zoneOf=r=>r.high||r.f==='#3f6b58'?'m':(r.f==='#8a4a68'||r.f==='#7a3f5c'||['研究室','温室','リアクター'].includes(r.n))?'j':'b';
   const pad=(rs,p,f,rad)=>{c.fillStyle=f;for(const r of rs){c.beginPath();rr(c,r.x-p,r.y-p,r.w+p*2,r.h+p*2,rad);c.fill();}};
@@ -890,7 +896,7 @@ function drawMapCanvas(){
   const disc=(x,y,r,f,s='#000')=>{c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=f;c.fill();c.lineWidth=4;c.strokeStyle=s;c.stroke();};
   const box=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(x,y,w,h);c.lineWidth=4;c.strokeStyle='#000';c.strokeRect(x,y,w,h);};
   disc(BTN.x,BTN.y,62,'#c9d2df');
-  if(MAPS[MAPI].fungle){
+  if(MAPS[MAPI].fungle&&!FG_BG){
     let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
     const tree=(x,y,r)=>{disc(x,y,r,'#2f5d2a');disc(x-r*.3,y-r*.3,r*.55,'#3f7a36','rgba(0,0,0,0)');};
     const shroom=(x,y,r,f)=>{c.fillStyle='#efe6d0';c.strokeStyle='#000';c.lineWidth=3;c.fillRect(x-r*.25,y-r*.2,r*.5,r*.9);c.strokeRect(x-r*.25,y-r*.2,r*.5,r*.9);
@@ -932,12 +938,18 @@ function drawMapCanvas(){
   box(SABP.lights.x-24,SABP.lights.y-40,48,32,'#4a3d24');
   box(SABP.reactor.x-20,SABP.reactor.y-40,40,32,'#3a2a2a');
   // labels
+  if(MAPS[MAPI].fungle&&FG_BG)return;
   c.font='bold 28px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.textBaseline='middle';
   for(const r of ROOMS){c.fillStyle='rgba(255,255,255,.22)';c.fillText(r.n,r.x+r.w/2,r.y+r.h/2);}
 }
 // ハシゴでしか行けない高い足場（見張り台）を作り、ハシゴはそこにだけ置く
 function makePlatforms(m){
   if(m.plats)return;
+  if(m.ladderPts){
+    const f=([x,y])=>({x:Math.round(x*MAP_SCALE),y:Math.round(y*MAP_SCALE)});
+    m.plats=m.ladderPts.map(([a,b,k])=>{const A=f(a),B=f(b);return{a:A,b:B,room:roomOf(A.x,A.y),top:roomOf(B.x,B.y),g:k==='G'};});
+    return;
+  }
   if(m.ladderSpec){
     const byN=n=>ROOMS.find(r=>r.n===n);
     m.plats=m.ladderSpec.map(([lo,hi,k])=>{const A=byN(lo),B=byN(hi);
@@ -982,7 +994,7 @@ function loadMap(i){
   scaleMap(m);
   if(m.skeld){MAPW=m.W;MAPH=m.H2||m.H;ROOMS=SKELD_ROOMS;HALLS=SKELD_HALLS;STATIONS=SKELD_STATIONS;VENTS=SKELD_VENTS;BTN=SKELD_BTN;SABP=SKELD_SABP;}
   else{MAPW=m.W;MAPH=m.H;ROOMS=m.rooms;HALLS=m.halls;STATIONS=m.stations;VENTS=m.vents;BTN=m.btn;SABP=m.sabp;}
-  HALLS.forEach(h=>{h.f='#6b7480';if(m.fungle){const cx=h.x+h.w/2,cy=h.y+h.h/2,r=ROOMS.slice().sort((a,b)=>Math.hypot(a.x+a.w/2-cx,a.y+a.h/2-cy)-Math.hypot(b.x+b.w/2-cx,b.y+b.h/2-cy))[0];h.f=r&&r.f==='#8a4a68'?'#7a3f5c':r&&r.high?'#3f6b58':'#dcc08a';}});makePlatforms(m);RECTS=[...ROOMS,...HALLS];
+  HALLS.forEach(h=>{h.f='#6b7480';if(m.fungle&&h.zone){h.f=h.zone==='j'?'#7a3f5c':h.zone==='m'?'#3f6b58':'#dcc08a';return;}if(m.fungle){const cx=h.x+h.w/2,cy=h.y+h.h/2,r=ROOMS.slice().sort((a,b)=>Math.hypot(a.x+a.w/2-cx,a.y+a.h/2-cy)-Math.hypot(b.x+b.w/2-cx,b.y+b.h/2-cy))[0];h.f=r&&r.f==='#8a4a68'?'#7a3f5c':r&&r.high?'#3f6b58':'#dcc08a';}});makePlatforms(m);RECTS=[...ROOMS,...HALLS];
   buildWalk();
   STATIONS.forEach(s=>s.room=roomOf(s.x,s.y));VENTS.forEach(v=>v.room=roomOf(v.x,v.y));
   buildPathGrid();
@@ -2317,6 +2329,7 @@ function pickPlayers(box,n,onPick){
     w.appendChild(b);}
 }
 function doAbility(){
+  {const P=me();if(canAct()&&P&&P.alive&&P.nrole==='papa'&&!papaCam&&P.abCd>0){toast(`📷 カメラはあと${Math.ceil(P.abCd)}秒で使える`);return;}}
   if(!canAct()||!abilityReady())return;const P=me();
   if(P.isNeu){
     if(P.nrole==='vulture'){crewAbility(P);return;}
@@ -3341,7 +3354,7 @@ function updateHud(){
   $('btnReport').disabled=!(play&&reportTarget());
   $('btnKill').hidden=!isKiller(P);
   if(P.nrole==='arson')$('btnIgnite').disabled=!(play&&P.alive&&allDoused(P));
-  if(!$('btnAbility').hidden){$('btnAbility').disabled=!(play&&abilityReady());$('abCd').textContent=!P.alive?'':P.cannon?Math.ceil(P.cannon.t):P.invisT>0?'👻':(['bubble','sniper','pusher'].includes(P.irole)&&P.killCd>0)?Math.ceil(P.killCd):(P.role==='sci'||P.role==='sage'||(P.role==='doppel'&&P.dop)||['cannon','tele','fraud','ventist','esci','shift','remote','gimlet','mine','crab'].includes(P.irole)||P.nrole==='arson')&&P.abCd>0?Math.ceil(P.abCd):'';}
+  if(!$('btnAbility').hidden){$('btnAbility').disabled=!(play&&abilityReady());$('abCd').textContent=!P.alive?'':P.nrole==='papa'?(papaCam?'📷':P.abCd>0?Math.ceil(P.abCd):''):P.cannon?Math.ceil(P.cannon.t):P.invisT>0?'👻':(['bubble','sniper','pusher'].includes(P.irole)&&P.killCd>0)?Math.ceil(P.killCd):(P.role==='sci'||P.role==='sage'||(P.role==='doppel'&&P.dop)||['cannon','tele','fraud','ventist','esci','shift','remote','gimlet','mine','crab'].includes(P.irole)||P.nrole==='arson')&&P.abCd>0?Math.ceil(P.abCd):'';}
   if(P.isImp||P.isNeu||P.sheriff){
     $('btnKill').disabled=!(play&&P.killCd<=0&&killTarget());
     $('killCd').textContent=P.alive&&P.killCd>0?Math.ceil(P.killCd):'';
@@ -3861,6 +3874,13 @@ cv.addEventListener('pointerup',joyEnd);cv.addEventListener('pointercancel',joyE
 // meeting controls
 $('btnVote').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote'||M.sel==null)return;if(M.scale&&!M.scale.includes(M.sel)){toast('天秤で選ばれた2人にしか投票できない');return;}M.votes[me().id]=M.sel;if(NET.client)rpc('vote',[M.sel]);snd('click');renderCards();updateMeetingUI();};
 $('btnPhoto').onclick=()=>{papaShow(me());if(S.M)updateMeetingUI();};
+$('btnFgBg').onclick=()=>$('inFgBg').click();
+$('btnFgBgDel').onclick=()=>{try{localStorage.removeItem('amongus-fungle-bg');}catch(e){}FG_BG=null;fgBgStatus();if(MAPS[MAPI].fungle)drawMapCanvas();};
+$('inFgBg').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{
+  const W=Math.min(2400,im.width),H=Math.round(W*im.height/im.width),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);
+  let u=c.toDataURL('image/jpeg',.85);try{localStorage.setItem('amongus-fungle-bg',u);}catch(e){try{u=c.toDataURL('image/jpeg',.6);localStorage.setItem('amongus-fungle-bg',u);}catch(e2){toast('画像が大きすぎて保存できなかった');}}
+  URL.revokeObjectURL(im.src);loadFgBg();};im.src=URL.createObjectURL(f);ev.target.value='';};
+loadFgBg();
 $('btnScale').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;if(M.scaleA==null){M.scaleA=M.sel;M.sel=null;renderCards();updateMeetingUI();return;}if(M.sel===M.scaleA)return;useBalance(P,S.ents[M.scaleA],S.ents[M.sel]);M.scaleA=null;};
 $('btnGuess').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;const t=S.ents[M.sel];if(!t.alive||(t.isImp&&P.role!=='nguesser')||t===P)return;doGuess(P,t,$('guessSel').value);};
 $('btnSkip').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote')return;if(M.scale){toast('天秤の発動中はスキップできない');return;}M.votes[me().id]='skip';if(NET.client)rpc('vote',['skip']);snd('click');renderCards();updateMeetingUI();};
