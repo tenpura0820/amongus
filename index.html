@@ -1257,7 +1257,10 @@ function placeAtTable(){
 
 // ================= visibility =================
 function visionR(e){if(!e.alive)return 99999;let r=e.isImp?780:e.isNeu?680:620;/* マップを1.3倍にしたので視界も広く */if(S.sab&&S.sab.type==='lights'&&!e.isImp&&e.role!=='noct')r*=.38;return r;}
-function canSee(e,x,y){if(!e.alive)return true;const r=visionR(e),dx=x-e.x,dy=y-e.y;if(dx*dx+dy*dy>r*r)return false;return los(e.x,e.y-8,x,y-8);}
+// 梯子・ロープの上（または梯子の上り口・下り口のそば）からは、壁や崖ごしに周りが見渡せる
+const LADDER_VIEW=.75;
+function ladderView(e){if(e.climb)return true;for(const L of LADDERS)if(Math.hypot(e.x-L.a.x,e.y-L.a.y)<90||Math.hypot(e.x-L.b.x,e.y-L.b.y)<90)return true;return false;}
+function canSee(e,x,y){if(!e.alive)return true;const r=visionR(e),dx=x-e.x,dy=y-e.y,d2=dx*dx+dy*dy;if(d2>r*r)return false;if(d2<(r*LADDER_VIEW)**2&&ladderView(e))return true;return los(e.x,e.y-8,x,y-8);}
 function visibleTo(viewer,o){if(o.inVent!=null)return false;if(!o.alive)return !viewer.alive;return canSee(viewer,o.x,o.y);}
 
 // ================= movement =================
@@ -2977,6 +2980,7 @@ function render(dt){
       i?fctx.lineTo(ox+ca*d,oy+sa*d):fctx.moveTo(ox+ca*d,oy+sa*d);}
     fctx.closePath();fctx.fill();
     fctx.beginPath();fctx.arc(ox,oy,60,0,TAU);fctx.fillStyle='rgba(0,0,0,1)';fctx.fill();
+    if(ladderView(V)){const g2=fctx.createRadialGradient(ox,oy,r*LADDER_VIEW*.7,ox,oy,r*LADDER_VIEW);g2.addColorStop(0,'rgba(0,0,0,1)');g2.addColorStop(1,'rgba(0,0,0,0)');fctx.fillStyle=g2;fctx.beginPath();fctx.arc(ox,oy,r*LADDER_VIEW,0,TAU);fctx.fill();}
     ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   // 名前・吹き出しは暗闇の上に描く
