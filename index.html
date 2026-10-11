@@ -628,6 +628,9 @@ function wpt(x,y){if(x<0||y<0||x>=MAPW||y>=MAPH)return 0;return walk[(y/G|0)*GW+
 const DIR8=[...Array(8)].map((_,i)=>[Math.cos(i/8*TAU),Math.sin(i/8*TAU)]);
 function circleOK(x,y,r=14){if(!wpt(x,y))return false;for(const d of DIR8)if(!wpt(x+d[0]*r,y+d[1]*r))return false;return true;}
 function los(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d/7);for(let i=1;i<n;i++){const t=i/n;if(!wpt(x1+(x2-x1)*t,y1+(y2-y1)*t))return false;}return true;}
+// 視界用: 薄い壁（合計 WALL_SEE までの厚さ）は見通せる
+const WALL_SEE=130;
+function losSee(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d/7),st=d/n;let w=0;for(let i=1;i<n;i++){const t=i/n;if(!wpt(x1+(x2-x1)*t,y1+(y2-y1)*t)){w+=st;if(w>WALL_SEE)return false;}}return true;}
 function nearRoom(x,y){const r=roomOf(x,y);if(r!=='通路')return r;let best=ROOMS[0],bd=1e9;for(const q of ROOMS){const d=Math.hypot(q.x+q.w/2-x,q.y+q.h/2-y);if(d<bd){bd=d;best=q;}}return best.n;}
 function roomOf(x,y){for(const r of ROOMS)if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return r.n;return '通路';}
 
@@ -1260,7 +1263,7 @@ function visionR(e){if(!e.alive)return 99999;let r=e.isImp?780:e.isNeu?680:620;/
 // 梯子・ロープの上（または梯子の上り口・下り口のそば）からは、壁や崖ごしに周りが見渡せる
 const LADDER_VIEW=.75;
 function ladderView(e){if(e.climb)return true;for(const L of LADDERS)if(Math.hypot(e.x-L.a.x,e.y-L.a.y)<90||Math.hypot(e.x-L.b.x,e.y-L.b.y)<90)return true;return false;}
-function canSee(e,x,y){if(!e.alive)return true;const r=visionR(e),dx=x-e.x,dy=y-e.y,d2=dx*dx+dy*dy;if(d2>r*r)return false;if(d2<(r*LADDER_VIEW)**2&&ladderView(e))return true;return los(e.x,e.y-8,x,y-8);}
+function canSee(e,x,y){if(!e.alive)return true;const r=visionR(e),dx=x-e.x,dy=y-e.y,d2=dx*dx+dy*dy;if(d2>r*r)return false;if(d2<(r*LADDER_VIEW)**2&&ladderView(e))return true;return losSee(e.x,e.y-8,x,y-8);}
 function visibleTo(viewer,o){if(o.inVent!=null)return false;if(!o.alive)return !viewer.alive;return canSee(viewer,o.x,o.y);}
 
 // ================= movement =================
@@ -2975,8 +2978,8 @@ function render(dt){
     const g=fctx.createRadialGradient(ox,oy,r*.8,ox,oy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
     fctx.fillStyle=g;fctx.beginPath();
     for(let i=0;i<N;i++){const a=i/N*TAU,ca=Math.cos(a),sa=Math.sin(a);let d=0;
-      while(d<r){d+=stp;if(!wpt(ox+ca*d,oy+sa*d))break;}
-      d=Math.min(r,d+60);
+      let wall=0;while(d<r){d+=stp;if(!wpt(ox+ca*d,oy+sa*d)){wall+=stp;if(wall>WALL_SEE)break;}}
+      d=Math.min(r,d+40);
       i?fctx.lineTo(ox+ca*d,oy+sa*d):fctx.moveTo(ox+ca*d,oy+sa*d);}
     fctx.closePath();fctx.fill();
     fctx.beginPath();fctx.arc(ox,oy,60,0,TAU);fctx.fillStyle='rgba(0,0,0,1)';fctx.fill();
