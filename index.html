@@ -1051,7 +1051,7 @@ NROLES.teru={n:'てるてる',d:'タスクを3個終わらせたうえで、会�
 NROLES.opp={n:'オポチュニスト',d:'キルはできない。試合が終わった時に生きていれば、勝った陣営と一緒に勝利（共存勝利）。とにかく生き残ろう'};
 NROLES.vulture={n:'ヴァルチャー',d:'死体の方向が矢印で分かる。F: 死体を食べる。決めた数（設定・初期2個）を食べた瞬間に単独勝利（横取りされない・優先度+9）'};
 NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。会議を3回生き残ると F「変身」が1回だけ使える（30秒間）。変身中は手足が長くなり、キルの待ち時間0秒・キルされない・全員が緊急ボタンも通報もできない。変身すると役職は見えなくなる。インポスターが全員死んだ時、自分が生きていてインポスターを1人以上キルしていれば単独勝利'};
-NROLES.papa={n:'パパラッチ',d:'F: 写真を撮る（近くに見えている人が写る・15秒ごと）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
+NROLES.papa={n:'パパラッチ',d:'F: 写真を撮る（近くに見えている人が写る・15秒ごと）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','verity','papa'];
 const PAPA_NEED=5,PAPA_SHOWS=2,PAPA_WINDOW=20;
 const VERITY_T=30;
@@ -1267,11 +1267,20 @@ function papaCanShow(e){const M=S.M;return !!(M&&e.nrole==='papa'&&e.alive&&M.st
 function papaShow(e){if(NET.client){rpc('papaShow',[e]);return;}
   if(!papaCanShow(e))return;const M=S.M;
   const ids=[...new Set(e.photos.flat())];e.photos=[];
-  for(const id of ids)if(!e.shot.includes(id))e.shot.push(id);
-  e.shows++;(M.papaShown=M.papaShown||{})[e.id]=1;
+  // 会議が終わった時に生きていれば、この写真が数に入る（追放・推理キルされたら無効）
+  e.papaPend=ids;(M.papaShown=M.papaShown||{})[e.id]=1;
   post(-1,`📸 写真が公開された！ 写っているのは ${ids.map(id=>S.ents[id].name).join('・')}`);
-  if(e===me())snd('task');
-  if(e.shows>=PAPA_SHOWS&&e.shot.length>=PAPA_NEED)endGame('papa',`パパラッチの${e.name}が${e.shot.length}人を写真に撮って公開した`,e.id);
+  if(e===me()){snd('task');tell(e,'📸 写真を出した。この会議を生き残れば数に入る');}
+}
+// 会議の後: 生き残ったパパラッチの写真だけを数える。条件を満たしたら勝ち
+function papaSettle(){
+  for(const e of S.ents){if(!e.papaPend)continue;const ids=e.papaPend;e.papaPend=null;
+    if(!e.alive){tell(e,'📸 生き残れなかったので、写真は無効になった');continue;}
+    for(const id of ids)if(!e.shot.includes(id))e.shot.push(id);e.shows++;
+    tell(e,`📸 写真が認められた（公開${e.shows}回・${e.shot.length}人）`);
+    if(e.shows>=PAPA_SHOWS&&e.shot.length>=PAPA_NEED){endGame('papa',`パパラッチの${e.name}が会議を生き残り、${e.shot.length}人を写した写真を${e.shows}回公開した`,e.id);return true;}
+  }
+  return false;
 }
 function verityReady(e){return e.nrole==='verity'&&e.alive&&!e.vUsed&&(e.verTurns||0)>=3;}
 function verityForm(e){if(NET.client){rpc('verityForm',[e]);return;}
@@ -2592,6 +2601,7 @@ function resolveVotes(){
 function finishEject(){
   $('hud').hidden=false;
   for(const e of S.ents)if(e.nrole==='verity'&&e.alive&&!e.vUsed){e.verTurns=(e.verTurns||0)+1;if(e.verTurns===3)tell(e,'🦵 会議を3回生き残った！ F で変身できる');}
+  if(papaSettle())return;
   if(S.teruWin!=null){const t=S.ents[S.teruWin];S.teruWin=null;endGame('teru',`てるてるの${t.name}がタスクを終わらせて追放された`,t.id);return;}
   if(checkWin())return;
   S.phase='play';S.bodies=[];S.sab=null;S.sabCd=20;S.meetingCd=15;
@@ -3228,7 +3238,7 @@ function updateHud(){
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
-  else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='papa'?`<li style="color:#ffd23d">📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
+  else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='papa'?`<li style="color:#ffd23d">📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
   else h+=(P.role==='mad'?`<li style="color:${P.madmate?'#ff5a5a':'#7fb4ff'}">${P.madmate?'😈 マッドメイト: インポスターが勝てば勝ち、負ければ負け（誰がインポスターかは分からない）':`赤くなるまで ${Math.round((P.madT||0)*100)}%`}</li>`:'')+`<li style="color:#9be7ff">${ROLES[P.role].d}${P.sheriff&&P.role!=='sheriff'?' ／ シェリフ: 村陣営以外をキルできる':''}</li>`+(P.role==='stunt'?`<li>防御: 残り${P.shield}回</li>`:'')+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
@@ -3480,7 +3490,7 @@ function netTick(dt){
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
-    sendTo(e,{t:'me',killCd:e.killCd,abCd:e.abCd,abUses:e.abUses,shield:e.shield,role:e.role,eaten:e.eaten||0,tasks:e.tasks.map(t=>t.done?1:0),labLog:e.labLog,carry:e.carry||[],serialT:e.serialT||0,photos:e.photos||[],shot:e.shot||[],shows:e.shows||0,verTurns:e.verTurns||0,vUsed:!!e.vUsed,vKilledImp:!!e.vKilledImp,doubleUsed:!!e.doubleUsed,bKills:e.bKills||0,frenzy:!!e.frenzy,madT:e.madT||0,madmate:!!e.madmate,oil:e.oil?[...e.oil]:null,stillT:e.stillT,buttonUses:e.buttonUses});
+    sendTo(e,{t:'me',killCd:e.killCd,abCd:e.abCd,abUses:e.abUses,shield:e.shield,role:e.role,eaten:e.eaten||0,tasks:e.tasks.map(t=>t.done?1:0),labLog:e.labLog,carry:e.carry||[],serialT:e.serialT||0,photos:e.photos||[],papaPend:e.papaPend||null,shot:e.shot||[],shows:e.shows||0,verTurns:e.verTurns||0,vUsed:!!e.vUsed,vKilledImp:!!e.vKilledImp,doubleUsed:!!e.doubleUsed,bKills:e.bKills||0,frenzy:!!e.frenzy,madT:e.madT||0,madmate:!!e.madmate,oil:e.oil?[...e.oil]:null,stillT:e.stillT,buttonUses:e.buttonUses});
   }
 }
 // --- client ---
@@ -3526,7 +3536,7 @@ function clientRecv(d){
   if(d.t==='tell'){if(S&&d.cm)closeModal();toast(d.text);return;}
   if(!S||!S.isClient)return;
   if(d.t==='s'){applySnap(d);return;}
-  if(d.t==='me'){const P=me();if(d.role&&d.role!==P.role){P.role=d.role;setupHud();}P.eaten=d.eaten;P.killCd=d.killCd;P.abCd=d.abCd;P.abUses=d.abUses;P.shield=d.shield;P.stillT=d.stillT;P.buttonUses=d.buttonUses;P.labLog=d.labLog||[];P.carry=d.carry||[];P.madT=d.madT;P.madmate=d.madmate;P.serialT=d.serialT;P.photos=d.photos;P.shot=d.shot;P.shows=d.shows;P.verTurns=d.verTurns;P.vUsed=d.vUsed;P.vKilledImp=d.vKilledImp;P.doubleUsed=d.doubleUsed;P.bKills=d.bKills;P.frenzy=d.frenzy;
+  if(d.t==='me'){const P=me();if(d.role&&d.role!==P.role){P.role=d.role;setupHud();}P.eaten=d.eaten;P.killCd=d.killCd;P.abCd=d.abCd;P.abUses=d.abUses;P.shield=d.shield;P.stillT=d.stillT;P.buttonUses=d.buttonUses;P.labLog=d.labLog||[];P.carry=d.carry||[];P.madT=d.madT;P.madmate=d.madmate;P.serialT=d.serialT;P.photos=d.photos;P.papaPend=d.papaPend;P.shot=d.shot;P.shows=d.shows;P.verTurns=d.verTurns;P.vUsed=d.vUsed;P.vKilledImp=d.vKilledImp;P.doubleUsed=d.doubleUsed;P.bKills=d.bKills;P.frenzy=d.frenzy;
     if(d.oil)P.oil=new Set(d.oil);(d.tasks||[]).forEach((v,i)=>{if(P.tasks[i]&&v)P.tasks[i].done=true;});return;}
   if(d.t==='post'){if(S.M)post(d.who,d.text,null,d.llm,true);return;}
   if(d.t==='say'){const e=S.ents[d.who];if(e)say(e,d.text,d.tp,true);return;}
