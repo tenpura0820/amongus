@@ -468,7 +468,7 @@ function genMap(spec){
   });
   for(const[x,y,w,h,z]of spec.ground||[])halls.push({x,y,w,h,zone:z});
   const L=byN(spec.lights),X=byN(spec.reactor);
-  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,fungle:!!spec.fungle,ladderSpec:spec.ladders||null,ladderPts:spec.ladderPts||null,
+  return{name:spec.name,W:spec.W,H:spec.H,rooms,halls,stations:st,vents,fungle:!!spec.fungle,scope:spec.scope?{x:spec.scope[0],y:spec.scope[1]}:null,ladderSpec:spec.ladders||null,ladderPts:spec.ladderPts||null,
     btn:spec.btn?{x:spec.btn[0],y:spec.btn[1]}:{x:hub.x+hub.w/2,y:hub.y+hub.h/2-40},
     sabp:{lights:{x:L.x+L.w/2,y:L.y+70,n:L.n},reactor:{x:X.x+X.w/2,y:X.y+70,n:X.n}}};
 }
@@ -514,7 +514,7 @@ const MAPS=[
     links:[['広場','北ゲート'],['広場','電力室'],['広場','採掘場'],['広場','食料庫'],['北ゲート','溶岩研究所'],['北ゲート','観測所'],['溶岩研究所','電力室'],
       ['観測所','採掘場'],['電力室','冷却コア'],['冷却コア','食料庫'],['食料庫','発着場'],['採掘場','発着場']]}),
   // ファングル（ジャングルの島）。参考画像の歩ける場所（砂浜・紫の道・山の草地）に合わせた配置。山の上へは梯子かグラップラーでしか行けない。キノコの混乱はこのマップだけ
-  genMap({name:'🍄 ファングル',fungle:true,W:3200,H:2400,hub:'キャンプファイヤー',lights:'倉庫',reactor:'リアクター',btn:[1190,1254],rooms:[
+  genMap({name:'🍄 ファングル',fungle:true,W:3200,H:2400,hub:'キャンプファイヤー',lights:'倉庫',reactor:'リアクター',btn:[1190,1254],scope:[1632,1190],rooms:[
     ['キャンプファイヤー',720,960,400,352,'#e3c48c'],['降下艇',768,544,416,336,'#8a8f99'],['食堂',368,816,336,256,'#e8cf9c'],['寝室',464,1136,208,118,'#e8cf9c'],
     ['遊戯室',448,1280,240,160,'#7fa88a'],['スプラッシュゾーン',224,1216,224,192,'#7fb8d8'],['キッチン',400,1504,352,320,'#e8cf9c'],['ビーチ',112,1536,304,192,'#f0dcae'],
     ['倉庫',1264,848,272,256,'#e8cf9c'],['会議室',1152,1168,384,240,'#d9c49a'],['研究室',998,1600,259,218,'#c8d4dc'],['温室',1670,1520,262,320,'#b8d0c0'],
@@ -1068,7 +1068,7 @@ function scaleMap(m){
   const f=v=>Math.round(v*MAP_SCALE);
   const rooms=m.skeld?SKELD_ROOMS:m.rooms,halls=m.skeld?SKELD_HALLS:m.halls,st=m.skeld?SKELD_STATIONS:m.stations,vents=m.skeld?SKELD_VENTS:m.vents,btn=m.skeld?SKELD_BTN:m.btn,sabp=m.skeld?SKELD_SABP:m.sabp;
   for(const r of [...rooms,...halls]){r.x=f(r.x);r.y=f(r.y);r.w=f(r.w);r.h=f(r.h);}
-  for(const o of [...st,...vents,btn,sabp.lights,sabp.reactor]){o.x=f(o.x);o.y=f(o.y);}
+  for(const o of [...st,...vents,btn,sabp.lights,sabp.reactor,...(m.scope?[m.scope]:[])]){o.x=f(o.x);o.y=f(o.y);}
   m.W=f(m.skeld?3000:m.W);m.H=f(m.skeld?1760:m.H);
 }
 function loadMap(i){
@@ -2578,6 +2578,9 @@ function botUpdate(e,dt){
 // ================= player =================
 function playerUpdate(dt){
   const P=me();
+  if(S.scope){P.moving=false;if(!P.alive||S.phase!=='play'||S.modal||S.killedT>0){S.scope=null;return;}
+    let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);if(joy.id!=null){ix+=joy.dx;iy+=joy.dy;}
+    const m=Math.hypot(ix,iy);if(m>.1){const k=Math.min(1,m)/m*SCOPE_SPEED*dt;S.scope.x=clamp(S.scope.x+ix*k,0,MAPW);S.scope.y=clamp(S.scope.y+iy*k,0,MAPH);}return;}
   if(P.carriedBy!=null||P.drill||P.climb){P.moving=false;return;}
   const A=P.ctrl&&S.ents[P.ctrl.id]?S.ents[P.ctrl.id]:P;   // リモコン: 操っている人を動かす
   if(A!==P)P.moving=false;
@@ -2589,8 +2592,14 @@ function playerUpdate(dt){
   if(m>.1){P.aim={x:ix/m,y:iy/m};const k=Math.min(1,m)/m*P.speed*dt*(A.alive?1:1.2);moveEnt(A,ix*k,iy*k);if(Math.abs(ix)>.1)A.face=ix>0?1:-1;A.moving=true;A.walk+=dt*11;}
   else A.moving=false;
 }
+const SCOPE_R=620,SCOPE_SPEED=1100;
+function scopeAt(){const m=MAPS[MAPI];return m&&m.scope&&!(S&&S.br)?m.scope:null;}
+function startScope(){const sc=scopeAt();if(!sc)return;S.scope={x:sc.x,y:sc.y-40};snd('click');toast('🔭 望遠鏡: 移動キー／スティックで見る場所を動かす。E（使う）かEscで戻る');}
+function endScope(){if(!S||!S.scope)return;S.scope=null;snd('click');}
 function useTarget(){
   const P=me();if(P.inVent!=null)return null;
+  if(S.scope)return{k:'scope'};
+  {const sc=scopeAt();if(sc&&P.alive&&dist(P,sc)<100)return{k:'scope'};}
   if(S.sab&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
   if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks){if(!t.done&&dist(P,STATIONS[t.s])<75)return{k:'task',t};}
@@ -2605,6 +2614,7 @@ function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)ret
 function doUse(){
   if(!canAct())return;const u=useTarget();if(!u)return;
   const P=me();
+  if(u.k==='scope'){if(S.scope)endScope();else startScope();return;}
   if(u.k==='ladder'){startClimb(P,u.L,u.to);return;}
   if(u.k==='task')openTask(u.t);
   else if(u.k==='sab')openSabFix();
@@ -2702,7 +2712,7 @@ function callMeeting(caller,body){if(S&&S.br)return;if(S.lockT>0){if(caller===me
   for(const e of S.ents){if(e.inVent!=null){e.inVent=null;}e.ai.mtRoom=nearRoom(e.x,e.y);e.carriedBy=null;e.carry=[];if(e.ctrl)e.ctrl=null;e.ctrlBy=null;e.drill=null;e.climb=null;e.ai.climbTo=null;}
   if(caller.isBot&&body)caller.ai.nearBody=caller.ai.nearBody||[];
   if(!body)caller.buttonUses--;
-  S.phase='meeting';S.sab=null;S.mushT=0;papaCam=null;
+  S.phase='meeting';S.sab=null;S.mushT=0;papaCam=null;S.scope=null;
   const M={caller:caller.id,body,pre:2.4,t:0,stage:'discuss',q:[],votes:{},public:{},sel:null,counters:{},bodiesAll:[...S.bodies],log:[],claims:{},guessUsed:{}};
   for(const e of S.ents){e.ai.llmSpeaks=0;e.ai.llmAt=rand(2,5);e.ai.llmVoted=false;e.ai.guessAt=rand(5,14);e.cannon=null;}
   S.M=M;
@@ -3184,7 +3194,7 @@ function render(dt){
   const P=me();
   S.scale=clamp(Math.min(VW,VH)/1080,matchMedia('(pointer:coarse)').matches?.5:.4,1.1);
   const sc=S.scale;
-  const V=P.ctrl&&S.ents[P.ctrl.id]?S.ents[P.ctrl.id]:P;
+  const V=S.scope?{x:S.scope.x,y:S.scope.y+30}:P.ctrl&&S.ents[P.ctrl.id]?S.ents[P.ctrl.id]:P;
   S.cam.x+=(V.x-S.cam.x)*Math.min(1,dt*10);S.cam.y+=(V.y-30-S.cam.y)*Math.min(1,dt*10);
   const cam=S.cam;
   drawStars(cam.x,cam.y);
@@ -3197,6 +3207,9 @@ function render(dt){
   if(P.alive){ctx.fillStyle='#c51111';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.arc(BTN.x,BTN.y,18,0,TAU);ctx.fill();ctx.stroke();}
   // bodies
   // ハシゴ
+  {const sc=scopeAt();if(sc){ctx.save();ctx.translate(sc.x,sc.y);ctx.strokeStyle='#000';ctx.lineWidth=5;ctx.lineCap='round';for(const dx of[-22,0,22]){ctx.beginPath();ctx.moveTo(0,-40);ctx.lineTo(dx,4);ctx.stroke();}
+    ctx.rotate(-.5);ctx.fillStyle='#6b4a2a';ctx.beginPath();rr(ctx,-34,-58,74,22,9);ctx.fill();ctx.stroke();ctx.fillStyle='#c9a24a';ctx.fillRect(28,-60,14,26);ctx.strokeRect(28,-60,14,26);ctx.fillStyle='#9be7ff';ctx.beginPath();ctx.arc(42,-47,7,0,TAU);ctx.fill();ctx.restore();
+    if(!S.scope&&P.alive&&dist(P,sc)<160){ctx.save();ctx.font='bold 16px "M PLUS Rounded 1c",sans-serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#000';ctx.fillStyle='#ffe680';ctx.strokeText('🔭 望遠鏡（E）',sc.x,sc.y-80);ctx.fillText('🔭 望遠鏡（E）',sc.x,sc.y-80);ctx.restore();}}}
   for(const l of LADDERS.filter(l=>l.g)){ctx.save();ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(l.a.x,l.a.y-30);ctx.lineTo(l.b.x,l.b.y-30);ctx.stroke();ctx.strokeStyle='#b8925a';ctx.lineWidth=5;ctx.setLineDash([14,8]);ctx.stroke();ctx.setLineDash([]);
     for(const q of [l.a,l.b]){ctx.fillStyle='#5a6476';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.rect(q.x-10,q.y-44,20,44);ctx.fill();ctx.stroke();ctx.fillStyle='#ffd23d';ctx.beginPath();ctx.arc(q.x,q.y-30,7,0,TAU);ctx.fill();ctx.stroke();}ctx.restore();}
   for(const l of LADDERS.filter(l=>!l.g)){const top=l.a.y<l.b.y?l.a:l.b,bot=top===l.a?l.b:l.a;ctx.save();ctx.strokeStyle='#000';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(top.x-16,top.y-10);ctx.lineTo(bot.x-16,bot.y+10);ctx.moveTo(top.x+16,top.y-10);ctx.lineTo(bot.x+16,bot.y+10);ctx.stroke();
@@ -3223,7 +3236,7 @@ function render(dt){
   for(const f of S.fx){ctx.save();ctx.globalAlpha=Math.min(1,f.t);ctx.font='bold 34px system-ui';ctx.textAlign='center';ctx.fillStyle='#44e15a';ctx.strokeStyle='#000';ctx.lineWidth=5;const y=f.y-(1.2-f.t)*30;ctx.strokeText('✓',f.x,y);ctx.fillText('✓',f.x,y);ctx.restore();}
   // entities
   const mate=e=>P.isImp&&e.isImp&&e!==P;
-  const vis=S.ents.filter(e=>e.inVent==null&&(S.phase==='review'||e===P||(mate(e)&&e.alive===P.alive)||(e.alive?(P.alive?!hid(e)&&canSee(P,e.x,e.y):true):!P.alive)));
+  const vis=S.ents.filter(e=>e.inVent==null&&(S.phase==='review'||e===P||(mate(e)&&e.alive===P.alive)||(e.alive?(P.alive?!hid(e)&&(canSee(P,e.x,e.y)||(S.scope&&dist(e,S.scope)<SCOPE_R)):true):!P.alive)));
   vis.sort((a,b)=>a.y-b.y);
   if(micSpeaking&&P.inVent==null){const g=ctx.createRadialGradient(P.x,P.y-30,10,P.x,P.y-30,85);g.addColorStop(0,'rgba(255,213,61,.55)');g.addColorStop(1,'rgba(255,213,61,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(P.x,P.y-30,85,0,TAU);ctx.fill();
     ctx.strokeStyle='#ffd53d';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(P.x,P.y-28,48,56,0,0,TAU);ctx.stroke();}
@@ -3251,6 +3264,7 @@ function render(dt){
     fctx.setTransform(1,0,0,1,0,0);fctx.globalCompositeOperation='source-over';fctx.fillStyle=P.isImp?'rgba(3,4,10,.45)':'rgba(3,4,10,1)';   /* 視界の外は真っ暗。インポスターだけは外も薄く見える */fctx.fillRect(0,0,fog.width,fog.height);
     fctx.globalCompositeOperation='destination-out';
     fctx.setTransform(dpr*sc,0,0,dpr*sc,dpr*(VW/2-cam.x*sc),dpr*(VH/2-cam.y*sc));
+    if(S.scope){const ox=S.scope.x,oy=S.scope.y,g=fctx.createRadialGradient(ox,oy,SCOPE_R*.85,ox,oy,SCOPE_R);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');fctx.fillStyle=g;fctx.beginPath();fctx.arc(ox,oy,SCOPE_R,0,TAU);fctx.fill();}else{
     const lite=matchMedia('(pointer:coarse)').matches,ox=V.x,oy=V.y-8,N=lite?120:220,stp=lite?10:6;
     const g=fctx.createRadialGradient(ox,oy,r*.8,ox,oy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
     fctx.fillStyle=g;fctx.beginPath();
@@ -3261,6 +3275,7 @@ function render(dt){
     fctx.closePath();fctx.fill();
     fctx.beginPath();fctx.arc(ox,oy,60,0,TAU);fctx.fillStyle='rgba(0,0,0,1)';fctx.fill();
     if(ladderView(V)){const g2=fctx.createRadialGradient(ox,oy,r*LADDER_VIEW*.7,ox,oy,r*LADDER_VIEW);g2.addColorStop(0,'rgba(0,0,0,1)');g2.addColorStop(1,'rgba(0,0,0,0)');fctx.fillStyle=g2;fctx.beginPath();fctx.arc(ox,oy,r*LADDER_VIEW,0,TAU);fctx.fill();}
+    }
     ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   // 名前・吹き出しは暗闇の上に描く
@@ -3295,6 +3310,7 @@ function render(dt){
   // reactor flash
   if(S.sab&&S.sab.type==='reactor'){ctx.fillStyle=`rgba(255,0,0,${.12+.1*Math.sin(tm*6)})`;ctx.fillRect(0,0,VW,VH);}
   drawViewfinder();
+  if(S.scope){ctx.save();ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(VW/2-24,VH/2);ctx.lineTo(VW/2+24,VH/2);ctx.moveTo(VW/2,VH/2-24);ctx.lineTo(VW/2,VH/2+24);ctx.stroke();ctx.font='bold 15px "M PLUS Rounded 1c",sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffe680';ctx.fillText('🔭 望遠鏡をのぞいている — 移動で見回す／E・Escで戻る',VW/2,VH-120);ctx.restore();}
   // arrows to objectives
   const targets=[];
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks)if(!t.done)targets.push({...STATIONS[t.s],c:'#ffd53d'});
@@ -4167,6 +4183,7 @@ addEventListener('keydown',e=>{
   keys[e.code]=true;
   if(!S)return;
   if(e.code==='Escape'&&papaCam){papaCam=null;return;}
+  if(e.code==='Escape'&&S.scope){endScope();return;}
   if(e.code==='Escape'){if(!$('quitDlg').hidden)closeQuit();else if(S.modal)closeModal();else if(!$('mapov').hidden||!$('sabMenu').hidden){$('mapov').hidden=true;$('sabMenu').hidden=true;}else askQuit();return;}
   if(e.repeat)return;
   if(e.code==='KeyC'){setMic(!micOn);return;}
