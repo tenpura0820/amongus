@@ -818,8 +818,10 @@ const mapCv=document.createElement('canvas');
 const FG_BUILD=['降下艇','食堂','倉庫','会議室','キッチン','研究室','温室','リアクター','寝室','遊戯室','上部エンジン','通信室'];
 // 自分の端末に読み込んだファングルの背景画像（公開サイトには入れない。この端末のブラウザにだけ保存）
 let FG_BG=null;
-function loadFgBg(){try{const u=localStorage.getItem('amongus-fungle-bg');if(!u){FG_BG=null;fgBgStatus();return;}const im=new Image();im.onload=()=>{FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src=u;}catch(e){}}
-function fgBgStatus(){const st=document.getElementById('fgBgSt'),del=document.getElementById('btnFgBgDel');if(st)st.textContent=FG_BG?'読み込み済み（この端末だけ）':'未設定（自動で描いた絵）';if(del)del.hidden=!FG_BG;}
+function loadFgBg(){try{const u=localStorage.getItem('amongus-fungle-bg');if(!u){FG_BG=null;fgBgStatus();
+  // ゲームと同じ場所に fungle.jpg があれば、それをそのままステージにする
+  const im=new Image();im.onload=()=>{if(localStorage.getItem('amongus-fungle-bg'))return;FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src='fungle.jpg';return;}const im=new Image();im.onload=()=>{FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src=u;}catch(e){}}
+function fgBgStatus(){const st=document.getElementById('fgBgSt'),del=document.getElementById('btnFgBgDel');let ls=null;try{ls=localStorage.getItem('amongus-fungle-bg');}catch(e){}if(st)st.textContent=FG_BG?(ls?'読み込み済み（この端末だけ）':'ステージ画像あり'):'未設定（自動で描いた絵）';if(del)del.hidden=!ls;}
 function drawFungleGround(c){
   if(FG_BG){c.fillStyle='#efb24a';c.fillRect(0,0,MAPW,MAPH);c.drawImage(FG_BG,0,0,MAPW,MAPW*FG_BG.height/FG_BG.width);return;}
   let sd=11;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
