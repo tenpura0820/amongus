@@ -143,6 +143,16 @@ button{touch-action:manipulation}
   #plog{top:auto;bottom:196px;left:8px;right:8px;transform:none;width:auto}
 }
 @media (max-width:640px){#pchat{bottom:auto;top:12px;left:auto;right:76px;transform:none;width:min(260px,46vw)}#plog{bottom:auto;top:62px;left:auto;right:12px;transform:none;width:min(300px,60vw)}}
+/* スマホ縦: 上のボタンと重ならないように、チャット欄は2段目に。ボタンは大きく */
+@media (pointer:coarse) and (orientation:portrait){
+  #pchat{top:60px!important;bottom:auto!important;left:8px!important;right:8px!important;width:auto!important;transform:none!important}
+  #plog{top:108px!important;bottom:auto!important;left:8px!important;right:8px!important;width:auto!important;transform:none!important;max-height:22vh}
+  #taskbox{top:6px}
+  .act{width:70px;height:70px;font-size:10.5px}
+  .act .ic{font-size:25px}
+  #actions{gap:7px}
+}
+@media (pointer:coarse) and (orientation:landscape){.act{width:66px;height:66px}}
 #joy{position:absolute;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);transform:translate(-50%,-50%)}
 #joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.45);transform:translate(-50%,-50%)}
 
@@ -211,7 +221,9 @@ button{touch-action:manipulation}
 .mfoot button.vote{background:var(--task);color:#06210b}
 .mfoot button:disabled{opacity:.4}
 #mHint{font-weight:800;color:#fff;text-shadow:1px 1px 0 #000;font-size:14px}
-@media (max-width:760px){.mbody{grid-template-columns:1fr;grid-template-rows:1fr 230px}.chat{border-left:0;border-top:4px solid #000}#mGrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
+@media (max-width:760px){.mbody{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 230px}.chat{border-left:0;border-top:4px solid #000}#mGrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
+/* スマホ縦の会議: 画面からはみ出さないように */
+@media (max-width:520px){#meeting{padding:4px}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
 
 /* ---------- splash / map ---------- */
 #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.88);text-align:center;padding:16px;gap:10px}
@@ -2573,6 +2585,7 @@ function renderCards(){
 }
 function updateMeetingUI(){
   const M=S.M,P=me();
+  $('btnQuit').style.visibility='hidden';   // 会議中は会議画面の中の「やめる」を使う（重なり防止）
   const canVote=M.stage==='vote'&&P.alive&&M.votes[P.id]===undefined;
   $('btnVote').disabled=!(canVote&&M.sel!=null&&M.sel!==undefined&&S.ents[M.sel].alive);
   $('btnSkip').disabled=!canVote;
@@ -3349,6 +3362,7 @@ function setupHud(){
   updateHud();
 }
 function updateHud(){
+  if($('meeting').hidden)$('btnQuit').style.visibility='';
   const P=me();
   $('tbFill').style.width=(S.taskDone/S.taskTotal*100)+'%';
   const role=$('role');
