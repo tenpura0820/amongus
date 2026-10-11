@@ -1367,7 +1367,7 @@ function brUpdate1(dt){
     for(const e of S.ents){if(!e.alive)continue;const se=pathS(B.path,e.x,e.y),ahead=(se-tr.s)*tr.dir;
       if(ahead>0&&ahead<TRAIN_SPEED*4.6&&!tr.warned[e.id]){tr.warned[e.id]=1;if(e===P){snd('alarm');toast('🚂 何かが来る…！ 穴に隠れて！');}else if(e.isBot&&Math.random()<.5)botSay(e,pick(['何か来る！！ 穴に隠れて！','線路から離れて！','あの音…来るぞ！']));}
       if(Math.hypot(tr.x-e.x,tr.y-30-e.y)<95&&!inHole(e)){
-        if(e.guardT>0){tr.dir*=-1;tr.s+=tr.dir*160;e.guardT=0;snd('task');toast(`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`);netBc({t:'tell',text:`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`});continue;}
+        if(e.guardT>0){tr.dir*=-1;tr.s+=tr.dir*200;tr.warned={};snd('task');toast(`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`);netBc({t:'tell',text:`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`});continue;}
         die(e,null);snd('kill');if(e===P){S.killedT=2.6;splash('ひかれた…','赤い列車の化物につかまった。幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`😱 ${e.name}が列車の化物にさらわれた…`);
         if(checkWin())return;}}}
   B.trains=B.trains.filter(tr=>tr.dir>0?tr.s<B.path.len+600:tr.s>-600);
@@ -1918,7 +1918,7 @@ function farRoom(x,y){let best=ROOMS[0],bd=-1;for(const r of ROOMS){const d=Math
 function crewAbility(e,arg){
   if(NET.client){rpc('crewAbility',[e,arg,e.aim]);return;}
   if(!e||!e.alive||S.phase!=='play')return;
-  if(e.role==='sage'&&e.team==='crew'){if(e.abCd>0)return;e.guardT=8;e.abCd=25;tell(e,'🛡 賢者ガード（8秒）');return;}
+  if(e.role==='sage'&&e.team==='crew'){if(e.abCd>0)return;if(S.br){e.guardT=12;e.abCd=18;tell(e,'🛡 賢者ガード（12秒・化物を跳ね返せる）');return;}e.guardT=8;e.abCd=25;tell(e,'🛡 賢者ガード（8秒）');return;}
   if(e.role==='doppel'&&e.team==='crew'){
     if(!e.dop){e.dop={x:e.x,y:e.y,face:e.face};tell(e,'👥 分身を置いた（もう一度Fで入れ替え）');return;}
     if(e.abCd>0)return;const{x,y}=e.dop;e.dop={x:e.x,y:e.y,face:e.face};e.x=x;e.y=y;e.tpc=(e.tpc||0)+1;e.path=null;e.abCd=15;if(e===me())snd('vent');return;
