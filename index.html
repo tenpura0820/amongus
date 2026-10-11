@@ -1358,15 +1358,19 @@ function goLv1(by){
 }
 function brUpdate1(dt){
   const B=S.br,P=me();B.t+=dt;B.nextTrain-=dt;
-  if(B.nextTrain<=0){B.nextTrain=rand(10,20);const fwd=Math.random()<.55;B.trains.push({s:fwd?-300:B.path.len+300,dir:fwd?1:-1,x:0,y:0,legs:0,warned:{}});}
+  if(B.nextTrain<=0){B.nextTrain=rand(10,20);
+    // だれか（人間を優先）の近くを狙って、3〜4.5秒で届く距離から走ってくる
+    const al=S.ents.filter(e=>e.alive),hum=al.filter(e=>!e.isBot),tg=pick(hum.length&&Math.random()<.7?hum:al);
+    if(tg){const st=pathS(B.path,tg.x,tg.y),fwd=st<300?true:st>B.path.len-300?false:Math.random()<.55,d=TRAIN_SPEED*rand(3,4.5);
+      B.trains.push({s:fwd?Math.max(-200,st-d):Math.min(B.path.len+200,st+d),dir:fwd?1:-1,x:0,y:0,legs:0,warned:{}});}}
   for(const tr of B.trains){tr.s+=tr.dir*TRAIN_SPEED*dt;tr.legs+=dt*20;const q=pathAt(B.path,tr.s);tr.x=q.x;tr.y=q.y+30;
     for(const e of S.ents){if(!e.alive)continue;const se=pathS(B.path,e.x,e.y),ahead=(se-tr.s)*tr.dir;
-      if(ahead>0&&ahead<3200&&!tr.warned[e.id]){tr.warned[e.id]=1;if(e===P){snd('alarm');toast('🚂 何かが来る…！ 穴に隠れて！');}else if(e.isBot&&Math.random()<.5)botSay(e,pick(['何か来る！！ 穴に隠れて！','線路から離れて！','あの音…来るぞ！']));}
+      if(ahead>0&&ahead<TRAIN_SPEED*4.6&&!tr.warned[e.id]){tr.warned[e.id]=1;if(e===P){snd('alarm');toast('🚂 何かが来る…！ 穴に隠れて！');}else if(e.isBot&&Math.random()<.5)botSay(e,pick(['何か来る！！ 穴に隠れて！','線路から離れて！','あの音…来るぞ！']));}
       if(Math.hypot(tr.x-e.x,tr.y-30-e.y)<95&&!inHole(e)){
         if(e.guardT>0){tr.dir*=-1;tr.s+=tr.dir*160;e.guardT=0;snd('task');toast(`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`);netBc({t:'tell',text:`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`});continue;}
         die(e,null);snd('kill');if(e===P){S.killedT=2.6;splash('ひかれた…','赤い列車の化物につかまった。幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`😱 ${e.name}が列車の化物にさらわれた…`);
         if(checkWin())return;}}}
-  B.trains=B.trains.filter(tr=>tr.s>-600&&tr.s<B.path.len+600);
+  B.trains=B.trains.filter(tr=>tr.dir>0?tr.s<B.path.len+600:tr.s>-600);
   for(const e of S.ents)if(e.alive&&dist(e,B.exit)<90){endGame('br',`${e.name}が線路の一番奥の非常口にたどり着き、全員でバックルームから脱出した！`);return;}
 }
 function brThink1(e){
