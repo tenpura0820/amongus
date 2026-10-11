@@ -279,6 +279,7 @@ button{touch-action:manipulation}
       <label class="row">議論時間<input type="range" id="inDisc" min="0" max="60" step="5" value="15"><b id="vDisc">15s</b></label>
       <label class="row">メイヤーの票数<input type="range" id="inMeyer" min="3" max="16" value="3"><b id="vMeyer">3</b></label>
       <label class="row">ヴァルチャーの必要数<input type="range" id="inVult" min="1" max="5" value="2"><b id="vVult">2</b></label>
+      <label class="row">バックルームになる確率<input type="range" id="inBR" min="0" max="100" value="5"><b id="vBR">5%</b></label>
       <label class="row">投票時間<input type="range" id="inVote" min="15" max="120" step="5" value="45"><b id="vVote">45s</b></label>
       <label class="row">第三陣営<input type="range" id="inNeu" min="0" max="12" value="5"><b id="vNeu">5</b></label>
       <label class="row">マップ<select id="inMap"></select></label>
@@ -468,6 +469,20 @@ function genMap(spec){
     btn:spec.btn?{x:spec.btn[0],y:spec.btn[1]}:{x:hub.x+hub.w/2,y:hub.y+hub.h/2-40},
     sabp:{lights:{x:L.x+L.w/2,y:L.y+70,n:L.n},reactor:{x:X.x+X.w/2,y:X.y+70,n:X.n}}};
 }
+// ザ・バックルーム Lv.0: 黄色い壁紙の部屋がどこまでも続く迷路（毎回同じ形。オンラインでも同じになるように固定の乱数）
+function genBackrooms(){
+  let sd=20240607;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  const C=6,Rw=4,SX=720,SY=620,rooms=[],nm=(i,j)=>'Lv0-'+'ABCDEF'[i]+(j+1);
+  for(let j=0;j<Rw;j++)for(let i=0;i<C;i++){const w=Math.round(360+rnd()*180),h=Math.round(280+rnd()*140);
+    rooms.push([nm(i,j),Math.round(150+i*SX+(SX-w)/2*rnd()),Math.round(150+j*SY+(SY-h)/2*rnd()),w,h,'#bfa64e']);}
+  // 迷路: ランダムな木構造 + ループを少し
+  const seen=new Set(['0,0']),stack=[[0,0]],links=[];
+  while(stack.length){const[i,j]=stack[stack.length-1];const nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([a,b])=>[i+a,j+b]).filter(([a,b])=>a>=0&&b>=0&&a<C&&b<Rw&&!seen.has(a+','+b));
+    if(!nb.length){stack.pop();continue;}const[a,b]=nb[Math.floor(rnd()*nb.length)];seen.add(a+','+b);links.push([nm(i,j),nm(a,b)]);stack.push([a,b]);}
+  for(let k=0;k<6;k++){const i=Math.floor(rnd()*(C-1)),j=Math.floor(rnd()*Rw);links.push([nm(i,j),nm(i+1,j)]);}
+  const m=genMap({name:'🟨 バックルーム Lv.0',W:150*2+C*SX,H:150*2+Rw*SY,hub:nm(0,0),lights:nm(2,1),reactor:nm(3,2),rooms,links});
+  m.backrooms=true;m.hidden=true;m.plats=[];return m;
+}
 const MAPS=[
   {name:'🚀 宇宙船',skeld:true},
   genMap({name:'🧪 雪原研究所',W:3200,H:2000,hub:'食堂',lights:'発電所',reactor:'原子炉',rooms:[
@@ -499,7 +514,9 @@ const MAPS=[
     ground:[[288,928,442,608,'b'],[688,858,854,109,'b'],[704,1296,454,214,'b'],[1082,1056,109,304,'b'],[1104,954,176,141,'b'],[755,1402,243,214,'b'],[384,1504,64,240,'b'],[880,1446,118,608,'j'],[960,1811,1702,128,'j'],[960,1440,1382,141,'j'],[1594,1440,83,499,'j'],[1926,1440,77,499,'j'],[2240,1440,90,499,'j'],[2278,1562,64,230,'j'],[2240,1030,83,122,'m']],
     // L=梯子 G=グラップラー（ロープで一気に移動）。座標は拡大前
     ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
+  genBackrooms(),
 ];
+const BRI=MAPS.length-1;   // バックルームのマップ番号（マップ一覧には出さない）
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=85;   // キルできる距離
 
@@ -891,10 +908,28 @@ function drawFungleGround(c){
     else if(z==='m'&&d>40&&rnd()<.05)rock(x,y+20,14+rnd()*18,'#8f5a2a');
   }
 }
+function drawBackroomsGround(c){
+  let sd=99;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  c.fillStyle='#14110a';c.fillRect(0,0,MAPW,MAPH);
+  for(const r of RECTS){c.fillStyle='#2b250f';c.fillRect(r.x-14,r.y-62,r.w+28,r.h+76);}
+  // 壁紙（黄色い縦じま）
+  for(const r of RECTS){if(!(r.w>=r.h||ROOMS.includes(r)))continue;c.fillStyle='#d9c56c';c.fillRect(r.x,r.y-50,r.w,50);
+    c.fillStyle='rgba(150,125,40,.35)';for(let x=r.x;x<r.x+r.w;x+=16)c.fillRect(x,r.y-50,5,50);
+    c.fillStyle='#b39a45';c.fillRect(r.x,r.y-10,r.w,10);c.fillStyle='rgba(90,70,20,.35)';for(let k=0;k<r.w/90;k++)c.fillRect(r.x+rnd()*r.w,r.y-50+rnd()*30,8+rnd()*14,6+rnd()*18);}
+  // 湿ったカーペット
+  for(const r of RECTS){c.fillStyle='#bba24c';c.fillRect(r.x,r.y,r.w,r.h);
+    c.fillStyle='rgba(120,95,30,.22)';for(let k=0;k<r.w*r.h/5000;k++){c.beginPath();c.ellipse(r.x+rnd()*r.w,r.y+rnd()*r.h,6+rnd()*26,4+rnd()*14,rnd()*3,0,TAU);c.fill();}
+    c.fillStyle='rgba(255,240,170,.08)';for(let y=r.y;y<r.y+r.h;y+=6)c.fillRect(r.x,y,r.w,2);}
+  // 蛍光灯（天井の光が床に落ちている）
+  for(const r of ROOMS)for(let y=r.y+70;y<r.y+r.h-40;y+=230)for(let x=r.x+80;x<r.x+r.w-60;x+=260){
+    const g=c.createRadialGradient(x,y,10,x,y,150);g.addColorStop(0,'rgba(255,250,210,.32)');g.addColorStop(1,'rgba(255,250,210,0)');c.fillStyle=g;c.fillRect(x-150,y-150,300,300);
+    c.fillStyle='#fffbe2';c.fillRect(x-46,y-12,92,24);c.strokeStyle='rgba(120,100,40,.6)';c.lineWidth=3;c.strokeRect(x-46,y-12,92,24);}
+}
 function drawMapCanvas(){
   mapCv.width=MAPW;mapCv.height=MAPH;
   const c=mapCv.getContext('2d');
 
+  if(MAPS[MAPI].backrooms){drawBackroomsGround(c);return;}
   if(MAPS[MAPI].fungle)drawFungleGround(c);else{
   c.fillStyle='#14171f';
   for(const r of RECTS)c.fillRect(r.x-12,r.y-58,r.w+24,r.h+70);
@@ -1040,12 +1075,12 @@ function tell(e,text){if(!e)return;if(e===me())toast(text);else if(e.remote)send
 
 function readCfg(){
   return{name:($('inName').value.trim()||'あなた').slice(0,8),color:selColor,costume:selCostume,players:+$('inPlayers').value,imps:+$('inImps').value,
-    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,snakeAnim:$('inSnakeAnim').checked};
+    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,brPct:+$('inBR').value,snakeAnim:$('inSnakeAnim').checked};
 }
 function maxImps(n){return n<=5?1:n<=8?2:3;}
 // 推奨構成: インポスター < 村陣営 < 第三陣営（第三陣営は全員が敵同士なので実質は村陣営が最大勢力）
 function recommend(n){if(n<6)return{i:1,c:2,neu:n-3};const i=Math.max(1,Math.floor(n/5)),r=n-i,c=Math.floor((r-1)/2);return{i,c,neu:r-c};}
-const TEAM={papa:{n:'パパラッチ',c:'#ffd23d'},verity:{n:'Verity',c:'#e0c0ff'},vulture:{n:'ヴァルチャー',c:'#c8a060'},teru:{n:'てるてる',c:'#ffb3d9'},opp:{n:'オポチュニスト',c:'#9fe0a8'},crew:{n:'村陣営',c:'#7fd6ff'},imp:{n:'インポスター',c:'#ff3b3b'},neu:{n:'第三陣営',c:'#c58bff'},lovers:{n:'ラバーズ',c:'#ff7ab8'},tuna:{n:'マグロ',c:'#5aa0ff'},god:{n:'神',c:'#ffd53d'},arson:{n:'アーソニスト',c:'#ff8a24'},draw:{n:'引き分け',c:'#aab3cc'}};
+const TEAM={br:{n:'全員',c:'#e8d36a'},papa:{n:'パパラッチ',c:'#ffd23d'},verity:{n:'Verity',c:'#e0c0ff'},vulture:{n:'ヴァルチャー',c:'#c8a060'},teru:{n:'てるてる',c:'#ffb3d9'},opp:{n:'オポチュニスト',c:'#9fe0a8'},crew:{n:'村陣営',c:'#7fd6ff'},imp:{n:'インポスター',c:'#ff3b3b'},neu:{n:'第三陣営',c:'#c58bff'},lovers:{n:'ラバーズ',c:'#ff7ab8'},tuna:{n:'マグロ',c:'#5aa0ff'},god:{n:'神',c:'#ffd53d'},arson:{n:'アーソニスト',c:'#ff8a24'},draw:{n:'引き分け',c:'#aab3cc'}};
 const ROLES={
   villager:{n:'村人',d:'特別な能力はない。タスクをこなして、怪しい人を会議で追放しよう',x:'人の動きをよく見て推理するのが仕事'},
   labtech:{n:'臨床検査技師',d:'2人を指定して、同じ陣営か調べられる（1回だけ・Fキー）',x:'信用できる人と怪しい人を比べると効果的'},
@@ -1141,7 +1176,8 @@ function roleName(e){return (e.isImp?(e.irole?IROLES[e.irole].n:'インポスタ
 // 神・マグロ・キューピッド・アーソニスト・ラバーズは、AIが絶対に正体を明かさない
 const mustHide=e=>['god','tuna','cupid','arson'].includes(e.nrole)||e.lover!=null;
 function publicRole(e){return e.team==='crew'?ROLES[roleKey(e)].n+(e.sheriff&&e.role!=='sheriff'?'+シェリフ':''):'村人';}
-const isKiller=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||e.sheriff||(e.nrole==='verity'&&e.vform>0);
+const isKiller=e=>!(S&&S.br)&&isKiller0(e);
+const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||e.sheriff||(e.nrole==='verity'&&e.vform>0);
 const hid=o=>o.inVent!=null||o.invisT>0;
 function afterKillHooks(k){
   if(k.role==='avenger'&&k.avAwake&&k.ai&&k.ai.lastVictim&&k.ai.lastVictim.id===k.avTarget){const t=k.ai.lastVictim;
@@ -1181,10 +1217,84 @@ if(tabCh)tabCh.onmessage=ev=>{
   }
 };
 try{tabCh&&tabCh.postMessage({type:'open',tab:TAB_ID});}catch(e){}
+// ===== バックルーム =====
+// 試合開始時に（設定の確率で）、または会議の後に 0.05% でノークリップしてバックルーム Lv.0 へ。
+// 全員が仲間。黒い針金の化物から逃げながら、人数×5枚のクーポンを集めて非常口から出れば全員勝利。
+const BR_PER=5,BR_MEET=0.05;
+function setupBackrooms(){
+  const alive=S.ents.filter(e=>e.alive);
+  S.br={need:alive.length*BR_PER,got:0,coupons:[],open:false,exit:null};
+  const far=ROOMS.slice().sort((a,b)=>dist({x:b.x+b.w/2,y:b.y+b.h/2},BTN)-dist({x:a.x+a.w/2,y:a.y+a.h/2},BTN));
+  const ex=far[0];S.br.exit={x:ex.x+ex.w/2,y:ex.y+ex.h/2,room:ex.n};
+  for(let k=0;k<S.br.need;k++){for(let t=0;t<40;t++){const r=pick(ROOMS);const x=rand(r.x+50,r.x+r.w-50),y=rand(r.y+50,r.y+r.h-40);
+    if(circleOK(x,y)&&dist({x,y},BTN)>160){S.br.coupons.push({x:Math.round(x),y:Math.round(y),got:false});break;}}}
+  S.br.need=Math.min(S.br.need,S.br.coupons.length);
+  const mr=far[Math.min(3,far.length-1)];
+  S.mon={x:mr.x+mr.w/2,y:mr.y+mr.h/2,stun:0,path:null,repath:0,tgt:null,goal:null,face:1,walk:0,roar:0};
+  S.bodies=[];S.sab=null;S.mushT=0;S.lockT=0;S.crabT=0;papaCam=null;
+  for(const e of S.ents){e.inVent=null;e.climb=null;e.disguise=null;e.invisT=0;e.berserk=false;e.vform=0;e.cannon=null;e.bubble=null;e.carriedBy=null;e.carry=[];e.ctrl=null;e.ctrlBy=null;e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}}
+}
+function enterBackrooms(){
+  if(NET.client||!S||S.br)return;
+  loadMap(BRI);
+  const al=S.ents.filter(e=>e.alive);al.forEach((e,i)=>{const a=i/al.length*TAU;e.x=BTN.x+Math.cos(a)*120;e.y=BTN.y+60+Math.sin(a)*80;e.tpc=(e.tpc||0)+1;});
+  S.cam={x:BTN.x,y:BTN.y};setupBackrooms();netBc({t:'br'});setupHud();brIntro();
+}
+function brIntro(){
+  snd('alarm');
+  splash('バックルーム Lv.0',`ノークリップしてしまった…！ ここでは全員が仲間（役職は関係ない）。黒い針金の化物から逃げながら、クーポンを${S.br.need}枚（1人${BR_PER}枚）集めて、非常口から脱出しよう`,'#e8d36a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);
+  S.splashT=4;
+}
+function brHud(){const B=S.br;return `<li style="color:#ffe680">🟨 バックルーム Lv.0 — 全員が仲間</li><li style="color:#ffe680">🎟 クーポン ${B.got} / ${B.need}</li>`
+  +(B.open?`<li style="color:#4cff7a">🚪 非常口が開いた！（${B.exit.room}）だれか1人がたどり着けば全員脱出</li>`:'<li>クーポンは黄色い部屋のあちこちに落ちている。上を歩けば拾える</li>')
+  +(S.mon&&S.mon.stun>0?`<li style="color:#9be7ff">化物は動けない（あと${Math.ceil(S.mon.stun)}秒）</li>`:'<li style="color:#ff8a8a">⚠ 黒い針金の化物に見つかったら逃げろ。キルはできない</li>')
+  +(me().role==='sage'?'<li style="color:#9be7ff">賢者: F のガード中に化物に触られると、化物を20秒止められる</li>':'');}
+function brUpdate(dt){
+  const B=S.br,M=S.mon;if(!B)return;
+  // クーポンを拾う
+  for(const e of S.ents){if(!e.alive)continue;for(const c of B.coupons){if(c.got||Math.abs(c.x-e.x)>46||Math.abs(c.y-e.y)>46)continue;c.got=true;B.got++;
+    if(e===me()){snd('task');toast(`🎟 クーポンを拾った！（${B.got}/${B.need}）`);}else if(canSee(me(),c.x,c.y))snd('click');
+    if(e.isBot&&Math.random()<.35)botSay(e,pick(['クーポンあった！','1枚ゲット！',`あと${Math.max(0,B.need-B.got)}枚！`]));
+    if(B.got>=B.need&&!B.open){B.open=true;snd('alarm');toast(`🚪 クーポンが全部そろった！ 非常口（${B.exit.room}）が開いた！`);}}}
+  if(B.open)for(const e of S.ents)if(e.alive&&dist(e,B.exit)<80){endGame('br',`${e.name}が非常口にたどり着き、全員でバックルームから脱出した！`);return;}
+  // 化物
+  if(!M)return;M.walk+=dt*6;if(M.roar>0)M.roar-=dt;
+  if(M.stun>0){M.stun=Math.max(0,M.stun-dt);return;}
+  let tg=null,bd=560;for(const e of S.ents){if(!e.alive||e.climb)continue;const d=dist(M,e);if(d<bd&&los(M.x,M.y-40,e.x,e.y-30)){bd=d;tg=e;}}
+  if(tg&&(!M.tgt||M.tgt!==tg.id)){M.tgt=tg.id;M.repath=0;if(M.roar<=0){M.roar=6;if(canSee(me(),M.x,M.y)||tg===me())snd('alarm');if(tg.isBot)botSay(tg,pick(['うわっ！ 来た！','化物だ！ 逃げて！！','ヤバいヤバい！']));}}
+  if(!tg&&M.tgt!=null){const t=S.ents[M.tgt];if(!t.alive||dist(M,t)>900)M.tgt=null;}
+  const T=M.tgt!=null?S.ents[M.tgt]:null;
+  M.repath-=dt;
+  if(T){if(M.repath<=0){M.path=findPath(M.x,M.y,T.x,T.y);M.repath=.5;}}
+  else if(!M.path||!M.path.length||M.repath<-6){const q=randomRoomPoint();M.path=findPath(M.x,M.y,q.x,q.y);M.repath=0;}
+  const sp=T?222:150;let mv=sp*dt;   // 追いかける時もプレイヤー（231）より少し遅い
+  while(mv>0&&M.path&&M.path.length){const n=M.path[0],dx=n.x-M.x,dy=n.y-M.y,d=Math.hypot(dx,dy);if(d<=mv){M.x=n.x;M.y=n.y;M.path.shift();mv-=d;}else{M.x+=dx/d*mv;M.y+=dy/d*mv;if(Math.abs(dx)>2)M.face=dx>0?1:-1;mv=0;}}
+  // 触れたら…
+  for(const e of S.ents){if(!e.alive||e.climb||dist(M,e)>48)continue;
+    if(e.guardT>0){M.stun=20;e.guardT=0;M.tgt=null;M.path=null;toast(`🛡 ${e.name}（賢者）のガードで化物が20秒間動けなくなった！`);snd('task');if(e.isBot)botSay(e,'今のうちに逃げて！');break;}
+    die(e,null);const P=me();if(e===P){S.killedT=2.6;splash('つかまった…','黒い針金の化物にやられた。幽霊になってもみんなを見守れる','#000000',{body:{id:e.id}},null);}else if(canSee(P,e.x,e.y))toast(`😱 ${e.name}が化物につかまった…`);
+    M.tgt=null;M.path=null;M.repath=0;snd('kill');if(checkWin())return;break;}
+}
+function brThink(e){
+  const ai=e.ai,B=S.br,M=S.mon;
+  if(M&&M.stun<=0&&dist(e,M)<620&&los(e.x,e.y-30,M.x,M.y-40)){
+    if(e.role==='sage'&&e.abCd<=0&&dist(e,M)<260)crewAbility(e);
+    if(!(ai.goalKey||'').startsWith('brflee')||atGoal(e)){let best=null,bv=-1;for(let k=0;k<6;k++){const q=randomRoomPoint();const v=dist(q,M)-dist(q,e)*.4;if(v>bv){bv=v;best=q;}}setGoal(e,best.x,best.y,'brflee'+Math.random());}
+    return;
+  }
+  if(B.open){setGoal(e,B.exit.x,B.exit.y,'brexit');return;}
+  let best=null,bd=1e9;for(const c of B.coupons){if(c.got)continue;const d=dist(e,c)+(M&&M.stun<=0?Math.max(0,500-dist(c,M))*2:0);if(d<bd){bd=d;best=c;}}
+  if(best){const k='brc'+best.x+','+best.y;if(ai.goalKey!==k)setGoal(e,best.x,best.y,k);return;}
+  if(atGoal(e)||!(ai.goalKey||'').startsWith('wander')){ai.goalKey=null;wander(e);}
+}
+const BR_LINES=['ここどこ…？ 黄色い壁がずっと続いてる','蛍光灯のブーンって音が頭に響く…','カーペットが湿ってる…気持ち悪い','さっきもこの部屋通らなかった？','ノークリップしちゃったのかな','みんな離れないで！','クーポン集めて非常口を探そう','向こうで何か動いた気がする…','この部屋、何もない…','出口はどこにあるの…'];
+function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LINES));}
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
-  if(MAPI!==(cfg.map||0))loadMap(cfg.map||0);else resetVents();
+  const brStart=!NET.client&&Math.random()*100<(cfg.brPct??BR_PER);
+  const mapI=brStart?BRI:(cfg.map||0);
+  if(MAPI!==mapI)loadMap(mapI);else resetVents();
   try{tabCh&&tabCh.postMessage({type:'start',tab:TAB_ID});}catch(e){}
   // スタート/もう一度ボタンにフォーカスが残っていると、Space/Enterで試合が始め直されるのを防ぐ
   try{document.activeElement&&document.activeElement.blur();}catch(e){}
@@ -1246,6 +1356,7 @@ function startGame(cfg){
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
     gen:GEN,taskTotal:ents.filter(e=>e.team==='crew').reduce((a,e)=>a+e.tasks.length,0),taskDone:0,M:null,E:null,modal:null,hudT:0,splashT:0,killedT:0,chatQ:[],plog:[],fx:[],beams:[],booms:[],flash:0,leaks:{},cupid:null,impKnow:{},impVote:null,chan:'all',mines:[],bubbles:[],traces:[],snakeFx:[]};
   placeAtTable();
+  if(brStart)setupBackrooms();
   if(NET.host)netStartSend();
   $('menu').hidden=true;$('lobby').hidden=true;setTimeout(()=>cv.focus(),0);mobileTip();$('hud').hidden=false;$('btnQuit').hidden=false;$('quitDlg').hidden=true;
   setupHud();
@@ -1463,7 +1574,7 @@ function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
   snd('kill');endGame('arson',`アーソニストの${e.name}が全員を燃やした`,e.id);
 }
 // 戻り値: キルが成立したら true
-function doKill(k,v){if(NET.client){rpc('doKill',[k,v]);return false;}
+function doKill(k,v){if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
   if(k.ai)k.ai.lastVictim=v;
   if(k.irole==='rocket'&&k.isImp){rocketGrab(k,v);if(k.isBot)k.ai.launchAt=S.t+rand(2,4);return false;}
   if(!v.alive||!k.alive||S.phase!=='play')return false;
@@ -1871,9 +1982,11 @@ function imp2Update(dt){
   const P=me();
   if(S.crabT>0)S.crabT=Math.max(0,S.crabT-dt);
   if(S.lockT>0)S.lockT=Math.max(0,S.lockT-dt);
+  if(S.br){brUpdate(dt);if(S.phase!=='play')return;}
+  if(S.pendingBR&&!S.br){S.pendingBR=false;enterBackrooms();}
   if(S.mushT>0){S.mushT=Math.max(0,S.mushT-dt);if(S.mushT<=0)toast('🍄 胞子が晴れた');}
   for(const e of S.ents)if(e.vform>0){e.vform=Math.max(0,e.vform-dt);if(e.vform<=0){tell(e,'変身が解けた');if(e===me())setupHud();}}
-  for(const e of S.ents)if(e.irole==='serial'&&e.alive){e.serialT=(e.serialT||0)+dt;
+  for(const e of S.ents)if(e.irole==='serial'&&e.alive&&!S.br){e.serialT=(e.serialT||0)+dt;
     if(e.serialT>=60){e.serialT=0;die(e,null);if(e===P){S.killedT=2.6;splash('力尽きた…','シリアルキラーは60秒キルしないと死んでしまう','#ff3b3b',{body:{id:e.id}},null);}else tell(e,'シリアルキラーは60秒キルしないと死んでしまう…');
       if(canSee(P,e.x,e.y))toast(`${e.name}が急に倒れた…`);checkWin();if(S.phase!=='play')return;}}
   for(const e of S.ents)if(e.role==='mad'&&!e.madmate&&e.alive){e.madT=(e.madT||0)+dt/MAD_TIME;if(e.madT>=1)becomeMad(e);}
@@ -1924,7 +2037,7 @@ function botSay(e,text,fx){
 }
 function replyLater(b,fn,delay){S.chatQ.push({at:S.t+(delay||rand(1.4,2.4)),fn:()=>{if(b.alive&&S.phase==='play'){const t=fn();if(t)botSay(b,t);}}});}
 // 近くに誰かいる時に、AIが自分から話しかける
-function chatterThink(e){
+function chatterThink(e){if(S.br){brChatter(e);return;}
   const ai=e.ai;ai.talkCd=(ai.talkCd??rand(8,35))-.25;
   if(ai.talkCd>0||(S.talkCd||0)>S.t)return;
   const near=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&dist(o,e)<350&&canSee(e,o.x,o.y));
@@ -1978,7 +2091,7 @@ function exitVent(e){if(NET.client){rpc('exitVent',[e]);return;}
   if(e===me()||canSee(me(),v.x,v.y))snd('vent');
 }
 const MUSH_T=20;
-function startSab(type){if(NET.client){rpc('startSab',[type]);return;}
+function startSab(type){if(S&&S.br)return;if(NET.client){rpc('startSab',[type]);return;}
   if(type==='mush'){
     if(!MAPS[MAPI].fungle||S.sab||S.sabCd>0||S.mushT>0)return;
     // 生きている全員の見た目を入れ替える（自分自身の姿にはならない）。名前も見えなくなる
@@ -2298,7 +2411,7 @@ function botUpdate(e,dt){
     return;
   }
   e.ai.think-=dt;
-  if(e.ai.think<=0){e.ai.think=.25;perceive(e);e.isImp?impThink(e):e.isNeu?neuDispatch(e):crewThink(e);if(S.phase!=='play')return;chatterThink(e);}
+  if(e.ai.think<=0){e.ai.think=.25;perceive(e);S.br?brThink(e):e.isImp?impThink(e):e.isNeu?neuDispatch(e):crewThink(e);if(S.phase!=='play')return;chatterThink(e);}
   followPath(e,dt);
   if(atGoal(e)&&e.ai.climbTo&&!e.climb){const c=e.ai.climbTo;e.ai.climbTo=null;startClimb(e,c.L,c.to);}
   if(atGoal(e)&&!e.climb){
@@ -2334,9 +2447,9 @@ function useTarget(){
   if(P.alive&&dist(P,BTN)<115)return{k:'btn'};
   return null;
 }
-function reportTarget(){const P=me();if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
+function reportTarget(){const P=me();if(S.br)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
 function killTarget(){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
-function ventTarget(){const P=me();if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
+function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
 function doUse(){
   if(!canAct())return;const u=useTarget();if(!u)return;
@@ -2358,6 +2471,7 @@ function doVent(){if(!canAct())return;const P=me();
   if(P.ctrl){const pup=S.ents[P.ctrl.id];if(pup.inVent!=null)exitVent(pup);else{let bi=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(pup,v);if(d<bd){bd=d;bi=i;}});if(bi!=null)enterVent(pup,bi);}return;}const v=ventTarget();if(v==null)return;if(P.inVent!=null){exitVent(P);}else enterVent(P,v);refreshVentNav();}
 function canAct(){return S&&S.phase==='play'&&!S.modal&&S.killedT<=0;}
 function abilityReady(){const P=me();if(!P.alive)return false;
+  if(S.br)return P.role==='sage'&&P.team==='crew'&&P.abCd<=0;
   if(P.isNeu){if(P.nrole==='vulture')return !!vultBody(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0;if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
   if(P.isImp){const r=P.irole;
     if(r==='ventist'||r==='esci'||r==='shift'||r==='gimlet'||r==='mine'||r==='crab')return P.abCd<=0;
@@ -2426,7 +2540,7 @@ function doAbility(){
 }
 
 // ================= meetings =================
-function callMeeting(caller,body){if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
+function callMeeting(caller,body){if(S&&S.br)return;if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
   if(NET.client){rpc('callMeeting',[caller,body?{B:body.id}:null]);return;}
   if(S.phase!=='play')return;
   const P=me();
@@ -2760,6 +2874,7 @@ function finishEject(){
   if(S.teruWin!=null){const t=S.ents[S.teruWin];S.teruWin=null;endGame('teru',`てるてるの${t.name}がタスクを終わらせて追放された`,t.id);return;}
   if(checkWin())return;
   S.phase='play';S.bodies=[];S.sab=null;S.sabCd=20;S.meetingCd=15;
+  if(!NET.client&&Math.random()*100<BR_MEET)S.pendingBR=true;
   for(const e of S.ents){
     if(e.isImp)e.killCd=S.cfg.kcd;if(e.isNeu)e.killCd=S.cfg.kcd*1.8;
     for(let i=0;i<e.susp.length;i++)if(e.susp[i]<100)e.susp[i]*=.75;
@@ -2774,6 +2889,7 @@ function finishEject(){
 function checkWin(){
   if(!S||S.phase==='end'||S.phase==='review')return true;
   if(S.phase==='intro')return false;
+  if(S.br){if(!S.ents.some(e=>e.alive)){endGame('draw','全員が黒い針金の化物にやられてしまった…');return true;}return false;}
   const alive=S.ents.filter(e=>e.alive),imps=alive.filter(e=>e.isImp).length,neu=alive.filter(e=>e.isNeu&&e.nrole==='killer').length;
   const arson=alive.some(e=>e.nrole==='arson');
   if(!alive.length){endGame('draw','全員が死んでしまった');return true;}
@@ -2793,13 +2909,13 @@ function endGame(w,reason,wid){
   // 横取り勝利: ラバーズ(+7) > マグロ(+5) > 神(+4)
   const chickenSafe=w==='crew'&&S.ents.some(e=>e.alive&&e.role==='chicken');
   if(chickenSafe)reason+='（チキンが生き残ったので横取りされない）';
-  if(!['arson','lovers','teru','vulture'].includes(w)&&!chickenSafe){
+  if(!['arson','lovers','teru','vulture','br'].includes(w)&&!chickenSafe){
     const L=S.ents.filter(e=>e.lover!=null),tuna=S.ents.find(e=>e.alive&&e.nrole==='tuna'),god=S.ents.find(e=>e.alive&&e.nrole==='god'&&godReady(e));
     if(L.length&&L.every(e=>e.alive)){reason+=` …しかしラバーズ（${L.map(e=>e.name).join('♥')}）が横取り勝利！`;w='lovers';}
     else if(tuna){reason+=` …しかしマグロの${tuna.name}が横取り勝利！`;w='tuna';wid=tuna.id;}
     else if(god){reason+=` …しかし神の${god.name}が横取り勝利！`;w='god';wid=god.id;}
   }
-  const winners=w==='crew'?S.ents.filter(e=>e.team==='crew'&&!e.madmate):w==='imp'?S.ents.filter(e=>e.team==='imp'||e.madmate):w==='lovers'?S.ents.filter(e=>e.lover!=null||e.id===S.cupid):w==='draw'?[]:[S.ents[wid]];
+  const winners=w==='br'?S.ents.slice():w==='crew'?S.ents.filter(e=>e.team==='crew'&&!e.madmate):w==='imp'?S.ents.filter(e=>e.team==='imp'||e.madmate):w==='lovers'?S.ents.filter(e=>e.lover!=null||e.id===S.cupid):w==='draw'?[]:[S.ents[wid]];
   const opps=S.ents.filter(e=>e.nrole==='opp'&&e.alive&&!winners.includes(e));
   if(opps.length){winners.push(...opps);reason+=`（オポチュニストの${opps.map(e=>e.name).join('と')}も共存勝利）`;}
   const win=winners.includes(me());
@@ -2879,6 +2995,7 @@ function drawSplash(){
   }
 }
 function showIntro(){
+  if(S.br){brIntro();return;}
   const P=me();
   const lineup=P.isImp?S.ents.filter(e=>e.isImp).map(e=>e.id):P.isNeu?[P.id]:S.ents.map(e=>e.id);
   const neuTxt=S.cfg.neu?`と、全員が敵の第三陣営${S.cfg.neu}人`:'';
@@ -2962,6 +3079,12 @@ function render(dt){
     ctx.save();ctx.font='bold 16px "M PLUS Rounded 1c",sans-serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#000';ctx.fillStyle=e===P?'#9be7ff':'#fff';const lb=e===P?'あなたの分身':e.name;ctx.strokeText(lb,e.dop.x,e.dop.y-86);ctx.fillText(lb,e.dop.x,e.dop.y-86);ctx.restore();}
   // 賢者ガード
   for(const e of vis)if(e.guardT>0){ctx.save();ctx.strokeStyle=`rgba(255,240,150,${.6+.3*Math.sin(tm*8)})`;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(e.x,e.y-28,46,56,0,0,TAU);ctx.stroke();ctx.restore();}
+  if(S.br){const B=S.br,see=(x,y)=>!P.alive||canSee(P,x,y);
+    for(const c of B.coupons){if(c.got||!see(c.x,c.y))continue;ctx.save();ctx.translate(c.x,c.y-14+Math.sin(tm*3+c.x)*3);ctx.rotate(-.15);ctx.fillStyle='#ffe14a';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();rr(ctx,-20,-12,40,24,4);ctx.fill();ctx.stroke();
+      ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(-8,-12);ctx.lineTo(-8,12);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#a5321a';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('券',5,4);ctx.restore();}
+    const X=B.exit;if(see(X.x,X.y)||B.open){ctx.save();ctx.fillStyle=B.open?'#2a8a3a':'#3a3a3a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillRect(X.x-40,X.y-110,80,110);ctx.strokeRect(X.x-40,X.y-110,80,110);
+      ctx.fillStyle=B.open?'#4cff7a':'#7a7a7a';ctx.fillRect(X.x-44,X.y-138,88,24);ctx.strokeRect(X.x-44,X.y-138,88,24);ctx.fillStyle='#000';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(B.open?'EXIT 非常口':'EXIT 🔒',X.x,X.y-121);ctx.restore();}
+    if(S.mon&&see(S.mon.x,S.mon.y))drawWireMonster(ctx,S.mon,tm);}
   for(const e of vis)if(e.berserk&&e.alive){ctx.save();const g=ctx.createRadialGradient(e.x,e.y-30,8,e.x,e.y-30,70);g.addColorStop(0,'rgba(255,40,20,.55)');g.addColorStop(1,'rgba(255,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y-30,70,0,TAU);ctx.fill();ctx.restore();}
   for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});
     if(e.drill){ctx.save();ctx.translate(e.x,e.y-26);ctx.rotate(Math.atan2(e.drill.dy,e.drill.dx));ctx.fillStyle='#aab3c0';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(70,0);ctx.lineTo(20,-22);ctx.lineTo(20,22);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
@@ -3027,6 +3150,7 @@ function render(dt){
   if(P.nrole==='vulture'&&P.alive)for(const b of S.bodies)targets.push({x:b.x,y:b.y,c:'#c8a060',label:'🦅'});
   if(P.carryBody!=null){const b=S.bodies.find(b=>b.id===P.carryBody);if(b&&b.goal)targets.push({x:b.goal.x,y:b.goal.y,c:'#9be7ff',label:'⚰'+b.goal.room});}
   if(P.isImp)for(const e of S.ents)if(e.isImp&&e!==P&&e.alive&&e.inVent==null)targets.push({x:e.x,y:e.y-10,c:'#ff4747',label:'🔴'+e.name});
+  if(S.br){targets.length=0;if(S.br.open)targets.push({x:S.br.exit.x,y:S.br.exit.y,c:'#4cff7a',label:'🚪非常口'});}
   for(const t of targets){
     const sx=VW/2+(t.x-cam.x)*sc,sy=VH/2+(t.y-20-cam.y)*sc;
     if(sx>30&&sx<VW-30&&sy>30&&sy<VH-30)continue;
@@ -3040,6 +3164,28 @@ function render(dt){
 }
 
 let bubbleRects=[];
+// 黒い針金の人形の化物
+function drawWireMonster(c,M,tm){
+  const st=M.stun>0,j=st?0:1;c.save();c.translate(M.x,M.y);c.scale(M.face||1,1);c.lineCap='round';c.lineJoin='round';
+  if(st){c.globalAlpha=.75;}
+  const w=(a,b)=>Math.sin(tm*13+a)*b*j,sw=Math.sin(M.walk)*j;
+  c.strokeStyle='rgba(0,0,0,.25)';c.lineWidth=22;c.beginPath();c.ellipse(0,0,28,7,0,0,TAU);c.stroke();
+  c.strokeStyle='#050505';
+  // 脚・胴・腕（細い針金を何本も重ねる）
+  for(let k=0;k<3;k++){const o=k*2.2-2;c.lineWidth=2.4;c.beginPath();
+    c.moveTo(-10+o,0);c.lineTo(-6+sw*16+w(k,3),-60);c.lineTo(o+w(k+1,2),-150);   // 左脚〜胴
+    c.moveTo(12+o,0);c.lineTo(6-sw*16+w(k+2,3),-60);c.lineTo(o+w(k+3,2),-150);  // 右脚〜胴
+    c.moveTo(o,-150);c.lineTo(-38+w(k+4,6),-110-sw*10);c.lineTo(-54+w(k+5,8),-58);   // 左腕
+    c.moveTo(o,-150);c.lineTo(40+w(k+6,6),-112+sw*10);c.lineTo(58+w(k+7,8),-60);     // 右腕
+    c.stroke();}
+  // 指
+  c.lineWidth=1.6;for(const[x,y]of[[-54,-58],[58,-60]])for(let f=-1;f<=1;f++){c.beginPath();c.moveTo(x,y);c.lineTo(x+f*7+w(f,2),y+16);c.stroke();}
+  // 頭: ぐちゃぐちゃに巻いた針金
+  c.lineWidth=1.8;c.beginPath();let px=0,py=-178;c.moveTo(px,py);for(let k=0;k<26;k++){const a=k*2.3+(st?0:tm*2),r=10+((k*7)%13);px=Math.cos(a)*r;py=-180+Math.sin(a)*r*1.2;c.lineTo(px,py);}c.stroke();
+  if(st){c.globalAlpha=1;c.font='bold 22px sans-serif';c.textAlign='center';c.fillStyle='#9be7ff';c.fillText('💫 '+Math.ceil(M.stun),0,-215);}
+  else if(M.tgt!=null){c.fillStyle='#ff2020';c.beginPath();c.arc(-4,-182,3,0,TAU);c.arc(6,-182,3,0,TAU);c.fill();}
+  c.restore();
+}
 function drawBubble(e){
   // 画面が縮小されていても（スマホ）、吹き出しの文字は画面上で同じくらいの大きさに見えるようにする
   const k=clamp(1.05/(S.scale||1),1,2.6),b=e.bubble,lines=[];let t=b.text;while(t.length){lines.push(t.slice(0,14));t=t.slice(14);}
@@ -3384,9 +3530,9 @@ function setupHud(){
   const P=me();
   $('taskbox').classList.toggle('min',isTouch());
   document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp;b.classList.remove('on');});
-  $('btnVent').hidden=$('btnSab').hidden=!P.isImp;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
+  $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
   const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
-  $('btnAbility').hidden=!ab;
+  $('btnAbility').hidden=!ab||(!!S.br&&P.role!=='sage');
   $('killIc').textContent=P.irole==='vamp'?'🦇':P.irole==='rocket'?'🙌':'🔪';$('killLabel').textContent=P.irole==='vamp'?'噛む':P.irole==='rocket'?'持ち上げ':'キル';if(ab){$('abIc').textContent=ab[0];$('abLabel').textContent=ab[1];}
   $('plog').innerHTML='';$('pchatIn').value='';
   $('ventNav').hidden=true;$('sabMenu').hidden=true;$('alert').hidden=true;
@@ -3397,13 +3543,15 @@ function updateHud(){
   const P=me();
   $('tbFill').style.width=(S.taskDone/S.taskTotal*100)+'%';
   const role=$('role');
-  role.textContent=TEAM[P.team].n+(P.team==='crew'||P.irole?' / '+roleName(P):'')+(P.alive?'':'（幽霊）');role.style.color=TEAM[P.team].c;
+  if(S.br){role.textContent='🟨 バックルーム（全員仲間）'+(P.alive?'':'（幽霊）');role.style.color='#e8d36a';}else role.textContent=TEAM[P.team].n+(P.team==='crew'||P.irole?' / '+roleName(P):'')+(P.alive?'':'（幽霊）');role.style.color=TEAM[P.team].c;
   const ul=$('tasklist');let h='';
+  if(S.br)h=brHud();else{
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
   else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='god'?`<li style="color:#ffe08a">${godReady(P)?'✨ タスク完了！ 生きていれば横取りできる':`✨ 横取りまで タスク ${P.tasks.filter(t=>t.done).length}/${P.tasks.length}`}</li>`:''}${P.nrole==='papa'?`<li style="color:#ffd23d">${papaCam?'📷 構え中: マウスで四角を動かして F で撮影 ／ ':''}📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
   else h+=(P.role==='mad'?`<li style="color:${P.madmate?'#ff5a5a':'#7fb4ff'}">${P.madmate?'😈 マッドメイト: インポスターが勝てば勝ち、負ければ負け（誰がインポスターかは分からない）':`赤くなるまで ${Math.round((P.madT||0)*100)}%`}</li>`:'')+(P.role==='avenger'&&P.avAwake&&P.alive?`<li style="color:#ff8a5a">⚔ 報復の相手: ${S.ents[P.avTarget].name}${S.ents[P.avTarget].alive?'（キルすれば'+(P.avWhy==='lover'?'ラバーズとキューピッドの':'村陣営の')+'勝利）':'（もう死んでいる）'}</li>`:'')+`<li style="color:#9be7ff">${ROLES[roleKey(P)].d}${P.sheriff&&P.role!=='sheriff'?' ／ シェリフ: 村陣営以外をキルできる':''}</li>`+(P.role==='stunt'?`<li>防御: 残り${P.shield}回</li>`:'')+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');
+  }
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
   if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
@@ -3650,7 +3798,7 @@ function netTick(dt){
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
-      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
+      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face]:null}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
@@ -3737,7 +3885,7 @@ function applySnap(d){
   S.bodies=d.bodies.map(([id,x,y,color,room])=>({id,x,y,color,room}));
   S.sab=d.sab;S.taskDone=d.td;S.taskTotal=d.tt;S.impKnow=d.ik||{};S.cupid=d.cu;S.flash=d.flash||0;
   S.beams=d.beams.map(([x,y,dx,dy,L,t,thin])=>({x,y,dx,dy,L,t,thin}));
-  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
+  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br){if(MAPI!==BRI)loadMap(BRI);const b=x.br;const first=!S.br;S.br={got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];}if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
@@ -3836,7 +3984,7 @@ function update(dt){
   for(const b of S.booms)b.t-=dt;S.booms=S.booms.filter(b=>b.t>0);
   if(S.flash>0)S.flash-=dt;
   // マグロ: 3秒以上止まると死ぬ
-  for(const e of S.ents){if(e.nrole!=='tuna'||!e.alive)continue;
+  for(const e of S.ents){if(e.nrole!=='tuna'||!e.alive||S.br)continue;
     if(e.moving&&e.inVent==null)e.stillT=0;else e.stillT+=dt;
     if(e.stillT>=3){e.stillT=0;die(e,null);const P=me();if(e===P){S.killedT=2.6;splash('止まってしまった…','マグロは泳ぎ続けないと死んでしまう','#5aa0ff',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`🐟 ${e.name}が急に倒れた…`);
       checkWin();if(S.phase!=='play')return;}}
@@ -3953,7 +4101,7 @@ $('chatForm').onsubmit=e=>{e.preventDefault();delete $('chatInput').dataset.mic;
 let selColor=0,selCostume='none';try{const k=localStorage.getItem('amongus-costume');if(k&&COSTUMES.some(c=>c[0]===k))selCostume=k;}catch(e){}
 (function menu(){
   const nt=$('nroleToggles');for(const r of NSPECIAL){const l=document.createElement('label');l.innerHTML=`<input type="checkbox" value="${r}" checked>`;l.append(NROLES[r].n);nt.appendChild(l);}
-  MAPS.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.name;$('inMap').appendChild(o);});
+  MAPS.forEach((m,i)=>{if(m.hidden)return;const o=document.createElement('option');o.value=i;o.textContent=m.name;$('inMap').appendChild(o);});
   const it=$('iroleToggles');for(const r of ISPECIAL){const l=document.createElement('label');l.innerHTML=`<input type="checkbox" value="${r}" checked>`;l.append(IROLES[r].n);it.appendChild(l);}
   const rt=$('roleToggles');for(const r of SPECIAL){const l=document.createElement('label');l.innerHTML=`<input type="checkbox" value="${r}" checked>`;l.append(ROLES[r].n);rt.appendChild(l);}
   $('roleHelpMenu').innerHTML=roleHelpHTML();
@@ -3968,7 +4116,7 @@ let selColor=0,selCostume='none';try{const k=localStorage.getItem('amongus-costu
     if(+im.value>mx)im.value=mx;nu.max=Math.max(0,n-2);if(+nu.value+ +im.value>n-1)nu.value=Math.max(0,n-1-im.value);
     $('vImps').textContent=im.value;$('vNeu').textContent=nu.value;
     const c=n-im.value-nu.value;$('compo').textContent=`構成: インポスター${im.value}人 / 村陣営${c}人 / 第三陣営${nu.value}人（第三陣営は全員バラバラの敵）`;}
-  bind('inPlayers','vPlayers');bind('inImps','vImps');bind('inNeu','vNeu');bind('inTasks','vTasks');bind('inKcd','vKcd',x=>x+'s');bind('inDisc','vDisc',x=>x+'s');bind('inVote','vVote',x=>x+'s');bind('inVVol','vVVol');bind('inVRate','vVRate');bind('inMeyer','vMeyer');bind('inVult','vVult');
+  bind('inBR','vBR',x=>x+'%');bind('inPlayers','vPlayers');bind('inImps','vImps');bind('inNeu','vNeu');bind('inTasks','vTasks');bind('inKcd','vKcd',x=>x+'s');bind('inDisc','vDisc',x=>x+'s');bind('inVote','vVote',x=>x+'s');bind('inVVol','vVVol');bind('inVRate','vVRate');bind('inMeyer','vMeyer');bind('inVult','vVult');
   $('btnVoiceTest').onclick=()=>{loadVoices();const nm=['ChatGPT','Claude','Gemini'];nm.forEach((n,i)=>{const fake={isBot:true,alive:true,id:i+1,name:n};voiceOf(fake,`${n}です。よろしくね`,1,readCfg());});if(!jaVoices.length)toast('日本語の音声が見つかりません（Windowsの設定で日本語音声を追加してね）');};
   sync(true);
   loadLLM();for(const k in LLM_IDS){$(LLM_IDS[k][0]).value=LLM[k].key;$(LLM_IDS[k][1]).value=LLM[k].model;}
