@@ -2964,7 +2964,7 @@ function render(dt){
   // fog of war
   if(P.alive&&S.phase!=='review'){
     const r=visionR(P);
-    fctx.setTransform(1,0,0,1,0,0);fctx.globalCompositeOperation='source-over';fctx.fillStyle='rgba(3,4,10,.62)';fctx.fillRect(0,0,fog.width,fog.height);   // 見えない所も、マップは薄く見える（人は見えない）
+    fctx.setTransform(1,0,0,1,0,0);fctx.globalCompositeOperation='source-over';fctx.fillStyle='rgba(3,4,10,.45)';fctx.fillRect(0,0,fog.width,fog.height);   // 見えない所も、マップは薄く見える（人は見えない）
     fctx.globalCompositeOperation='destination-out';
     fctx.setTransform(dpr*sc,0,0,dpr*sc,dpr*(VW/2-cam.x*sc),dpr*(VH/2-cam.y*sc));
     const lite=matchMedia('(pointer:coarse)').matches,ox=V.x,oy=V.y-8,N=lite?120:220,stp=lite?10:6;
