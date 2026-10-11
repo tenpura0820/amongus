@@ -239,6 +239,8 @@ button{touch-action:manipulation}
 .llmrow input{min-width:0;background:#141a33;border:2px solid #3a4566;border-radius:8px;color:var(--fg);padding:5px 7px;font-weight:800}
 .msg .ai{font-size:10px;background:#111;color:#fff;border-radius:5px;padding:0 4px;margin-left:4px}
 #btnQuit{position:fixed;right:12px;top:12px;z-index:100;width:48px;height:48px}
+#pauseBar{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:90;background:rgba(10,12,24,.92);border:3px solid #ffd53d;border-radius:14px;padding:10px 16px;font-weight:800;color:#ffe680;text-align:center;max-width:92vw}
+#pauseBar button{margin-left:8px;border:2px solid #000;border-radius:10px;background:#ffd53d;padding:4px 12px;font-weight:800}
 #topRight{right:68px!important}
 #reviewBar{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:90;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;background:var(--panel);border:3px solid #000;border-radius:14px;padding:8px 14px;max-width:min(760px,92vw);box-shadow:0 0 0 1px var(--line) inset}
 #reviewBar b{font-family:var(--display);font-weight:400;font-size:22px}
@@ -320,7 +322,7 @@ button{touch-action:manipulation}
   <div id="alert" hidden></div>
   <div id="toast"></div>
   <div id="roomName"></div>
-  <div id="topRight"><button class="mini" id="btnFull" title="全画面">⛶</button><button class="mini" id="btnHelp" title="役職の説明 (H)">？</button><button class="mini" id="btnMap" title="マップ (M)">🗺</button></div>
+  <div id="topRight"><button class="mini" id="btnPause" title="一時停止（P）: 止めている間は全員と話せる">⏸</button><button class="mini" id="btnFull" title="全画面">⛶</button><button class="mini" id="btnHelp" title="役職の説明 (H)">？</button><button class="mini" id="btnMap" title="マップ (M)">🗺</button></div>
   <div id="sabMenu" hidden>
     <button data-sab="lights">💡 停電させる</button>
     <button data-sab="reactor">☢ リアクター崩壊</button>
@@ -369,6 +371,7 @@ button{touch-action:manipulation}
 <div id="splash" hidden><h2 id="spTitle"></h2><p id="spSub"></p><canvas id="splashCv" width="1520" height="400"></canvas><div class="btns" id="spBtns"></div></div>
 <button class="mini" id="btnQuit" hidden title="試合をやめる (Esc)">🚪</button>
 <div id="reviewBar" hidden><b id="rvTitle"></b><span id="rvSub"></span><span id="rvTime"></span><button id="rvNext">結果へ ▶</button></div>
+<div id="pauseBar" hidden>⏸ 一時停止中 — 全員と話せる（下の欄に書いて送信）　<button type="button" id="btnResume">▶ 再開</button></div>
 <div id="quitDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">試合をやめる？</h3><p style="margin:0 0 14px;font-weight:800;color:var(--muted)">設定画面に戻ります（ゲームは一時停止中）</p><div style="display:flex;gap:10px;justify-content:center"><button class="big" id="qYes" style="background:#ff5a5a">やめる</button><button class="big alt" id="qNo">続ける</button></div></div></div>
 <div id="lobby" hidden><b>🌐 部屋コード <span id="lbCode"></span></b><p id="lbInfo"></p><ul id="lbList"></ul><button id="lbLeave">部屋を出る</button></div>
 <div id="mapov" hidden><canvas id="mapCv" width="1500" height="900"></canvas></div>
@@ -571,7 +574,7 @@ function findByName(text){
   return null;
 }
 function llmSystem(e){
-  const goal=e.isImp?'インポスター陣営。自分たち以外を倒すのが目的。正体を隠し、村陣営を騙して追放させよう。仲間をかばいすぎないこと':
+  const goal=S&&S.br?'今はバックルーム Lv.0 にいる。役職や陣営は関係なく、ここにいる全員が仲間。疑ったり責めたりしない。黒い針金の化物から逃げながら、みんなでクーポンを集めて非常口から脱出するのが目的。協力的に、短く話す':e.isImp?'インポスター陣営。自分たち以外を倒すのが目的。正体を隠し、村陣営を騙して追放させよう。仲間をかばいすぎないこと':
     e.isNeu?'第三陣営。キルできる敵が全員いなくなり、投票できる人が1人以下になれば単独勝利。他の第三陣営も敵。自分のことを最適に考え、周りを利用しよう。正体は隠すこと':
     '村陣営（クルーメイト）。インポスターを倒して勝利しよう。証拠をもとに推理すること';
   return `あなたは宇宙船を舞台にした人狼系ゲーム（アモングアス風）のプレイヤー「${e.name}」です。${goal}。
@@ -1229,7 +1232,8 @@ function setupBackrooms(){
   const mr=far[Math.min(3,far.length-1)];
   S.mon={x:mr.x+mr.w/2,y:mr.y+mr.h/2,stun:0,path:null,repath:0,tgt:null,goal:null,face:1,walk:0,roar:0};
   S.bodies=[];S.sab=null;S.mushT=0;S.lockT=0;S.crabT=0;papaCam=null;
-  for(const e of S.ents){e.inVent=null;e.climb=null;e.disguise=null;e.invisT=0;e.berserk=false;e.vform=0;e.cannon=null;e.bubble=null;e.carriedBy=null;e.carry=[];e.ctrl=null;e.ctrlBy=null;e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}}
+  for(const e of S.ents){if(e.susp)e.susp.fill(0);if(e.ai){e.ai.witnessKill=null;e.ai.lone=false;e.ai.sawVent=null;e.ai.urgent=false;e.ai.notes=[];}
+    e.inVent=null;e.climb=null;e.disguise=null;e.invisT=0;e.berserk=false;e.vform=0;e.cannon=null;e.bubble=null;e.carriedBy=null;e.carry=[];e.ctrl=null;e.ctrlBy=null;e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}}
 }
 function enterBackrooms(){
   if(NET.client||!S||S.br)return;
@@ -1314,6 +1318,16 @@ function brThink(e){
   let best=null,bd=1e9;for(const c of B.coupons){if(c.got)continue;const d=dist(e,c)+(M&&!M.dead&&M.stun<=0?Math.max(0,500-dist(c,M))*2:0);if(d<bd){bd=d;best=c;}}
   if(best){const k='brc'+best.x+','+best.y;if(ai.goalKey!==k)setGoal(e,best.x,best.y,k);return;}
   if(atGoal(e)||!(ai.goalKey||'').startsWith('wander')){ai.goalKey=null;wander(e);}
+}
+function brReply(b,sp,text){
+  const B=S.br,M=S.mon;
+  if(/インポ|怪し|犯人|人外|キル|疑/.test(text))return pick(['ここでは全員仲間だよ！ 疑い合ってる場合じゃない','今は役職なんて関係ない、協力しよう！','仲間割れしたら化物の思うつぼだよ']);
+  if(/クーポン|券|枚/.test(text))return B.open?'クーポンはもう全部そろったよ！ 非常口へ急ごう':`いま${B.got}枚。あと${B.need-B.got}枚だね、手分けして探そう`;
+  if(/非常口|出口|EXIT|exit/.test(text))return B.open?`非常口は${B.exit.room}だよ！ 矢印の方向！`:'クーポンが全部そろわないと開かないみたい';
+  if(/化物|ばけもの|バケモノ|あいつ|逃げ|怖|こわ/.test(text))return M&&M.dead?'化物は今倒れてる！ 今のうちに！':M&&M.stun>0?'化物は今動けないみたい、今のうちに集めよう':pick(['見つかったらとにかく逃げて！','あいつ、見つけると追いかけてくる…','角を曲がって振り切ろう！']);
+  if(/ついて|一緒|来て|集合/.test(text))return pick(['わかった、一緒に行こう！','ついていく！ 離れないでね','了解、近くにいるね']);
+  if(/大丈夫|生き|無事/.test(text))return pick(['なんとか生きてる…','大丈夫！ そっちは？','ギリギリ逃げ切った…']);
+  return pick(['了解！ みんなで脱出しよう','仲間だから安心して','うん、協力しよう！','わかった！','ここ、ずっと同じ景色で迷いそう…']);
 }
 const BR_LINES=['ここどこ…？ 黄色い壁がずっと続いてる','蛍光灯のブーンって音が頭に響く…','カーペットが湿ってる…気持ち悪い','さっきもこの部屋通らなかった？','ノークリップしちゃったのかな','みんな離れないで！','クーポン集めて非常口を探そう','向こうで何か動いた気がする…','この部屋、何もない…','出口はどこにあるの…'];
 function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LINES));}
@@ -2155,6 +2169,7 @@ function completeTask(e,t){if(t.done)return;
 
 // ================= bots =================
 function perceive(e){
+  if(S.br)return;   // バックルームでは全員仲間なので、だれも疑わない
   for(const o of S.ents){
     if(o===e||!o.alive||hid(o))continue;
     if(canSee(e,o.x,o.y)){
@@ -3146,11 +3161,11 @@ function render(dt){
   ctx.save();ctx.translate(VW/2,VH/2);ctx.scale(sc,sc);ctx.translate(-cam.x,-cam.y);
   ctx.font='bold 16px "M PLUS Rounded 1c",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   for(const e of vis){const y=e.y-(e.alive?86:96);ctx.globalAlpha=e.alive?1:.65;
-    const reveal=seesRoles(P)||e===P;
-    const color=P.isImp&&e.isImp&&e!==P?'#ff6a6a':reveal?(e.team==='crew'?'#fff':TEAM[e.team].c):'#fff';
+    const reveal=(seesRoles(P)&&!S.br)||e===P;
+    const color=S.br?(e===P?'#fff':'#ffe680'):P.isImp&&e.isImp&&e!==P?'#ff6a6a':reveal?(e.team==='crew'?'#fff':TEAM[e.team].c):'#fff';
     const heart=!reveal&&(P.lover===e.id||(P.nrole==='cupid'&&e.lover!=null))?'♥':'';const oil=P.nrole==='arson'&&P.oil.has(e.id)?'🛢':'';
     const shown=P.isImp&&e.isImp?e:faceOf(e);
-    const label=(P.isImp&&e.isImp&&e!==P?'🔴':'')+(reveal?`${e.name}［${roleName(e)}］`:S.mushT>0&&e.alive&&e!==P&&!(P.isImp&&e.isImp)?'🍄？？？':shown.name+heart)+oil+(P.isImp&&e.disguise?`（${faceOf(e).name}に変身中）`:'');
+    const label=(S.br?(e!==P&&e.alive?'🤝':''):P.isImp&&e.isImp&&e!==P?'🔴':'')+(reveal?`${e.name}［${roleName(e)}］`:S.mushT>0&&e.alive&&e!==P&&!(P.isImp&&e.isImp)?'🍄？？？':shown.name+heart)+oil+(P.isImp&&e.disguise?`（${faceOf(e).name}に変身中）`:'');
     // 名前の後ろに半透明の帯（体の色のふち）を敷いて、暗い背景でも読めるようにする
     const w=ctx.measureText(label).width+16;
     ctx.fillStyle='rgba(8,10,20,.72)';ctx.strokeStyle=COLORS[e.color].b;ctx.lineWidth=2.5;
@@ -3372,7 +3387,7 @@ function micText(txt){
 
 // ================= proximity chat =================
 // あなたの言葉は全員のAIに届く（生きている間は生きているAI、幽霊の間は幽霊のAI）
-function hearers(sp){if(S.phase==='review')return S.ents.filter(o=>o!==sp&&o.isBot);return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive&&(sp.alive?o.inVent==null:true));}
+function hearers(sp){if(S.hold)return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive);if(S.phase==='review')return S.ents.filter(o=>o!==sp&&o.isBot);return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive&&(sp.alive?o.inVent==null:true));}
 function say(e,text,toPlayer,raw){
   e.bubble={text,t:5};
   if(!raw)netBc({t:'say',who:e.id,text,tp:!!toPlayer});
@@ -3465,6 +3480,7 @@ function contentReply(b,text){
   return null;
 }
 function ruleReply(b,sp,text){
+  if(S.br)return brReply(b,sp,text);
   if(S.phase==='review')return reviewReply(b,sp,text);
   const t=text.toLowerCase(),tgt=findByName(text),about=tgt&&tgt!==b&&tgt!==sp?tgt:null;
   const room=S.phase==='meeting'?b.ai.mtRoom:roomOf(b.x,b.y),liar=b.team!=='crew';
@@ -3561,8 +3577,9 @@ async function llmProx(b,sp,text,hs){
 // ================= HUD =================
 function setupHud(){
   const P=me();
+  $('btnPause').hidden=!!NET.mode;$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';
   $('taskbox').classList.toggle('min',isTouch());
-  document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp;b.classList.remove('on');});
+  document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp||!!S.br;b.classList.remove('on');});if(S.br)S.chan='all';
   $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
   const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
   {const brAb=S.br?(P.role==='sage'&&P.team==='crew'?ab:P.isImp?{sniper:['🎯','狙撃'],gimlet:['🔩','ドリル'],cannon:['🔫','波動砲'],viper:['🐍','鈍足の毒']}[P.irole]:P.nrole==='verity'?['🦵','変身/攻撃']:null):ab;
@@ -3987,6 +4004,9 @@ function frame(now){
 }
 function update(dt){
   if(S.paused)return;
+  // 一時停止中: 試合は止まるが、会話（全員と話せる）と吹き出しだけ進む
+  if(S.hold){S.t+=dt;for(const e of S.ents)if(e.bubble&&(e.bubble.t-=dt)<=0)e.bubble=null;
+    for(let i=S.chatQ.length-1;i>=0;i--)if(S.chatQ[i].at<=S.t){const c=S.chatQ.splice(i,1)[0];c.fn();}return;}
   if(S.isClient){clientUpdate(dt);return;}
   if(NET.host)netTick(dt);
   if(S.splashT>0){S.splashT-=dt;if(S.splashT<=0){hideSplash();S.phase='play';}return;}
@@ -4048,6 +4068,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyE'||e.code==='Space'){doUse();e.preventDefault();}
   else if(e.code==='KeyR')doReport();
   else if(e.code==='KeyF')doAbility();
+  else if(e.code==='KeyP')togglePause();
   else if(e.code==='KeyI'){if(me().isImp)setChan(S.chan==='imp'?'all':'imp');}
   else if(e.code==='KeyG'){if(canAct())ignite(me());}
   else if(e.code==='KeyH')showHelp();
@@ -4070,6 +4091,11 @@ function quitGame(){
   setMic(false);closeModal();resetLeftovers();
   for(const id of ['meeting','splash','mapov','sabMenu','ventNav','modal','hud','btnQuit','quitDlg','reviewBar'])$(id).hidden=true;
   S=null;$('menu').hidden=false;setOnlineUI();
+}
+function togglePause(){
+  if(!S||NET.mode||S.phase!=='play'||S.isClient)return;
+  S.hold=!S.hold;$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';snd('click');
+  if(S.hold){setTimeout(()=>{try{$('pchatIn').focus();}catch(e){}},0);}else cv.focus();
 }
 function askQuit(){if(!S)return;if(S.phase==='end'){quitGame();return;}if(S.phase==='review'){showResult();return;}S.paused=true;$('quitDlg').hidden=false;$('qNo').focus();}
 function closeQuit(){$('quitDlg').hidden=true;if(S)S.paused=false;cv.focus();}
@@ -4126,6 +4152,7 @@ $('inFgBg').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const im=new I
   let u=c.toDataURL('image/jpeg',.85);try{localStorage.setItem('amongus-fungle-bg',u);}catch(e){try{u=c.toDataURL('image/jpeg',.6);localStorage.setItem('amongus-fungle-bg',u);}catch(e2){toast('画像が大きすぎて保存できなかった');}}
   URL.revokeObjectURL(im.src);loadFgBg();};im.src=URL.createObjectURL(f);ev.target.value='';};
 loadFgBg();
+$('btnPause').onclick=togglePause;$('btnResume').onclick=togglePause;
 $('btnScale').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;if(M.scaleA==null){M.scaleA=M.sel;M.sel=null;renderCards();updateMeetingUI();return;}if(M.sel===M.scaleA)return;useBalance(P,S.ents[M.scaleA],S.ents[M.sel]);M.scaleA=null;};
 $('btnGuess').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;const t=S.ents[M.sel];if(!t.alive||(t.isImp&&P.role!=='nguesser')||t===P)return;doGuess(P,t,$('guessSel').value);};
 $('btnSkip').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote')return;if(M.scale){toast('天秤の発動中はスキップできない');return;}M.votes[me().id]='skip';if(NET.client)rpc('vote',['skip']);snd('click');renderCards();updateMeetingUI();};
