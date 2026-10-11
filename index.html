@@ -480,8 +480,8 @@ function genBackrooms(){
   while(stack.length){const[i,j]=stack[stack.length-1];const nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([a,b])=>[i+a,j+b]).filter(([a,b])=>a>=0&&b>=0&&a<C&&b<Rw&&!seen.has(a+','+b));
     if(!nb.length){stack.pop();continue;}const[a,b]=nb[Math.floor(rnd()*nb.length)];seen.add(a+','+b);links.push([nm(i,j),nm(a,b)]);stack.push([a,b]);}
   for(let k=0;k<6;k++){const i=Math.floor(rnd()*(C-1)),j=Math.floor(rnd()*Rw);links.push([nm(i,j),nm(i+1,j)]);}
-  const m=genMap({name:'🟨 バックルーム Lv.0',W:150*2+C*SX,H:150*2+Rw*SY,hub:nm(0,0),lights:nm(2,1),reactor:nm(3,2),rooms,links});
-  m.backrooms=true;m.hidden=true;m.plats=[];return m;
+  const m=genMap({name:'🟨 バックルーム Lv.0（確定）',W:150*2+C*SX,H:150*2+Rw*SY,hub:nm(0,0),lights:nm(2,1),reactor:nm(3,2),rooms,links});
+  m.backrooms=true;m.plats=[];return m;   // マップ一覧で選ぶと「確定バックルーム」
 }
 const MAPS=[
   {name:'🚀 宇宙船',skeld:true},
@@ -516,7 +516,7 @@ const MAPS=[
     ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
   genBackrooms(),
 ];
-const BRI=MAPS.length-1;   // バックルームのマップ番号（マップ一覧には出さない）
+const BRI=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=85;   // キルできる距離
 
@@ -1292,7 +1292,7 @@ function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LI
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
-  const brStart=!NET.client&&Math.random()*100<(cfg.brPct??BR_PER);
+  const brStart=!NET.client&&((cfg.map||0)===BRI||Math.random()*100<(cfg.brPct??BR_PER));
   const mapI=brStart?BRI:(cfg.map||0);
   if(MAPI!==mapI)loadMap(mapI);else resetVents();
   try{tabCh&&tabCh.postMessage({type:'start',tab:TAB_ID});}catch(e){}
