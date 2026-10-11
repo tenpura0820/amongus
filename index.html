@@ -105,7 +105,8 @@ input,select{font-family:var(--body)}
 .pcard.speak{box-shadow:0 0 0 4px #7fd6ff,0 0 18px #7fd6ff}
 .pcard.talk{box-shadow:0 0 0 4px #ffd53d,0 0 18px #ffd53d}
 #plog{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);width:min(420px,58vw);display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:800;pointer-events:none}
-#plog div{background:rgba(0,0,0,.55);border-radius:8px;padding:2px 8px;text-shadow:1px 1px 0 #000}
+#plog div{background:rgba(6,8,18,.82);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:3px 9px;text-shadow:1px 1px 0 #000;line-height:1.35}
+#plog div b{text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
 #plog div.ghost{color:#c9d6ff;font-style:italic}
 .pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;max-height:50vh;overflow:auto}
 .pick button{display:flex;gap:6px;align-items:center;border:3px solid #000;border-radius:10px;background:#3e4a66;color:#fff;padding:6px;font-family:var(--body);font-weight:800;font-size:13px}
@@ -127,7 +128,7 @@ button{touch-action:manipulation}
   #btnQuit{width:42px;height:42px}
   #topRight{right:58px!important;gap:6px}
   #roomName{font-size:13px;bottom:6px}
-  #plog{font-size:11.5px}
+  #plog{font-size:13.5px}
   #joy{width:110px;height:110px}
   .mpanel{padding:10px}
   #sabMenu{bottom:150px}
@@ -200,11 +201,11 @@ button{touch-action:manipulation}
 .chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
 .chip{width:14px;height:14px;border-radius:50%;border:2px solid #000}
 .chat{display:grid;grid-template-rows:1fr auto auto;border-left:4px solid #000;background:#e6ecf5;min-height:0;color:#111}
-#chatLog{overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+#chatLog{overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px;font-size:15px;line-height:1.4}
 .msg{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:start}
 .msg .dot{width:20px;height:20px;border-radius:50%;border:2px solid #000;margin-top:1px}
-.msg b{font-size:12px;display:block;color:#3a4256}
-.msg p{margin:0;background:#fff;border:2px solid #000;border-radius:10px;padding:4px 8px;font-weight:800}
+.msg b{font-size:12.5px;display:block;color:#2a3246}
+.msg p{margin:0;background:#fff;border:2px solid #000;border-radius:10px;padding:5px 9px;font-weight:800;word-break:break-word}
 .msg.sys p{background:#ffe9a8}
 .quick{display:flex;flex-wrap:wrap;gap:5px;padding:6px 8px;border-top:3px solid #000;background:#cfd8e6}
 .quick button{font-size:12px;padding:5px 8px;border-radius:8px;border:2px solid #000;background:#fff;color:#111;font-family:var(--body);font-weight:800}
@@ -223,7 +224,7 @@ button{touch-action:manipulation}
 #mHint{font-weight:800;color:#fff;text-shadow:1px 1px 0 #000;font-size:14px}
 @media (max-width:760px){.mbody{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 230px}.chat{border-left:0;border-top:4px solid #000}#mGrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 /* スマホ縦の会議: 画面からはみ出さないように */
-@media (max-width:520px){#meeting{padding:4px}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
+@media (max-width:520px){#meeting{padding:4px}.mbody{grid-template-rows:minmax(0,40%) minmax(0,1fr)!important}.pcard{padding:3px 6px!important}.pcard canvas{height:38px!important}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
 
 /* ---------- splash / map ---------- */
 #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.88);text-align:center;padding:16px;gap:10px}
@@ -2976,8 +2977,9 @@ function render(dt){
     ctx.beginPath();rr(ctx,e.x-w/2,y-12,w,24,12);ctx.fill();ctx.stroke();
     ctx.fillStyle=color;ctx.fillText(label,e.x,y+1);}
   ctx.globalAlpha=1;ctx.textBaseline='alphabetic';
+  bubbleRects=[];
   if(liveMic&&!P.bubble)drawBubble({x:P.x,y:P.y,alive:P.alive,bubble:{text:'🎤 '+liveMic.text,t:1}});
-  for(const e of vis){
+  for(const e of vis.slice().sort((a,b)=>b.y-a.y)){
     if(e.bubble)drawBubble(e);
     else if(e.ai.heardT>0&&e!==P){ctx.font='22px system-ui';ctx.textAlign='center';ctx.fillText('👂',e.x+30,e.y-62);}
     if(speakingId===e.id&&e!==P){ctx.font='22px system-ui';ctx.textAlign='center';ctx.fillText('🔊',e.x-32,e.y-62);}
@@ -3013,12 +3015,17 @@ function render(dt){
   }
 }
 
+let bubbleRects=[];
 function drawBubble(e){
-  const b=e.bubble,lines=[];let t=b.text;while(t.length){lines.push(t.slice(0,15));t=t.slice(15);}
-  ctx.save();ctx.globalAlpha=Math.min(1,b.t)*(e.alive?1:.75);ctx.font='bold 14px "M PLUS Rounded 1c",sans-serif';
-  const w=Math.max(...lines.map(l=>ctx.measureText(l).width))+16,h=lines.length*18+10,x=e.x-w/2,y=e.y-(e.alive?106:116)-h;
-  ctx.fillStyle=e.alive?'#fff':'#dfe6ff';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();rr(ctx,x,y,w,h,8);ctx.moveTo(e.x-6,y+h);ctx.lineTo(e.x,y+h+8);ctx.lineTo(e.x+6,y+h);ctx.fill();ctx.stroke();
-  ctx.fillStyle='#111';ctx.textAlign='center';ctx.textBaseline='top';lines.forEach((l,i)=>ctx.fillText(l,e.x,y+6+i*18));ctx.restore();
+  // 画面が縮小されていても（スマホ）、吹き出しの文字は画面上で同じくらいの大きさに見えるようにする
+  const k=clamp(1.05/(S.scale||1),1,2.6),b=e.bubble,lines=[];let t=b.text;while(t.length){lines.push(t.slice(0,14));t=t.slice(14);}
+  ctx.save();ctx.globalAlpha=Math.min(1,b.t)*(e.alive?1:.8);ctx.font=`bold ${Math.round(15*k)}px "M PLUS Rounded 1c",sans-serif`;
+  const lh=19*k,w=Math.max(...lines.map(l=>ctx.measureText(l).width))+18*k,h=lines.length*lh+10*k,x=e.x-w/2;let y=e.y-(e.alive?106:116)-h;
+  // ほかの吹き出しと重なる時は上にずらす
+  for(let n=0;n<8;n++){const o=bubbleRects.find(r=>x<r.x+r.w&&x+w>r.x&&y<r.y+r.h+4*k&&y+h+4*k>r.y);if(!o)break;y=o.y-h-6*k;}
+  bubbleRects.push({x,y,w,h});
+  ctx.fillStyle=e.alive?'#fff':'#dfe6ff';ctx.strokeStyle='#000';ctx.lineWidth=3*k;ctx.beginPath();rr(ctx,x,y,w,h,8*k);ctx.moveTo(e.x-6*k,y+h);ctx.lineTo(e.x,y+h+9*k);ctx.lineTo(e.x+6*k,y+h);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#111';ctx.textAlign='center';ctx.textBaseline='top';lines.forEach((l,i)=>ctx.fillText(l,e.x,y+6*k+i*lh));ctx.restore();
 }
 
 // ================= voice (読み上げ / マイク) =================
@@ -3169,11 +3176,11 @@ function say(e,text,toPlayer,raw){
   const P=me();
   const nearOnly=!P.alive&&P.role==='redhood';
   if(e===P||toPlayer||S.phase==='review'||(nearOnly?dist(P,e)<450:P.alive?e.alive&&e.inVent==null&&dist(P,e)<700:true)){
-    S.plog.push({who:e.name,text,ghost:!e.alive,t:S.t,mic:e===P&&viaMic});if(S.plog.length>5)S.plog.shift();renderPlog();
+    S.plog.push({who:e.name,text,ghost:!e.alive,t:S.t,mic:e===P&&viaMic,col:COLORS[e.color].b});if(S.plog.length>5)S.plog.shift();renderPlog();
     if(e!==P)voiceOf(e,text,toPlayer?1:P.alive?clamp(1-dist(P,e)/800,.2,1):.9);
   }
 }
-function renderPlog(){const el=$('plog');el.innerHTML='';for(const l of S.plog){const d=document.createElement('div');if(l.ghost)d.className='ghost';if(l.imp)d.className='imp';d.textContent=`${l.ghost?'👻 ':''}${l.mic?'🎤 ':''}${l.who}: ${l.text}`;el.appendChild(d);}}
+function renderPlog(){const el=$('plog');el.innerHTML='';for(const l of S.plog){const d=document.createElement('div');if(l.ghost)d.className='ghost';if(l.imp)d.className='imp';const n=document.createElement('b');n.textContent=`${l.ghost?'👻 ':''}${l.mic?'🎤 ':''}${l.who}`;if(l.col){const h=l.col.replace('#',''),f=h.length===3?h.split('').map(c=>c+c).join(''):h,[r,g,b]=[0,2,4].map(i=>parseInt(f.slice(i,i+2),16)),lum=.3*r+.59*g+.11*b;n.style.color=lum<90?`rgb(${Math.round(r+(255-r)*.6)},${Math.round(g+(255-g)*.6)},${Math.round(b+(255-b)*.6)})`:l.col;}d.append(n,document.createTextNode('：'+l.text));el.appendChild(d);}}
 function playerSay(text,P){
   if(!S)return;if(NET.client){rpc('playerSay',[text]);return;}P=P||me();if((S.phase!=='play'&&S.phase!=='review')||(S.killedT>0&&S.phase==='play'))return;
   say(P,text);
