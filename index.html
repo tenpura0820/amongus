@@ -1301,6 +1301,18 @@ function reviveFor(id){
     if(r===P){snd('task');P.labLog.push(`${S.ents[id].name}が死んだので復活した`);if(S.phase==='play')splash('復活！',`あなたをキルした${S.ents[id].name}が死んだので、生き返った`,'#ff7a7a',{caller:r.id},null),S.killedT=2.2;}
   }
 }
+// キルした人・死体・もう1人の「3人だけ」が近くにいた時は、そのもう1人は見ていなくても犯人が分かる
+const LONE_R=450;
+function loneWitness(k,v){
+  if(!k||!S||S.phase!=='play'||dist(k,v)>LONE_R)return;
+  const near=S.ents.filter(o=>o.alive&&o!==k&&o!==v&&o.inVent==null&&dist(o,v)<LONE_R);
+  if(near.length!==1)return;
+  const w=near[0],face=faceOf(k);
+  if(face===w||(w.isImp&&k.isImp))return;
+  if(w===me()){toast(`近くにいたのは ${face.name} だけだった…！`);return;}
+  if(!w.isBot)return;
+  w.susp[face.id]=100;if(w.ai.witnessKill==null){w.ai.witnessKill=face.id;w.ai.lone=true;}w.ai.urgent=true;
+}
 function die(v,killer){
   if(killer&&v.vform>0)return;   // Verityの変身中は、どんな攻撃でも死なない
   v.alive=false;v.inVent=null;v.path=null;v.doing=0;v.invisT=0;v.ai.killedBy=killer?killer.id:null;v.ai.follow=null;
@@ -1309,6 +1321,7 @@ function die(v,killer){
   if(v.remote)sendTo(v,{t:'died',by:killer?killer.id:-1});
   // ラバーズ: 片方が死ぬともう片方も死ぬ
   reviveFor(v.id);
+  loneWitness(killer,v);
   onDeathRoles(v);
   if(v.lover!=null){const L=S.ents[v.lover];if(L.alive){die(L,null);const P=me();
     if(L===P){S.killedT=2.6;splash('後追い…',`ラバーズの${v.name}が死んだので、あなたも後を追った`,'#ff7ab8',{body:{id:L.id}},null);}
@@ -2464,7 +2477,7 @@ function buildMeetingKnowledge(M){
       for(const x of e.ai.clears||[]){if(!S.ents[x].alive)continue;q(M,rand(4,9),e.id,`${S.ents[x].name}がタスク終わらせるの何回も見たよ。白だと思う`,{k:'safe',x,w:-15});}
       e.ai.clears=null;
       for(const n of e.ai.notes||[]){if(said.has(n.x)||!S.ents[n.x].alive||n.x===e.id)continue;said.add(n.x);q(M,rand(2.5,7),e.id,n.text,{k:'sus',x:n.x,w:n.w});}
-      if(e.ai.witnessKill!=null&&S.ents[e.ai.witnessKill].alive){const x=e.ai.witnessKill;said.add(x);q(M,rand(1.5,3.5),e.id,`${S.ents[x].name}がキルしていました。現行犯です！ ${S.ents[x].name}に投票して！`,{k:'kill',x,w:60});}
+      if(e.ai.witnessKill!=null&&S.ents[e.ai.witnessKill].alive){const x=e.ai.witnessKill;said.add(x);q(M,rand(1.5,3.5),e.id,e.ai.lone?`${S.ents[x].name}がキルしてた！ 死体の近くには自分と${S.ents[x].name}しかいなかった！ ${S.ents[x].name}に投票して！`:`${S.ents[x].name}がキルしていました。現行犯です！ ${S.ents[x].name}に投票して！`,{k:'kill',x,w:60});}
       if(e.ai.sawVent!=null&&S.ents[e.ai.sawVent].alive&&!(e===caller&&!body)&&!said.has(e.ai.sawVent)){const x=e.ai.sawVent;said.add(x);q(M,rand(2,4),e.id,`${S.ents[x].name}がベントを使ってた！`,{k:'vent',x,w:55});}
       if(body&&e.ai.nearBody)for(const x of e.ai.nearBody){if(said.has(x)||!S.ents[x].alive||x===e.id)continue;said.add(x);q(M,rand(3,7),e.id,`死体の近くに${S.ents[x].name}がいた`,{k:'near',x,w:18});}
       if(body&&Math.random()<.5){const s=e.seen[body.id];if(s&&S.t-s.t<60)q(M,rand(3,9),e.id,`${S.ents[body.id].name}を最後に見たのは${s.room}だった`);}
@@ -2714,7 +2727,7 @@ function finishEject(){
     if(e.isImp)e.killCd=S.cfg.kcd;if(e.isNeu)e.killCd=S.cfg.kcd*1.8;
     for(let i=0;i<e.susp.length;i++)if(e.susp[i]<100)e.susp[i]*=.75;
     e.ai.body=null;e.ai.nearBody=null;e.ai.notes=[];e.ai.urgent=false;e.ai.selfReport=null;e.ai.ventTo=null;e.ai.flee=0;e.ai.target=null;e.ai.huntAt=S.t+rand(0,6);e.ai.fake=null;
-    if(e.ai.witnessKill!=null&&!S.ents[e.ai.witnessKill].alive)e.ai.witnessKill=null;
+    if(e.ai.witnessKill!=null&&!S.ents[e.ai.witnessKill].alive){e.ai.witnessKill=null;e.ai.lone=false;}
     if(e.ai.sawVent!=null&&!S.ents[e.ai.sawVent].alive)e.ai.sawVent=null;
   }
   placeAtTable();
