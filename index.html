@@ -372,7 +372,7 @@ button{touch-action:manipulation}
 <button class="mini" id="btnQuit" hidden title="試合をやめる (Esc)">🚪</button>
 <div id="reviewBar" hidden><b id="rvTitle"></b><span id="rvSub"></span><span id="rvTime"></span><button id="rvNext">結果へ ▶</button></div>
 <div id="pauseBar" hidden>⏸ 一時停止中 — 全員と話せる（下の欄に書いて送信）　<button type="button" id="btnResume">▶ 再開</button></div>
-<div id="quitDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">試合をやめる？</h3><p style="margin:0 0 14px;font-weight:800;color:var(--muted)">設定画面に戻ります（ゲームは一時停止中）</p><div style="display:flex;gap:10px;justify-content:center"><button class="big" id="qYes" style="background:#ff5a5a">やめる</button><button class="big alt" id="qNo">続ける</button></div></div></div>
+<div id="quitDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">試合をやめる？</h3><p style="margin:0 0 14px;font-weight:800;color:var(--muted)">設定画面に戻ります（ゲームは一時停止中・下の欄で全員と話せる）</p><div style="display:flex;gap:10px;justify-content:center"><button class="big" id="qYes" style="background:#ff5a5a">やめる</button><button class="big alt" id="qNo">続ける</button></div><form id="qChat" autocomplete="off" style="display:flex;gap:6px;margin-top:14px"><input id="qChatIn" placeholder="一時停止中は全員と話せる（Enterで送信）" style="flex:1;min-width:0;border:2px solid #000;border-radius:8px;padding:7px 9px;font-weight:800"><button style="border:2px solid #000;border-radius:8px;background:var(--crew);padding:0 12px">送信</button></form><div id="qLog" style="margin-top:8px;max-height:26vh;overflow:auto;text-align:left;font-size:13.5px;font-weight:800"></div></div></div>
 <div id="lobby" hidden><b>🌐 部屋コード <span id="lbCode"></span></b><p id="lbInfo"></p><ul id="lbList"></ul><button id="lbLeave">部屋を出る</button></div>
 <div id="mapov" hidden><canvas id="mapCv" width="1500" height="900"></canvas></div>
 
@@ -483,6 +483,16 @@ function genBackrooms(){
   const m=genMap({name:'🟨 バックルーム Lv.0（確定）',W:150*2+C*SX,H:150*2+Rw*SY,hub:nm(0,0),lights:nm(2,1),reactor:nm(3,2),rooms,links,hw:240});
   m.backrooms=true;m.plats=[];return m;   // マップ一覧で選ぶと「確定バックルーム」
 }
+// バックルーム Lv.1: 折り返しながら続く長い線路のトンネル。線路のわきに隠れられる「穴」がある（奥ほど少ない）
+function genBackrooms1(){
+  const Wt=3900,rows=4,X0=150,TH=200,SP=640,rooms=[],ground=[];
+  for(let k=0;k<rows;k++){const y=220+k*SP;rooms.push(['線路'+(k+1),X0,y,Wt,TH,'#4a4038']);
+    if(k<rows-1){const right=k%2===0;ground.push([right?X0+Wt-200:X0,y+TH-20,200,SP-TH+40,'r']);}
+    const gap=380+k*320;let hi=0;
+    for(let x=X0+320;x<X0+Wt-320;x+=gap){const up=(hi++%2===0);rooms.push(['穴',x,up?y-100:y+TH-10,120,110,'#1e1a16']);}}
+  const m=genMap({name:'🚂 バックルーム Lv.1（確定）',W:X0*2+Wt,H:220+rows*SP,hub:'線路1',lights:'線路2',reactor:'線路3',rooms,links:[],ground});
+  m.backrooms=true;m.lv1=true;m.plats=[];return m;
+}
 const MAPS=[
   {name:'🚀 宇宙船',skeld:true},
   genMap({name:'🧪 雪原研究所',W:3200,H:2000,hub:'食堂',lights:'発電所',reactor:'原子炉',rooms:[
@@ -515,8 +525,9 @@ const MAPS=[
     // L=梯子 G=グラップラー（ロープで一気に移動）。座標は拡大前
     ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
   genBackrooms(),
+  genBackrooms1(),
 ];
-const BRI=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
+const BRI=MAPS.length-2,BR1I=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=85;   // キルできる距離
 
@@ -908,6 +919,23 @@ function drawFungleGround(c){
     else if(z==='m'&&d>40&&rnd()<.05)rock(x,y+20,14+rnd()*18,'#8f5a2a');
   }
 }
+function drawLv1Ground(c){
+  let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  c.fillStyle='#0b0907';c.fillRect(0,0,MAPW,MAPH);
+  for(const r of RECTS){c.fillStyle='#1d1914';c.fillRect(r.x-16,r.y-60,r.w+32,r.h+76);}
+  for(const r of RECTS){if(r.n==='穴')continue;   // コンクリートの壁と砂利
+    if(r.w>=r.h){c.fillStyle='#4d463d';c.fillRect(r.x,r.y-52,r.w,52);c.fillStyle='rgba(0,0,0,.25)';for(let k=0;k<r.w/70;k++)c.fillRect(r.x+rnd()*r.w,r.y-52+rnd()*40,10+rnd()*30,4+rnd()*14);c.fillStyle='#38322b';c.fillRect(r.x,r.y-10,r.w,10);}
+    c.fillStyle='#5b5249';c.fillRect(r.x,r.y,r.w,r.h);c.fillStyle='rgba(0,0,0,.22)';for(let k=0;k<r.w*r.h/700;k++)c.fillRect(r.x+rnd()*r.w,r.y+rnd()*r.h,3,3);
+    c.fillStyle='rgba(255,255,255,.07)';for(let k=0;k<r.w*r.h/900;k++)c.fillRect(r.x+rnd()*r.w,r.y+rnd()*r.h,2,2);}
+  for(const r of ROOMS){if(!r.n.startsWith('線路'))continue;const yc=r.y+r.h/2;   // まくら木とレール
+    c.fillStyle='#5a3d22';for(let x=r.x+10;x<r.x+r.w-10;x+=42){c.fillRect(x,yc-40,12,80);}
+    c.strokeStyle='#2a2622';c.lineWidth=10;for(const dy of[-24,24]){c.beginPath();c.moveTo(r.x,yc+dy);c.lineTo(r.x+r.w,yc+dy);c.stroke();}
+    c.strokeStyle='#a6acb2';c.lineWidth=5;for(const dy of[-25,23]){c.beginPath();c.moveTo(r.x,yc+dy);c.lineTo(r.x+r.w,yc+dy);c.stroke();}
+    for(let x=r.x+200;x<r.x+r.w;x+=650){const g=c.createRadialGradient(x,r.y-30,4,x,r.y-30,170);g.addColorStop(0,'rgba(255,220,120,.35)');g.addColorStop(1,'rgba(255,220,120,0)');c.fillStyle=g;c.fillRect(x-170,r.y-200,340,340);c.fillStyle='#ffe9a8';c.fillRect(x-12,r.y-40,24,10);}}
+  for(const r of ROOMS){if(r.n!=='穴')continue;   // 隠れられる穴
+    c.fillStyle='#4d463d';c.fillRect(r.x-10,r.y-10,r.w+20,r.h+20);const g=c.createRadialGradient(r.x+r.w/2,r.y+r.h/2,10,r.x+r.w/2,r.y+r.h/2,r.w*.7);g.addColorStop(0,'#070605');g.addColorStop(1,'#1e1a16');c.fillStyle=g;c.fillRect(r.x,r.y,r.w,r.h);
+    c.strokeStyle='#ffd53d';c.lineWidth=3;c.setLineDash([10,8]);c.strokeRect(r.x+3,r.y+3,r.w-6,r.h-6);c.setLineDash([]);}
+}
 function drawBackroomsGround(c){
   let sd=99;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
   c.fillStyle='#14110a';c.fillRect(0,0,MAPW,MAPH);
@@ -929,6 +957,7 @@ function drawMapCanvas(){
   mapCv.width=MAPW;mapCv.height=MAPH;
   const c=mapCv.getContext('2d');
 
+  if(MAPS[MAPI].lv1){drawLv1Ground(c);return;}
   if(MAPS[MAPI].backrooms){drawBackroomsGround(c);return;}
   if(MAPS[MAPI].fungle)drawFungleGround(c);else{
   c.fillStyle='#14171f';
@@ -1242,11 +1271,14 @@ function enterBackrooms(){
   S.cam={x:BTN.x,y:BTN.y};setupBackrooms();netBc({t:'br'});setupHud();brIntro();
 }
 function brIntro(){
+  if(S.br.lv===1){snd('alarm');splash('バックルーム Lv.1','終わりの見えない線路のトンネル。赤い列車のような蜘蛛の化物が、10〜20秒ごとにものすごい速さで走ってくる。線路わきの「穴」に隠れてやりすごし、一番奥の非常口をめざそう（奥ほど穴は少ない）','#ff5a3a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);S.splashT=4.5;return;}
   snd('alarm');
   splash('バックルーム Lv.0',`ノークリップしてしまった…！ ここでは全員が仲間（役職は関係ない）。黒い針金の化物から逃げながら、クーポンを${S.br.need}枚（1人${BR_PER}枚）集めて、非常口から脱出しよう`,'#e8d36a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);
   S.splashT=4;
 }
-function brHud(){const B=S.br;return `<li style="color:#ffe680">🟨 バックルーム Lv.0 — 全員が仲間</li><li style="color:#ffe680">🎟 クーポン ${B.got} / ${B.need}</li>`
+function brHud(){const B=S.br;if(B.lv===1){const P=me(),pr=Math.round(pathS(B.path,P.x,P.y)/B.path.len*100);let near=null;if(B.path)for(const tr of B.trains){const a=(pathS(B.path,P.x,P.y)-tr.s)*tr.dir;if(a>0&&(near==null||a<near))near=a;}
+  return `<li style="color:#ff9a7a">🚂 バックルーム Lv.1 — 全員が仲間</li><li style="color:#ffe680">進み具合 ${clamp(pr,0,100)}%（一番奥に非常口）</li>`+(near!=null?`<li style="color:#ff5a5a">⚠ 列車の化物が接近中！ あと約${Math.max(0,Math.ceil(near/TRAIN_SPEED))}秒 — 穴に隠れて！</li>`:`<li>次の列車まで油断しないで（10〜20秒ごと）</li>`)+'<li>黄色い点線の「穴」の中にいれば捕まらない</li>'+(P.role==='sage'?'<li style="color:#9be7ff">賢者: ガード中なら列車の化物を跳ね返せる</li>':'');}
+  return `<li style="color:#ffe680">🟨 バックルーム Lv.0 — 全員が仲間</li><li style="color:#ffe680">🎟 クーポン ${B.got} / ${B.need}</li>`
   +(B.open?`<li style="color:#4cff7a">🚪 非常口が開いた！（${B.exit.room}）だれか1人がたどり着けば全員脱出</li>`:'<li>クーポンは黄色い部屋のあちこちに落ちている。上を歩けば拾える</li>')
   +(S.mon&&S.mon.stun>0?`<li style="color:#9be7ff">化物は動けない（あと${Math.ceil(S.mon.stun)}秒）</li>`:'<li style="color:#ff8a8a">⚠ 黒い針金の化物に見つかったら逃げろ。キルはできない</li>')
   +(me().role==='sage'?'<li style="color:#9be7ff">賢者: F のガード中に化物に触られると、化物を20秒止められる</li>':'')
@@ -1255,12 +1287,13 @@ function brHud(){const B=S.br;return `<li style="color:#ffe680">🟨 バック�
   +(S.mon&&S.mon.dead?`<li style="color:#4cff7a">化物は倒れている（${Math.ceil(S.mon.respawn)}秒で復活）</li>`:S.mon&&S.mon.slowT>0?'<li style="color:#9be7ff">化物の動きが遅くなっている</li>':'');}
 function brUpdate(dt){
   const B=S.br,M=S.mon;if(!B)return;
+  if(B.lv===1){brUpdate1(dt);return;}
   // クーポンを拾う
   for(const e of S.ents){if(!e.alive)continue;for(const c of B.coupons){if(c.got||Math.abs(c.x-e.x)>46||Math.abs(c.y-e.y)>46)continue;c.got=true;B.got++;
     if(e===me()){snd('task');toast(`🎟 クーポンを拾った！（${B.got}/${B.need}）`);}else if(canSee(me(),c.x,c.y))snd('click');
     if(e.isBot&&Math.random()<.35)botSay(e,pick(['クーポンあった！','1枚ゲット！',`あと${Math.max(0,B.need-B.got)}枚！`]));
     if(B.got>=B.need&&!B.open){B.open=true;snd('alarm');toast(`🚪 クーポンが全部そろった！ 非常口（${B.exit.room}）が開いた！`);}}}
-  if(B.open)for(const e of S.ents)if(e.alive&&dist(e,B.exit)<80){endGame('br',`${e.name}が非常口にたどり着き、全員でバックルームから脱出した！`);return;}
+  if(B.open)for(const e of S.ents)if(e.alive&&dist(e,B.exit)<80){goLv1(e);return;}
   // 化物
   B.t=(B.t||0)+dt;
   if(!M)return;M.walk+=dt*6;if(M.roar>0)M.roar-=dt;if(M.slowT>0)M.slowT=Math.max(0,M.slowT-dt);
@@ -1301,7 +1334,75 @@ function brImpAbility(e){
 function verityKillMon(e){const M=S.mon;if(!M||M.dead||!(e.vform>0)||e.vMonKill)return false;
   e.vMonKill=true;M.dead=true;M.respawn=30;M.stun=0;M.tgt=null;M.path=null;snd('kill');
   toast(`🦵 ${e.name}（Verity）が化物を倒した！ …でも30秒で復活するらしい`);netBc({t:'tell',text:`🦵 ${e.name}（Verity）が化物を倒した！ 30秒で復活する`});return true;}
+// ----- Lv.1 -----
+const TRAIN_SPEED=231*3;
+function lv1Path(){const rows=ROOMS.filter(r=>r.n.startsWith('線路')).sort((a,b)=>a.y-b.y),pts=[];
+  rows.forEach((r,k)=>{const yc=r.y+r.h/2,L={x:r.x+70,y:yc},Rp={x:r.x+r.w-100,y:yc};if(k%2===0){pts.push(k===0?L:{x:r.x+100,y:yc},Rp);}else{pts.push({x:r.x+r.w-100,y:yc},k===rows.length-1?L:{x:r.x+100,y:yc});}});
+  if(rows.length%2===0){/* 最後の段は左端が出口 */}else{pts[pts.length-1]={x:rows[rows.length-1].x+rows[rows.length-1].w-70,y:pts[pts.length-1].y};}
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));return{pts,cum,len:cum[cum.length-1]};}
+function pathAt(P,s){s=clamp(s,0,P.len);for(let i=1;i<P.pts.length;i++)if(s<=P.cum[i]){const t=(s-P.cum[i-1])/((P.cum[i]-P.cum[i-1])||1),a=P.pts[i-1],b=P.pts[i];return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}return P.pts[P.pts.length-1];}
+function pathS(P,x,y){let best=0,bd=1e18;for(let i=1;i<P.pts.length;i++){const a=P.pts[i-1],b=P.pts[i],vx=b.x-a.x,vy=b.y-a.y,L2=vx*vx+vy*vy||1;const t=clamp(((x-a.x)*vx+(y-a.y)*vy)/L2,0,1),px=a.x+vx*t,py=a.y+vy*t,d=(x-px)**2+(y-py)**2;if(d<bd){bd=d;best=P.cum[i-1]+t*Math.sqrt(L2);}}return best;}
+function inHole(e){return ROOMS.some(r=>r.n==='穴'&&e.x>r.x-4&&e.x<r.x+r.w+4&&e.y>r.y-4&&e.y<r.y+r.h+4);}
+function setupBackrooms1(){
+  const P=lv1Path(),st=P.pts[0],ex=P.pts[P.pts.length-1];
+  S.br={lv:1,need:0,got:0,coupons:[],open:true,exit:{x:ex.x,y:ex.y,room:'線路の一番奥'},path:P,trains:[],nextTrain:rand(10,20),t:0};
+  S.mon=null;S.bodies=[];S.sab=null;S.mushT=0;S.lockT=0;S.crabT=0;papaCam=null;
+  const al=S.ents.filter(e=>e.alive);al.forEach((e,i)=>{e.x=st.x+40+(i%5)*44;e.y=st.y-40+Math.floor(i/5)*40;e.tpc=(e.tpc||0)+1;});
+  for(const e of S.ents){if(e.susp)e.susp.fill(0);e.inVent=null;e.climb=null;e.path=null;e.disguise=null;e.invisT=0;e.bubble=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;e.ai.urgent=false;}}
+  S.cam={x:st.x,y:st.y};
+}
+function goLv1(by){
+  if(NET.client)return;
+  loadMap(BR1I);setupBackrooms1();netBc({t:'br'});setupHud();snd('alarm');
+  splash('バックルーム Lv.1',`${by?by.name+'が非常口を開けた…その先は、終わりの見えない線路のトンネルだった。':''}赤い列車のような蜘蛛の化物が、10〜20秒ごとにものすごい速さで走ってくる。線路わきの「穴」に隠れてやりすごし、一番奥の非常口をめざそう（奥ほど穴は少ない）`,'#ff5a3a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);S.splashT=4.5;
+}
+function brUpdate1(dt){
+  const B=S.br,P=me();B.t+=dt;B.nextTrain-=dt;
+  if(B.nextTrain<=0){B.nextTrain=rand(10,20);const fwd=Math.random()<.55;B.trains.push({s:fwd?-300:B.path.len+300,dir:fwd?1:-1,x:0,y:0,legs:0,warned:{}});}
+  for(const tr of B.trains){tr.s+=tr.dir*TRAIN_SPEED*dt;tr.legs+=dt*20;const q=pathAt(B.path,tr.s);tr.x=q.x;tr.y=q.y+30;
+    for(const e of S.ents){if(!e.alive)continue;const se=pathS(B.path,e.x,e.y),ahead=(se-tr.s)*tr.dir;
+      if(ahead>0&&ahead<3200&&!tr.warned[e.id]){tr.warned[e.id]=1;if(e===P){snd('alarm');toast('🚂 何かが来る…！ 穴に隠れて！');}else if(e.isBot&&Math.random()<.5)botSay(e,pick(['何か来る！！ 穴に隠れて！','線路から離れて！','あの音…来るぞ！']));}
+      if(Math.hypot(tr.x-e.x,tr.y-30-e.y)<95&&!inHole(e)){
+        if(e.guardT>0){tr.dir*=-1;tr.s+=tr.dir*160;e.guardT=0;snd('task');toast(`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`);netBc({t:'tell',text:`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`});continue;}
+        die(e,null);snd('kill');if(e===P){S.killedT=2.6;splash('ひかれた…','赤い列車の化物につかまった。幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`😱 ${e.name}が列車の化物にさらわれた…`);
+        if(checkWin())return;}}}
+  B.trains=B.trains.filter(tr=>tr.s>-600&&tr.s<B.path.len+600);
+  for(const e of S.ents)if(e.alive&&dist(e,B.exit)<90){endGame('br',`${e.name}が線路の一番奥の非常口にたどり着き、全員でバックルームから脱出した！`);return;}
+}
+function brThink1(e){
+  const B=S.br,ai=e.ai,se=pathS(B.path,e.x,e.y);
+  let danger=null,dd=1e9;for(const tr of B.trains){const ahead=(se-tr.s)*tr.dir;if(ahead>-80&&ahead<3400&&ahead<dd){dd=ahead;danger=tr;}}
+  if(danger&&e.role==='sage'&&e.abCd<=0&&dd<420)crewAbility(e);
+  if(danger&&!(e.guardT>0)){
+    if(inHole(e)){e.path=null;e.moving=false;ai.goalKey='hide';return;}
+    let h=null,hd=1e9;for(const r of ROOMS){if(r.n!=='穴')continue;const c={x:r.x+r.w/2,y:r.y+r.h/2},d=dist(e,c);if(d<hd){hd=d;h=c;}}
+    if(h){const k='hole'+Math.round(h.x)+','+Math.round(h.y);if(ai.goalKey!==k)setGoal(e,h.x,h.y,k);return;}
+  }
+  if(ai.goalKey!=='brexit1'||!e.path||!e.path.length)setGoal(e,B.exit.x,B.exit.y,'brexit1');
+}
+function drawTrainSpider(c,tr,tm){
+  c.save();c.translate(tr.x,tr.y);const f=tr.dir>0?1:-1;
+  // 背中側の脚
+  c.strokeStyle='#120404';c.lineCap='round';c.lineWidth=7;
+  for(let i=0;i<8;i++){const side=i%2?1:-1,px=-120+Math.floor(i/2)*60,ph=tr.legs+i;c.beginPath();c.moveTo(px*f,-40);c.lineTo((px+20*Math.sin(ph))*f,-110*side*.0-100);c.lineTo((px+40+25*Math.sin(ph))*f,side>0?30:-10);c.stroke();}
+  // 赤い車体
+  c.fillStyle='#b3161a';c.strokeStyle='#000';c.lineWidth=5;c.beginPath();rr(c,-170,-150,340,130,26);c.fill();c.stroke();
+  c.fillStyle='#7a0d10';c.fillRect(-170,-60,340,22);c.strokeRect(-170,-60,340,22);
+  c.fillStyle='#2a0a0a';for(let i=-2;i<=1;i++){c.fillRect(i*70+10,-130,46,36);}
+  // 顔（前面）と目
+  c.fillStyle='#d9201f';c.beginPath();c.ellipse(170*f,-85,40,66,0,0,TAU);c.fill();c.stroke();
+  c.fillStyle='#fff8c0';c.shadowColor='#fff3a0';c.shadowBlur=30;c.beginPath();c.arc(186*f,-110,13,0,TAU);c.fill();c.shadowBlur=0;
+  c.fillStyle='#000';for(const[x,y]of[[160,-70],[176,-60],[150,-58],[182,-82]]){c.beginPath();c.arc(x*f,y,6,0,TAU);c.fill();}
+  c.fillStyle='#ff2020';for(const[x,y]of[[160,-72],[176,-62],[150,-60],[182,-84]]){c.beginPath();c.arc(x*f,y,2.5,0,TAU);c.fill();}
+  // 牙
+  c.fillStyle='#f4efe0';for(const dx of[-12,10]){c.beginPath();c.moveTo((190+dx)*f,-30);c.lineTo((196+dx)*f,-4);c.lineTo((202+dx)*f,-30);c.fill();}
+  // 手前の脚
+  c.lineWidth=9;c.strokeStyle='#1a0505';
+  for(let i=0;i<4;i++){const px=-130+i*80,ph=tr.legs*1.3+i*1.7;c.beginPath();c.moveTo(px*f,-30);c.lineTo((px+30+20*Math.sin(ph))*f,-90);c.lineTo((px+60+30*Math.sin(ph))*f,40+8*Math.cos(ph));c.stroke();}
+  c.restore();
+}
 function brThink(e){
+  if(S.br&&S.br.lv===1)return brThink1(e);
   const ai=e.ai,B=S.br,M=S.mon;
   if(M&&!M.dead&&M.stun<=0&&dist(e,M)<520&&losSee(e.x,e.y-20,M.x,M.y-60)){
     if(e.isImp&&BR_IMP_AB.includes(e.irole)&&e.abCd<=0&&!e.cannon&&!e.drill){e.aim={x:M.x-e.x,y:M.y-40-e.y};brImpAbility(e);}
@@ -1334,8 +1435,8 @@ function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LI
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
-  const brStart=!NET.client&&((cfg.map||0)===BRI||Math.random()*100<(cfg.brPct??BR_PER));
-  const mapI=brStart?BRI:(cfg.map||0);
+  const brStart=!NET.client&&((cfg.map||0)===BRI||(cfg.map||0)===BR1I||Math.random()*100<(cfg.brPct??BR_PER));
+  const mapI=brStart?((cfg.map||0)===BR1I?BR1I:BRI):(cfg.map||0);
   if(MAPI!==mapI)loadMap(mapI);else resetVents();
   try{tabCh&&tabCh.postMessage({type:'start',tab:TAB_ID});}catch(e){}
   // スタート/もう一度ボタンにフォーカスが残っていると、Space/Enterで試合が始め直されるのを防ぐ
@@ -1398,7 +1499,7 @@ function startGame(cfg){
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
     gen:GEN,taskTotal:ents.filter(e=>e.team==='crew').reduce((a,e)=>a+e.tasks.length,0),taskDone:0,M:null,E:null,modal:null,hudT:0,splashT:0,killedT:0,chatQ:[],plog:[],fx:[],beams:[],booms:[],flash:0,leaks:{},cupid:null,impKnow:{},impVote:null,chan:'all',mines:[],bubbles:[],traces:[],snakeFx:[]};
   placeAtTable();
-  if(brStart)setupBackrooms();
+  if(brStart){if(mapI===BR1I)setupBackrooms1();else setupBackrooms();}
   if(NET.host)netStartSend();
   $('menu').hidden=true;$('lobby').hidden=true;setTimeout(()=>cv.focus(),0);mobileTip();$('hud').hidden=false;$('btnQuit').hidden=false;$('quitDlg').hidden=true;
   setupHud();
@@ -3130,9 +3231,10 @@ function render(dt){
   if(S.br){const B=S.br,see=(x,y)=>!P.alive||canSee(P,x,y);
     for(const c of B.coupons){if(c.got||!see(c.x,c.y))continue;ctx.save();ctx.translate(c.x,c.y-14+Math.sin(tm*3+c.x)*3);ctx.rotate(-.15);ctx.fillStyle='#ffe14a';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();rr(ctx,-20,-12,40,24,4);ctx.fill();ctx.stroke();
       ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(-8,-12);ctx.lineTo(-8,12);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#a5321a';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('券',5,4);ctx.restore();}
-    const X=B.exit;if(see(X.x,X.y)||B.open){ctx.save();ctx.fillStyle=B.open?'#2a8a3a':'#3a3a3a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillRect(X.x-40,X.y-110,80,110);ctx.strokeRect(X.x-40,X.y-110,80,110);
+    const X=B.exit;if(see(X.x,X.y)||(B.open&&!B.lv)){ctx.save();ctx.fillStyle=B.open?'#2a8a3a':'#3a3a3a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillRect(X.x-40,X.y-110,80,110);ctx.strokeRect(X.x-40,X.y-110,80,110);
       ctx.fillStyle=B.open?'#4cff7a':'#7a7a7a';ctx.fillRect(X.x-44,X.y-138,88,24);ctx.strokeRect(X.x-44,X.y-138,88,24);ctx.fillStyle='#000';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(B.open?'EXIT 非常口':'EXIT 🔒',X.x,X.y-121);ctx.restore();}
-    if(S.mon&&!S.mon.dead&&see(S.mon.x,S.mon.y))drawWireMonster(ctx,S.mon,tm);}
+    if(S.mon&&!S.mon.dead&&see(S.mon.x,S.mon.y))drawWireMonster(ctx,S.mon,tm);
+    if(B.trains)for(const tr of B.trains){if(dist(P,tr)<2600||!P.alive)drawTrainSpider(ctx,tr,tm);}}
   for(const e of vis)if(e.berserk&&e.alive){ctx.save();const g=ctx.createRadialGradient(e.x,e.y-30,8,e.x,e.y-30,70);g.addColorStop(0,'rgba(255,40,20,.55)');g.addColorStop(1,'rgba(255,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y-30,70,0,TAU);ctx.fill();ctx.restore();}
   for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});
     if(e.drill){ctx.save();ctx.translate(e.x,e.y-26);ctx.rotate(Math.atan2(e.drill.dy,e.drill.dx));ctx.fillStyle='#aab3c0';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(70,0);ctx.lineTo(20,-22);ctx.lineTo(20,22);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
@@ -3387,7 +3489,7 @@ function micText(txt){
 
 // ================= proximity chat =================
 // あなたの言葉は全員のAIに届く（生きている間は生きているAI、幽霊の間は幽霊のAI）
-function hearers(sp){if(S.hold)return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive);if(S.phase==='review')return S.ents.filter(o=>o!==sp&&o.isBot);return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive&&(sp.alive?o.inVent==null:true));}
+function hearers(sp){if(S.hold||S.paused)return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive);if(S.phase==='review')return S.ents.filter(o=>o!==sp&&o.isBot);return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive&&(sp.alive?o.inVent==null:true));}
 function say(e,text,toPlayer,raw){
   e.bubble={text,t:5};
   if(!raw)netBc({t:'say',who:e.id,text,tp:!!toPlayer});
@@ -3398,7 +3500,8 @@ function say(e,text,toPlayer,raw){
     if(e!==P)voiceOf(e,text,toPlayer?1:P.alive?clamp(1-dist(P,e)/800,.2,1):.9);
   }
 }
-function renderPlog(){const el=$('plog');el.innerHTML='';for(const l of S.plog){const d=document.createElement('div');if(l.ghost)d.className='ghost';if(l.imp)d.className='imp';const n=document.createElement('b');n.textContent=`${l.ghost?'👻 ':''}${l.mic?'🎤 ':''}${l.who}`;if(l.col){const h=l.col.replace('#',''),f=h.length===3?h.split('').map(c=>c+c).join(''):h,[r,g,b]=[0,2,4].map(i=>parseInt(f.slice(i,i+2),16)),lum=.3*r+.59*g+.11*b;n.style.color=lum<90?`rgb(${Math.round(r+(255-r)*.6)},${Math.round(g+(255-g)*.6)},${Math.round(b+(255-b)*.6)})`:l.col;}d.append(n,document.createTextNode('：'+l.text));el.appendChild(d);}}
+function renderPlog(){if(!$('quitDlg').hidden){const q=$('qLog');q.innerHTML='';for(const l of S.plog){const d=document.createElement('div');d.style.cssText='background:rgba(0,0,0,.35);border-radius:8px;padding:3px 8px;margin:3px 0;color:#fff';d.textContent=`${l.who}：${l.text}`;q.appendChild(d);}q.scrollTop=q.scrollHeight;}
+  const el=$('plog');el.innerHTML='';for(const l of S.plog){const d=document.createElement('div');if(l.ghost)d.className='ghost';if(l.imp)d.className='imp';const n=document.createElement('b');n.textContent=`${l.ghost?'👻 ':''}${l.mic?'🎤 ':''}${l.who}`;if(l.col){const h=l.col.replace('#',''),f=h.length===3?h.split('').map(c=>c+c).join(''):h,[r,g,b]=[0,2,4].map(i=>parseInt(f.slice(i,i+2),16)),lum=.3*r+.59*g+.11*b;n.style.color=lum<90?`rgb(${Math.round(r+(255-r)*.6)},${Math.round(g+(255-g)*.6)},${Math.round(b+(255-b)*.6)})`:l.col;}d.append(n,document.createTextNode('：'+l.text));el.appendChild(d);}}
 function playerSay(text,P){
   if(!S)return;if(NET.client){rpc('playerSay',[text]);return;}P=P||me();if((S.phase!=='play'&&S.phase!=='review')||(S.killedT>0&&S.phase==='play'))return;
   say(P,text);
@@ -3605,7 +3708,8 @@ function updateHud(){
   }
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
-  if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
+  if(S.br&&S.br.lv===1&&S.br.trains&&S.br.trains.some(tr=>{const P=me(),a=(pathS(S.br.path,P.x,P.y)-tr.s)*tr.dir;return P.alive&&a>0&&a<3200;})){al.hidden=false;al.textContent='🚂 列車の化物が来る！ 穴に隠れろ！';}
+  else if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
   else if(!S.sab&&S.crabT>0){al.hidden=false;al.textContent=`🦀 カニ発動中！ 横にしか歩けない（${Math.ceil(S.crabT)}秒）`;}
   else if(S.sab){al.hidden=false;al.textContent=S.sab.type==='lights'?`⚠ 停電発生！ ${SABP.lights.n}で修理せよ`:`☢ リアクター崩壊まで ${Math.ceil(S.sab.t)} 秒`;}else al.hidden=true;
   $('roomName').textContent=P.inVent!=null?'ベントの中':roomOf(P.x,P.y);
@@ -3850,7 +3954,7 @@ function netTick(dt){
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
-      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
+      bz:S.ents.map(e=>e.berserk?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{lv:S.br.lv||0,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
@@ -3937,7 +4041,7 @@ function applySnap(d){
   S.bodies=d.bodies.map(([id,x,y,color,room])=>({id,x,y,color,room}));
   S.sab=d.sab;S.taskDone=d.td;S.taskTotal=d.tt;S.impKnow=d.ik||{};S.cupid=d.cu;S.flash=d.flash||0;
   S.beams=d.beams.map(([x,y,dx,dy,L,t,thin])=>({x,y,dx,dy,L,t,thin}));
-  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br){if(MAPI!==BRI)loadMap(BRI);const b=x.br;const first=!S.br;S.br={got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
+  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
@@ -4003,9 +4107,8 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 function update(dt){
-  if(S.paused)return;
-  // 一時停止中: 試合は止まるが、会話（全員と話せる）と吹き出しだけ進む
-  if(S.hold){S.t+=dt;for(const e of S.ents)if(e.bubble&&(e.bubble.t-=dt)<=0)e.bubble=null;
+  // 一時停止中（⏸ でも「やめる？」の確認中でも）: 試合は止まるが、会話（全員と話せる）と吹き出しだけ進む
+  if(S.hold||S.paused){if(S.isClient)return;S.t+=dt;for(const e of S.ents)if(e.bubble&&(e.bubble.t-=dt)<=0)e.bubble=null;
     for(let i=S.chatQ.length-1;i>=0;i--)if(S.chatQ[i].at<=S.t){const c=S.chatQ.splice(i,1)[0];c.fn();}return;}
   if(S.isClient){clientUpdate(dt);return;}
   if(NET.host)netTick(dt);
@@ -4097,7 +4200,7 @@ function togglePause(){
   S.hold=!S.hold;$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';snd('click');
   if(S.hold){setTimeout(()=>{try{$('pchatIn').focus();}catch(e){}},0);}else cv.focus();
 }
-function askQuit(){if(!S)return;if(S.phase==='end'){quitGame();return;}if(S.phase==='review'){showResult();return;}S.paused=true;$('quitDlg').hidden=false;$('qNo').focus();}
+function askQuit(){if(!S)return;if(S.phase==='end'){quitGame();return;}if(S.phase==='review'){showResult();return;}S.paused=true;$('quitDlg').hidden=false;$('qNo').focus();try{renderPlog();}catch(e){}}
 function closeQuit(){$('quitDlg').hidden=true;if(S)S.paused=false;cv.focus();}
 $('btnQuit').onclick=askQuit;$('btnQuit2').onclick=askQuit;
 $('rvNext').onclick=()=>{if(S&&S.phase==='review')showResult();};
@@ -4152,6 +4255,7 @@ $('inFgBg').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const im=new I
   let u=c.toDataURL('image/jpeg',.85);try{localStorage.setItem('amongus-fungle-bg',u);}catch(e){try{u=c.toDataURL('image/jpeg',.6);localStorage.setItem('amongus-fungle-bg',u);}catch(e2){toast('画像が大きすぎて保存できなかった');}}
   URL.revokeObjectURL(im.src);loadFgBg();};im.src=URL.createObjectURL(f);ev.target.value='';};
 loadFgBg();
+$('qChat').onsubmit=e=>{e.preventDefault();const v=$('qChatIn').value.trim();$('qChatIn').value='';if(v)playerSay(v);};
 $('btnPause').onclick=togglePause;$('btnResume').onclick=togglePause;
 $('btnScale').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;if(M.scaleA==null){M.scaleA=M.sel;M.sel=null;renderCards();updateMeetingUI();return;}if(M.sel===M.scaleA)return;useBalance(P,S.ents[M.scaleA],S.ents[M.sel]);M.scaleA=null;};
 $('btnGuess').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;const t=S.ents[M.sel];if(!t.alive||(t.isImp&&P.role!=='nguesser')||t===P)return;doGuess(P,t,$('guessSel').value);};
