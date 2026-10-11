@@ -1256,7 +1256,7 @@ function placeAtTable(){
 }
 
 // ================= visibility =================
-function visionR(e){if(!e.alive)return 99999;let r=e.isImp?600:e.isNeu?520:470;if(S.sab&&S.sab.type==='lights'&&!e.isImp&&e.role!=='noct')r*=.38;return r;}
+function visionR(e){if(!e.alive)return 99999;let r=e.isImp?780:e.isNeu?680:620;/* マップを1.3倍にしたので視界も広く */if(S.sab&&S.sab.type==='lights'&&!e.isImp&&e.role!=='noct')r*=.38;return r;}
 function canSee(e,x,y){if(!e.alive)return true;const r=visionR(e),dx=x-e.x,dy=y-e.y;if(dx*dx+dy*dy>r*r)return false;return los(e.x,e.y-8,x,y-8);}
 function visibleTo(viewer,o){if(o.inVent!=null)return false;if(!o.alive)return !viewer.alive;return canSee(viewer,o.x,o.y);}
 
