@@ -282,6 +282,7 @@ button{touch-action:manipulation}
       <label class="row">メイヤーの票数<input type="range" id="inMeyer" min="3" max="16" value="3"><b id="vMeyer">3</b></label>
       <label class="row">ヴァルチャーの必要数<input type="range" id="inVult" min="1" max="5" value="2"><b id="vVult">2</b></label>
       <label class="row">バックルームになる確率<input type="range" id="inBR" min="0" max="100" value="5"><b id="vBR">5%</b></label>
+      <label class="row">Lv.3で自分が蜘蛛になる<span><input type="checkbox" id="inSpiderMe"> 100%（必ず自分が噛まれる）</span></label>
       <label class="row">投票時間<input type="range" id="inVote" min="15" max="120" step="5" value="45"><b id="vVote">45s</b></label>
       <label class="row">第三陣営<input type="range" id="inNeu" min="0" max="12" value="5"><b id="vNeu">5</b></label>
       <label class="row">マップ<select id="inMap"></select></label>
@@ -493,6 +494,15 @@ function genBackrooms1(){
   const m=genMap({name:'🚂 バックルーム Lv.1（確定）',W:X0*2+Wt,H:220+rows*SP,hub:'線路1',lights:'線路2',reactor:'線路3',rooms,links:[],ground});
   m.backrooms=true;m.lv1=true;m.plats=[];return m;
 }
+// バックルーム Lv.3: 森の広場と小屋（地下室・採掘場・釜戸・湖のボート）
+function genBackrooms3(){
+  const rooms=[['広場',150,700,700,560,'#3f6b3a'],['玄関',950,850,380,300,'#8a5a32'],['居間',1400,650,650,600,'#8a5a32'],['台所',2120,650,420,320,'#8a5a32'],
+    ['寝室',1400,150,480,380,'#8a5a32'],['倉庫',1960,150,420,380,'#8a5a32'],['地下室1',1400,1400,560,380,'#5c5c64'],['地下室2',2040,1400,480,380,'#5c5c64'],
+    ['採掘場',2600,1400,440,380,'#6b5a48'],['釜戸の部屋',2620,650,400,380,'#7a4a32'],['裏口',3100,760,260,240,'#8a5a32'],['湖',3430,450,700,900,'#2f6a9a']];
+  const links=[['広場','玄関'],['玄関','居間'],['居間','台所'],['居間','寝室'],['寝室','倉庫'],['居間','地下室1'],['地下室1','地下室2'],['地下室2','採掘場'],['台所','釜戸の部屋'],['釜戸の部屋','裏口'],['裏口','湖']];
+  const m=genMap({name:'🕷 バックルーム Lv.3（確定）',W:4300,H:1950,hub:'広場',lights:'居間',reactor:'台所',rooms,links});
+  m.backrooms=true;m.lv3=true;m.plats=[];return m;
+}
 const MAPS=[
   {name:'🚀 宇宙船',skeld:true},
   genMap({name:'🧪 雪原研究所',W:3200,H:2000,hub:'食堂',lights:'発電所',reactor:'原子炉',rooms:[
@@ -526,8 +536,9 @@ const MAPS=[
     ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
   genBackrooms(),
   genBackrooms1(),
+  genBackrooms3(),
 ];
-const BRI=MAPS.length-2,BR1I=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
+const BRI=MAPS.length-3,BR1I=MAPS.length-2,BR3I=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=85;   // キルできる距離
 
@@ -919,6 +930,22 @@ function drawFungleGround(c){
     else if(z==='m'&&d>40&&rnd()<.05)rock(x,y+20,14+rnd()*18,'#8f5a2a');
   }
 }
+function drawLv3Ground(c){
+  let sd=31;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  c.fillStyle='#16210f';c.fillRect(0,0,MAPW,MAPH);
+  for(let k=0;k<MAPW*MAPH/9000;k++){c.fillStyle=rnd()<.5?'#1c2a14':'#203018';c.beginPath();c.arc(rnd()*MAPW,rnd()*MAPH,10+rnd()*30,0,TAU);c.fill();}
+  for(const r of RECTS){c.fillStyle='rgba(0,0,0,.45)';c.fillRect(r.x-14,r.y-58,r.w+28,r.h+72);}
+  for(const r of RECTS){const out=r.f==='#3f6b3a'||r.n==='湖',wood=r.f==='#8a5a32'||r.f==='#7a4a32',stone=r.f==='#5c5c64'||r.f==='#6b5a48';
+    if(!out&&(r.w>=r.h||ROOMS.includes(r))){c.fillStyle=stone?'#3e3e46':'#5a3a20';c.fillRect(r.x,r.y-50,r.w,50);c.fillStyle=stone?'rgba(0,0,0,.25)':'rgba(255,220,160,.12)';for(let x=r.x;x<r.x+r.w;x+=34)c.fillRect(x,r.y-50,3,50);}
+    c.fillStyle=r.f||'#8a5a32';c.fillRect(r.x,r.y,r.w,r.h);
+    if(wood){c.strokeStyle='rgba(60,30,10,.45)';c.lineWidth=2;for(let y=r.y+24;y<r.y+r.h;y+=24){c.beginPath();c.moveTo(r.x,y);c.lineTo(r.x+r.w,y);c.stroke();}for(let k=0;k<r.w*r.h/6000;k++){c.fillRect(r.x+rnd()*r.w,r.y+Math.floor(rnd()*r.h/24)*24,2,24);}}
+    if(stone){c.fillStyle='rgba(0,0,0,.2)';for(let k=0;k<r.w*r.h/2500;k++){c.beginPath();c.ellipse(r.x+rnd()*r.w,r.y+rnd()*r.h,8+rnd()*16,6+rnd()*10,0,0,TAU);c.fill();}}
+    if(r.f==='#3f6b3a'){c.fillStyle='rgba(120,180,80,.25)';for(let k=0;k<r.w*r.h/800;k++)c.fillRect(r.x+rnd()*r.w,r.y+rnd()*r.h,2,6);}
+    if(r.n==='湖'){c.fillStyle='rgba(255,255,255,.12)';for(let k=0;k<60;k++){c.fillRect(r.x+rnd()*r.w,r.y+rnd()*r.h,30+rnd()*40,3);}c.fillStyle='#7a5530';c.fillRect(r.x,r.y+r.h/2-50,r.w*.55,100);c.strokeStyle='rgba(40,20,5,.6)';c.lineWidth=3;for(let x=r.x;x<r.x+r.w*.55;x+=30){c.beginPath();c.moveTo(x,r.y+r.h/2-50);c.lineTo(x,r.y+r.h/2+50);c.stroke();}}
+  }
+  // 広場の会議テーブル
+  c.fillStyle='#6b4a2a';c.strokeStyle='#000';c.lineWidth=5;c.beginPath();c.ellipse(BTN.x,BTN.y+40,170,90,0,0,TAU);c.fill();c.stroke();
+}
 function drawLv1Ground(c){
   let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
   c.fillStyle='#0b0907';c.fillRect(0,0,MAPW,MAPH);
@@ -957,6 +984,7 @@ function drawMapCanvas(){
   mapCv.width=MAPW;mapCv.height=MAPH;
   const c=mapCv.getContext('2d');
 
+  if(MAPS[MAPI].lv3){drawLv3Ground(c);return;}
   if(MAPS[MAPI].lv1){drawLv1Ground(c);return;}
   if(MAPS[MAPI].backrooms){drawBackroomsGround(c);return;}
   if(MAPS[MAPI].fungle)drawFungleGround(c);else{
@@ -1104,12 +1132,12 @@ function tell(e,text){if(!e)return;if(e===me())toast(text);else if(e.remote)send
 
 function readCfg(){
   return{name:($('inName').value.trim()||'あなた').slice(0,8),color:selColor,costume:selCostume,players:+$('inPlayers').value,imps:+$('inImps').value,
-    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,brPct:+$('inBR').value,snakeAnim:$('inSnakeAnim').checked};
+    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,brPct:+$('inBR').value,spiderMe:$('inSpiderMe').checked,snakeAnim:$('inSnakeAnim').checked};
 }
 function maxImps(n){return n<=5?1:n<=8?2:3;}
 // 推奨構成: インポスター < 村陣営 < 第三陣営（第三陣営は全員が敵同士なので実質は村陣営が最大勢力）
 function recommend(n){if(n<6)return{i:1,c:2,neu:n-3};const i=Math.max(1,Math.floor(n/5)),r=n-i,c=Math.floor((r-1)/2);return{i,c,neu:r-c};}
-const TEAM={br:{n:'全員',c:'#e8d36a'},papa:{n:'パパラッチ',c:'#ffd23d'},verity:{n:'Verity',c:'#e0c0ff'},vulture:{n:'ヴァルチャー',c:'#c8a060'},teru:{n:'てるてる',c:'#ffb3d9'},opp:{n:'オポチュニスト',c:'#9fe0a8'},crew:{n:'村陣営',c:'#7fd6ff'},imp:{n:'インポスター',c:'#ff3b3b'},neu:{n:'第三陣営',c:'#c58bff'},lovers:{n:'ラバーズ',c:'#ff7ab8'},tuna:{n:'マグロ',c:'#5aa0ff'},god:{n:'神',c:'#ffd53d'},arson:{n:'アーソニスト',c:'#ff8a24'},draw:{n:'引き分け',c:'#aab3cc'}};
+const TEAM={br3:{n:'生存者',c:'#9be7ff'},br3s:{n:'蜘蛛',c:'#ff5a5a'},br:{n:'全員',c:'#e8d36a'},papa:{n:'パパラッチ',c:'#ffd23d'},verity:{n:'Verity',c:'#e0c0ff'},vulture:{n:'ヴァルチャー',c:'#c8a060'},teru:{n:'てるてる',c:'#ffb3d9'},opp:{n:'オポチュニスト',c:'#9fe0a8'},crew:{n:'村陣営',c:'#7fd6ff'},imp:{n:'インポスター',c:'#ff3b3b'},neu:{n:'第三陣営',c:'#c58bff'},lovers:{n:'ラバーズ',c:'#ff7ab8'},tuna:{n:'マグロ',c:'#5aa0ff'},god:{n:'神',c:'#ffd53d'},arson:{n:'アーソニスト',c:'#ff8a24'},draw:{n:'引き分け',c:'#aab3cc'}};
 const ROLES={
   villager:{n:'村人',d:'特別な能力はない。タスクをこなして、怪しい人を会議で追放しよう',x:'人の動きをよく見て推理するのが仕事'},
   labtech:{n:'臨床検査技師',d:'2人を指定して、同じ陣営か調べられる（1回だけ・Fキー）',x:'信用できる人と怪しい人を比べると効果的'},
@@ -1252,6 +1280,7 @@ try{tabCh&&tabCh.postMessage({type:'open',tab:TAB_ID});}catch(e){}
 // 全員が仲間。黒い針金の化物から逃げながら、人数×5枚のクーポンを集めて非常口から出れば全員勝利。
 const BR_PER=5,BR_MEET=0.05;
 function setupBackrooms(){
+  for(const e of S.ents)e.tasks=[];
   const alive=S.ents.filter(e=>e.alive);
   S.br={need:alive.length*BR_PER,got:0,coupons:[],open:false,exit:null};
   const far=ROOMS.slice().sort((a,b)=>dist({x:b.x+b.w/2,y:b.y+b.h/2},BTN)-dist({x:a.x+a.w/2,y:a.y+a.h/2},BTN));
@@ -1272,12 +1301,13 @@ function enterBackrooms(){
   S.cam={x:BTN.x,y:BTN.y};setupBackrooms();netBc({t:'br'});setupHud();brIntro();
 }
 function brIntro(){
+  if(S.br.lv===3){splash('バックルーム Lv.3','いつものように会議をしている…はずだった。','#9be7ff',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);S.splashT=3;return;}
   if(S.br.lv===1){snd('alarm');splash('バックルーム Lv.1','終わりの見えない線路のトンネル。赤い列車のような蜘蛛の化物が、10〜20秒ごとにものすごい速さで走ってくる。線路わきの「穴」に隠れてやりすごし、一番奥の非常口をめざそう（奥ほど穴は少ない）','#ff5a3a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);S.splashT=4.5;return;}
   snd('alarm');
   splash('バックルーム Lv.0',`ノークリップしてしまった…！ ここでは全員が仲間（役職は関係ない）。黒い針金の化物から逃げながら、クーポンを${S.br.need}枚（1人${BR_PER}枚）集めて、非常口から脱出しよう`,'#e8d36a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);
   S.splashT=4;
 }
-function brHud(){const B=S.br;if(B.lv===1){const P=me(),pr=Math.round(pathS(B.path,P.x,P.y)/B.path.len*100);let near=null;if(B.path)for(const tr of B.trains){const a=(pathS(B.path,P.x,P.y)-tr.s)*tr.dir;if(a>0&&(near==null||a<near))near=a;}
+function brHud(){const B=S.br;if(B.lv===3)return l3Hud();if(B.lv===1){const P=me(),pr=Math.round(pathS(B.path,P.x,P.y)/B.path.len*100);let near=null;if(B.path)for(const tr of B.trains){const a=(pathS(B.path,P.x,P.y)-tr.s)*tr.dir;if(a>0&&(near==null||a<near))near=a;}
   return `<li style="color:#ff9a7a">🚂 バックルーム Lv.1 — 全員が仲間</li><li style="color:#ffe680">進み具合 ${clamp(pr,0,100)}%（一番奥に非常口）</li>`+(near!=null?`<li style="color:#ff5a5a">⚠ 列車の化物が接近中！ あと約${Math.max(0,Math.ceil(near/TRAIN_SPEED))}秒 — 穴に隠れて！</li>`:`<li>次の列車まで油断しないで（10〜20秒ごと）</li>`)+'<li>黄色い点線の「穴」の中にいれば捕まらない</li>'+(P.role==='sage'?'<li style="color:#9be7ff">賢者: ガード中なら列車の化物を跳ね返せる</li>':'');}
   return `<li style="color:#ffe680">🟨 バックルーム Lv.0 — 全員が仲間</li><li style="color:#ffe680">🎟 クーポン ${B.got} / ${B.need}</li>`
   +(B.open?`<li style="color:#4cff7a">🚪 非常口が開いた！（${B.exit.room}）だれか1人がたどり着けば全員脱出</li>`:'<li>クーポンは黄色い部屋のあちこちに落ちている。上を歩けば拾える</li>')
@@ -1288,6 +1318,7 @@ function brHud(){const B=S.br;if(B.lv===1){const P=me(),pr=Math.round(pathS(B.pa
   +(S.mon&&S.mon.dead?`<li style="color:#4cff7a">化物は倒れている（${Math.ceil(S.mon.respawn)}秒で復活）</li>`:S.mon&&S.mon.slowT>0?'<li style="color:#9be7ff">化物の動きが遅くなっている</li>':'');}
 function brUpdate(dt){
   const B=S.br,M=S.mon;if(!B)return;
+  if(B.lv===3){brUpdate3(dt);return;}
   if(B.lv===1){brUpdate1(dt);return;}
   // クーポンを拾う
   for(const e of S.ents){if(!e.alive)continue;for(const c of B.coupons){if(c.got||Math.abs(c.x-e.x)>46||Math.abs(c.y-e.y)>46)continue;c.got=true;B.got++;
@@ -1345,6 +1376,7 @@ function pathAt(P,s){s=clamp(s,0,P.len);for(let i=1;i<P.pts.length;i++)if(s<=P.c
 function pathS(P,x,y){let best=0,bd=1e18;for(let i=1;i<P.pts.length;i++){const a=P.pts[i-1],b=P.pts[i],vx=b.x-a.x,vy=b.y-a.y,L2=vx*vx+vy*vy||1;const t=clamp(((x-a.x)*vx+(y-a.y)*vy)/L2,0,1),px=a.x+vx*t,py=a.y+vy*t,d=(x-px)**2+(y-py)**2;if(d<bd){bd=d;best=P.cum[i-1]+t*Math.sqrt(L2);}}return best;}
 function inHole(e){return ROOMS.some(r=>r.n==='穴'&&e.x>r.x-4&&e.x<r.x+r.w+4&&e.y>r.y-4&&e.y<r.y+r.h+4);}
 function setupBackrooms1(){
+  for(const e of S.ents)e.tasks=[];
   const P=lv1Path(),st=P.pts[0],ex=P.pts[P.pts.length-1];
   S.br={lv:1,need:0,got:0,coupons:[],open:true,exit:{x:ex.x,y:ex.y,room:'線路の一番奥'},path:P,trains:[],nextTrain:rand(10,20),t:0};
   S.mon=null;S.bodies=[];S.sab=null;S.mushT=0;S.lockT=0;S.crabT=0;papaCam=null;
@@ -1372,7 +1404,7 @@ function brUpdate1(dt){
         die(e,null);snd('kill');if(e===P){S.killedT=2.6;splash('ひかれた…','赤い列車の化物につかまった。幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`😱 ${e.name}が列車の化物にさらわれた…`);
         if(checkWin())return;}}}
   B.trains=B.trains.filter(tr=>tr.dir>0?tr.s<B.path.len+600:tr.s>-600);
-  for(const e of S.ents)if(e.alive&&dist(e,B.exit)<90){endGame('br',`${e.name}が線路の一番奥の非常口にたどり着き、全員でバックルームから脱出した！`);return;}
+  for(const e of S.ents)if(e.alive&&dist(e,B.exit)<90){goLv3(e);return;}
 }
 function brThink1(e){
   const B=S.br,ai=e.ai,se=pathS(B.path,e.x,e.y);
@@ -1406,7 +1438,139 @@ function drawTrainSpider(c,tr,tm){
   for(let i=0;i<4;i++){const px=-130+i*80,ph=tr.legs*1.3+i*1.7;c.beginPath();c.moveTo(px*f,-30);c.lineTo((px+30+20*Math.sin(ph))*f,-90);c.lineTo((px+60+30*Math.sin(ph))*f,40+8*Math.cos(ph));c.stroke();}
   c.restore();
 }
+// ----- Lv.3 -----
+const L3_ITEMS=[['yellow','黄色い鍵','#ffd23d'],['white1','白い鍵','#f4f4f4'],['white2','白い鍵（2本目）','#f4f4f4'],['red','赤い鍵','#ff4a4a'],['pick','ピッケル','#b0b8c0'],['blue','青い鍵','#4a8aff'],['pink','ピンクの鍵','#ff8ad8']];
+const L3_GOT={iron:'鉄',coal:'石炭',ikey:'焼いた鉄（外のドアの鍵）'};
+const L3_STEPS=[
+  {n:'黄色い鍵で 第1ランプを開ける',room:'居間',fx:.85,fy:.8,need:['yellow'],ic:'🪜'},
+  {n:'白い鍵で 第2ランプを上げる',room:'地下室1',fx:.2,fy:.35,need:['white1'],ic:'🪜'},
+  {n:'白い鍵で 地下室の電気レバーを下げる',room:'地下室1',fx:.82,fy:.7,need:['white2'],ic:'⚡'},
+  {n:'赤い鍵で 第2地下室の電気レバーを解禁する',room:'地下室2',fx:.5,fy:.35,need:['red'],ic:'⚡'},
+  {n:'ピッケルで石を掘って 鉄を手に入れる',room:'採掘場',fx:.5,fy:.55,need:['pick'],ic:'⛏',dur:4,give:'iron'},
+  {n:'青い鍵で 石炭を手に入れる',room:'倉庫',fx:.75,fy:.65,need:['blue'],ic:'🪨',give:'coal'},
+  {n:'釜戸で鉄を焼く（20秒）',room:'釜戸の部屋',fx:.5,fy:.5,need:['iron','coal'],ic:'🔥',dur:20,give:'ikey'},
+  {n:'外のドアの鍵を開ける',room:'裏口',fx:.5,fy:.55,need:['ikey'],ic:'🚪'},
+  {n:'ピンクの鍵でボートを動かして逃げる',room:'湖',fx:.45,fy:.5,need:['pink'],ic:'🚤'}];
+function l3Spot(room,fx,fy){const r=ROOMS.find(q=>q.n===room);return{x:Math.round(r.x+r.w*fx),y:Math.round(r.y+r.h*fy)};}
+function setupBackrooms3(){
+  for(const e of S.ents)e.tasks=[];
+  const house=['玄関','居間','台所','寝室','倉庫','地下室1','地下室2'];
+  const items=L3_ITEMS.map(([id,n,c])=>{for(let t=0;t<60;t++){const hn=pick(house),r=ROOMS.find(q=>q.n===hn),x=rand(r.x+50,r.x+r.w-50),y=rand(r.y+50,r.y+r.h-40);if(circleOK(x,y))return{id,n,c,x:Math.round(x),y:Math.round(y),got:false};}return{id,n,c,x:BTN.x,y:BTN.y+120,got:false};});
+  S.br={lv:3,stage:'meet',t:0,need:0,got:0,coupons:[],open:false,exit:l3Spot('湖',.45,.5),items,inv:[],si:0,work:null,webs:[],shots:[],big:null,said:{},
+    steps:L3_STEPS.map(st=>({...st,...l3Spot(st.room,st.fx,st.fy)}))};
+  S.mon=null;S.bodies=[];S.sab=null;S.mushT=0;S.lockT=0;S.crabT=0;papaCam=null;S.scope=null;
+  for(const e of S.ents){if(e.susp)e.susp.fill(0);e.inVent=null;e.climb=null;e.path=null;e.disguise=null;e.invisT=0;e.bubble=null;e.spider=false;e.bitten3=0;e.grab=null;e.grabLeft=2;e.stunS=0;e.spCd=0;if(e.ai){e.ai.goalKey=null;e.ai.target=null;e.ai.urgent=false;}}
+}
+function goLv3(by){
+  if(NET.client)return;
+  loadMap(BR3I);setupBackrooms3();placeAtTable();netBc({t:'br'});setupHud();brIntro();
+}
+const L3_MEET=['じゃあ会議を始めよう','最近、変な音しない？','タスクは順調？','このあたり、なんだか暗いよね','ここ、本当にバックルームなのかな…','みんな揃ってる？','天井のほう…何か動かなかった？'];
+const L3_REACT=['な、なにあれ…！？','天井から何か降りてくる…','く、蜘蛛…？ でかすぎる…','動かないで…刺激しないで…','目が…こっちを見てる…','嘘でしょ…'];
+const L3_SCREAM=['ぎゃああああっ！！','痛い痛い痛い！！','体が…熱い…！','た…すけ…て…','う、うあああ…'];
+function l3Survivors(){return S.ents.filter(e=>e.alive&&!e.spider);}
+function l3Use(e){
+  const B=S.br;if(!B||B.lv!==3||B.stage!=='run'||e.spider||!e.alive)return;
+  if(NET.client){rpc('l3Use',[e]);return;}
+  const st=B.steps[B.si];if(!st)return;
+  const near=B.steps.findIndex(x=>dist(e,x)<90);
+  if(near<0)return;
+  if(near!==B.si){if(near<B.si){if(e===me())toast('ここはもう終わっている');}else if(e===me())toast(`まだできない（先に「${st.n}」）`);return;}
+  if(B.work){if(e===me())toast(`${B.work.n}… あと${Math.ceil(B.work.t)}秒`);return;}
+  const miss=st.need.filter(id=>!B.inv.includes(id));
+  if(miss.length){if(e===me())toast(`${miss.map(id=>(L3_ITEMS.find(i=>i[0]===id)||[0,L3_GOT[id]])[1]).join('と')}が必要`);return;}
+  if(st.dur){B.work={t:st.dur,n:st.n};snd('click');if(e===me())toast(`${st.ic} ${st.n}…（${st.dur}秒）`);return;}
+  l3Done(e);
+}
+function l3Done(by){
+  const B=S.br,st=B.steps[B.si];B.inv=B.inv.filter(id=>!st.need.includes(id));if(st.give)B.inv.push(st.give);
+  B.si++;snd('task');toast(`✅ ${st.n}`);netBc({t:'tell',text:`✅ ${st.n}`});
+  if(by&&by.isBot&&Math.random()<.6)botSay(by,pick(['できた！ 次に行こう！','よし、開いた！','あと少し…！']));
+  if(B.si>=B.steps.length){const w=l3Survivors();endGame('br3',`ボートで逃げ切った！ 生き残った${w.map(e=>e.name).join('・')}の脱出成功`);}
+}
+function spGrab(e){
+  const B=S.br;if(NET.client){rpc('spGrab',[e]);return;}
+  if(!e.spider||e.grab||(e.spCd||0)>0||(e.stunS||0)>0)return;
+  let t=null,bd=200;for(const o of l3Survivors()){if(o.bitten3>0)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}if(!t)return;
+  e.grab={tgt:t.id,t:t.grabLeft||2};snd('vent');if(t===me())toast('🕸 糸で引き寄せられる…！');
+}
+function spWeb(e){const B=S.br;if(NET.client){rpc('spWeb',[e]);return;}if(!e.spider||(e.stunS||0)>0)return;
+  const mine=B.webs.filter(w=>w.owner===e.id);if(mine.length>=5)B.webs.splice(B.webs.indexOf(mine[0]),1);B.webs.push({x:Math.round(e.x),y:Math.round(e.y),owner:e.id});snd('click');}
+function l3Shoot(e){const B=S.br;if(NET.client){rpc('l3Shoot',[e,e.aim]);return;}if(e.abCd>0)return;const m=Math.hypot(e.aim.x,e.aim.y)||1;e.abCd=8;
+  for(let i=-1;i<=1;i++){const a=Math.atan2(e.aim.y,e.aim.x)+i*.18;B.shots.push({x:e.x,y:e.y-26,dx:Math.cos(a),dy:Math.sin(a),t:1.3});}snd('vent');}
+function l3Interrupt(sp,why){const t=S.ents[sp.grab.tgt];t.grabLeft=Math.max(.05,sp.grab.t);sp.grab=null;sp.stunS=1;snd('task');toast(`${why}で蜘蛛の捕食を止めた！（${t.name}が捕まるまで 残り${t.grabLeft.toFixed(1)}秒のまま）`);}
+function onWeb(e){const B=S&&S.br;return !!(B&&B.lv===3&&!e.spider&&B.webs.some(w=>Math.hypot(w.x-e.x,w.y-e.y)<55));}
+function l3Hud(){const B=S.br,P=me();
+  if(B.stage==='meet')return '<li style="color:#9be7ff">🗳 会議中…</li>';
+  if(B.stage==='spider')return '<li style="color:#ff9a9a">…天井から何かが降りてくる…</li>';
+  if(P.spider)return `<li style="color:#ff5a5a">🕷 あなたは蜘蛛</li><li>WASD: 移動（壁も登れる）</li><li>Z: 巣を吐く（${B.webs.filter(w=>w.owner===P.id).length}/5）</li><li>F: 糸で引き寄せて2秒後に捕食${P.spCd>0?`（あと${Math.ceil(P.spCd)}秒）`:''}</li><li>生存者 ${l3Survivors().filter(e=>e.bitten3<=0).length}人</li>`;
+  if(P.bitten3>0)return `<li style="color:#ff5a5a">😱 噛まれた… あと${Math.ceil(P.bitten3)}秒で蜘蛛になる</li>`;
+  let h=B.runT<8?'<li style="color:#ff5a5a">⚠ 逃げないといけない！ 小屋の中へ！</li>':'';
+  h+='<li style="color:#ffe680">🎒 持ち物: '+(B.inv.length?B.inv.map(id=>(L3_ITEMS.find(i=>i[0]===id)||[0,L3_GOT[id]])[1]).join('、'):'なし')+'</li>';
+  h+=B.steps.map((st,i)=>`<li style="${i<B.si?'opacity:.5;text-decoration:line-through':i===B.si?'color:#4cff7a':'opacity:.75'}">${i<B.si?'✅':i===B.si?'▶':'・'} ${st.n}${i===B.si&&B.work?`（あと${Math.ceil(B.work.t)}秒）`:''}</li>`).join('');
+  return h+'<li style="opacity:.75">鍵やピッケルは小屋のどこかに落ちている（上を歩けば拾う）。順番どおりにしかできない</li>';}
+function brUpdate3(dt){
+  const B=S.br,P=me();B.t+=dt;
+  if(B.stage==='meet'){
+    if(Math.random()<dt*.5){const b=pick(S.ents.filter(e=>e.isBot&&e.alive));if(b)botSay(b,pick(L3_MEET));}
+    if(B.t>=30){B.stage='spider';B.big={x:BTN.x,y:BTN.y-900,ty:BTN.y-160,t:0};snd('alarm');}
+  }else if(B.stage==='spider'){
+    const G=B.big;G.t+=dt;G.y+=(G.ty-G.y)*Math.min(1,dt*1.2);
+    if(Math.random()<dt*.9){const b=pick(S.ents.filter(e=>e.isBot&&e.alive));if(b)botSay(b,pick(L3_REACT));}
+    for(const e of S.ents)if(e.isBot)e.face=G.x>e.x?1:-1;
+    if(B.t>=50){const v=S.cfg.spiderMe&&me().alive?me():pick(S.ents.filter(e=>e.alive));B.stage='run';B.runT=0;B.big.victim=v.id;B.big.x=v.x;B.big.y=v.y-90;B.big.leave=2.5;v.bitten3=15;v.path=null;snd('kill');
+      if(v.isBot)botSay(v,pick(L3_SCREAM));if(v===P){splash('噛まれた…！','体が熱い…。15秒後、あなたは蜘蛛になる','#ff3b3b',{caller:v.id},null);S.killedT=2.2;}
+      toast(`😱 ${v.name}が蜘蛛に噛まれた！ 逃げないといけない！ 小屋の中へ！`);netBc({t:'tell',text:`😱 ${v.name}が蜘蛛に噛まれた！ 逃げないといけない！`});
+      for(const e of S.ents)if(e.isBot&&e!==v&&e.alive&&Math.random()<.5)S.chatQ.push({at:S.t+rand(.4,1.6),fn:()=>{if(e.alive)botSay(e,pick(['逃げて！！ 小屋に入って！','うわあああ！','走って！！']));}});}
+  }else{
+    B.runT+=dt;if(B.big){B.big.leave-=dt;B.big.y-=900*dt;if(B.big.leave<=0)B.big=null;}
+    for(const e of S.ents){if(e.bitten3>0&&e.alive){e.bitten3-=dt;e.moving=false;if(e.isBot&&Math.random()<dt*.6)botSay(e,pick(L3_SCREAM));
+      if(e.bitten3<=0){e.bitten3=0;e.spider=true;e.speed=205;e.spCd=4;snd('alarm');toast(`🕷 ${e.name}が蜘蛛になって出てきた…！`);netBc({t:'tell',text:`🕷 ${e.name}が蜘蛛になって出てきた…！`});
+        if(e===P){splash('蜘蛛になった','WASDで移動（壁も登れる）／ Z で巣を吐く（5個まで）／ F で糸で引き寄せて2秒後に捕食','#ff5a5a',{caller:e.id},null);S.killedT=2.4;setupHud();}}}
+      if(e.stunS>0)e.stunS=Math.max(0,e.stunS-dt);if(e.spCd>0)e.spCd=Math.max(0,e.spCd-dt);}
+    // アイテムを拾う（生存者が上を歩く）
+    for(const it of B.items){if(it.got)continue;for(const e of l3Survivors()){if(e.bitten3>0)continue;if(Math.abs(it.x-e.x)<44&&Math.abs(it.y-e.y)<44){it.got=true;B.inv.push(it.id);snd('task');toast(`🔑 ${e.name}が「${it.n}」を拾った`);break;}}}
+    // 時間のかかる作業（石を掘る・鉄を焼く）
+    if(B.work){B.work.t-=dt;if(B.work.t<=0){B.work=null;l3Done(null);if(S.phase!=='play')return;}}
+    // バブル
+    for(const sh of B.shots){sh.x+=sh.dx*700*dt;sh.y+=sh.dy*700*dt;sh.t-=dt;for(const sp of S.ents){if(!sp.spider||!sp.alive||Math.hypot(sp.x-sh.x,sp.y-30-sh.y)>60)continue;sh.t=0;if(sp.grab)l3Interrupt(sp,'バブル');else{sp.stunS=1;toast('🫧 バブルが蜘蛛に当たった！（1秒動けない）');}}}
+    B.shots=B.shots.filter(sh=>sh.t>0);
+    // 蜘蛛の捕食
+    for(const sp of S.ents){if(!sp.spider||!sp.alive||!sp.grab)continue;const t=S.ents[sp.grab.tgt];
+      if(!t.alive||t.spider||dist(sp,t)>280){if(t.alive)t.grabLeft=Math.max(.05,sp.grab.t);sp.grab=null;continue;}
+      const sage=S.ents.find(o=>o.alive&&!o.spider&&o.guardT>0&&(o===t||dist(o,t)<220));
+      if(sage){l3Interrupt(sp,`${sage.name}（賢者）のガード`);continue;}
+      const d=dist(sp,t)||1;moveEnt(t,(sp.x-t.x)/d*120*dt,(sp.y-t.y)/d*120*dt);t.moving=true;
+      sp.grab.t-=dt;if(sp.grab.t<=0){sp.grab=null;sp.spCd=10;t.grabLeft=2;die(t,sp);snd('kill');if(t===P){S.killedT=2.6;splash('蜘蛛に食べられた…','幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:t.id}},null);}else toast(`😱 ${t.name}が蜘蛛につかまった…`);}}
+    if(B.runT>2&&!l3Survivors().some(e=>e.bitten3<=0)&&S.ents.some(e=>e.alive&&e.spider)){endGame('br3s','全員が蜘蛛につかまってしまった…');return;}
+    if(!S.ents.some(e=>e.alive)){endGame('draw','全員いなくなってしまった…');return;}
+  }
+}
+function brThink3(e){
+  const B=S.br,ai=e.ai;
+  if(B.stage!=='run'||e.bitten3>0){e.path=null;e.moving=false;return;}
+  if(e.spider){if(e.stunS>0||e.grab){e.path=null;return;}
+    let t=null,bd=1e9;for(const o of l3Survivors()){if(o.bitten3>0)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
+    if(!t){e.path=null;return;}
+    e.path=[{x:t.x,y:t.y}];ai.goalKey='hunt';ai.gx=t.x;ai.gy=t.y;
+    if(bd<190&&e.spCd<=0)spGrab(e);
+    if(Math.random()<.02)spWeb(e);
+    return;}
+  const sp=S.ents.find(o=>o.alive&&o.spider&&!(o.stunS>0)&&dist(o,e)<430);
+  if(e.role==='sage'&&e.abCd<=0&&S.ents.some(o=>o.spider&&o.grab&&dist(S.ents[o.grab.tgt],e)<220))crewAbility(e);
+  if(e.isImp&&e.irole==='bubble'&&e.abCd<=0&&sp&&dist(sp,e)<450){e.aim={x:sp.x-e.x,y:sp.y-e.y};l3Shoot(e);}
+  if(sp&&!(B.work&&dist(e,B.steps[B.si])<120&&Math.random()<.5)){
+    if(!(ai.goalKey||'').startsWith('l3flee')||atGoal(e)){let best=null,bv=-1;for(let k=0;k<6;k++){const q=randomRoomPoint();const v=dist(q,sp)-dist(q,e)*.3;if(v>bv){bv=v;best=q;}}setGoal(e,best.x,best.y,'l3flee'+Math.random());}
+    return;}
+  if(B.runT<6&&!ai.l3in){const r=ROOMS.find(q=>q.n==='居間');setGoal(e,r.x+r.w/2+rand(-120,120),r.y+r.h/2+rand(-100,100),'l3in');if(atGoal(e))ai.l3in=true;return;}
+  const st=B.steps[B.si];if(!st)return;
+  const miss=st.need.filter(id=>!B.inv.includes(id));
+  if(miss.length){const it=B.items.find(i=>!i.got&&miss.includes(i.id));if(it){const k='l3i'+it.id;if(ai.goalKey!==k)setGoal(e,it.x,it.y,k);return;}}
+  const k='l3s'+B.si;if(ai.goalKey!==k)setGoal(e,st.x,st.y+10,k);
+  if(dist(e,st)<85)l3Use(e);
+}
 function brThink(e){
+  if(S.br&&S.br.lv===3)return brThink3(e);
   if(S.br&&S.br.lv===1)return brThink1(e);
   const ai=e.ai,B=S.br,M=S.mon;
   if(M&&!M.dead&&M.stun<=0&&dist(e,M)<520&&losSee(e.x,e.y-20,M.x,M.y-60)){
@@ -1440,8 +1604,8 @@ function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LI
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
-  const brStart=!NET.client&&((cfg.map||0)===BRI||(cfg.map||0)===BR1I||Math.random()*100<(cfg.brPct??BR_PER));
-  const mapI=brStart?((cfg.map||0)===BR1I?BR1I:BRI):(cfg.map||0);
+  const brStart=!NET.client&&((cfg.map||0)===BRI||(cfg.map||0)===BR1I||(cfg.map||0)===BR3I||Math.random()*100<(cfg.brPct??BR_PER));
+  const mapI=brStart?((cfg.map||0)===BR1I?BR1I:(cfg.map||0)===BR3I?BR3I:BRI):(cfg.map||0);
   if(MAPI!==mapI)loadMap(mapI);else resetVents();
   try{tabCh&&tabCh.postMessage({type:'start',tab:TAB_ID});}catch(e){}
   // スタート/もう一度ボタンにフォーカスが残っていると、Space/Enterで試合が始め直されるのを防ぐ
@@ -1504,7 +1668,7 @@ function startGame(cfg){
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
     gen:GEN,taskTotal:ents.filter(e=>e.team==='crew').reduce((a,e)=>a+e.tasks.length,0),taskDone:0,M:null,E:null,modal:null,hudT:0,splashT:0,killedT:0,chatQ:[],plog:[],fx:[],beams:[],booms:[],flash:0,leaks:{},cupid:null,impKnow:{},impVote:null,chan:'all',mines:[],bubbles:[],traces:[],snakeFx:[]};
   placeAtTable();
-  if(brStart){if(mapI===BR1I)setupBackrooms1();else setupBackrooms();}
+  if(brStart){if(mapI===BR3I)setupBackrooms3();else if(mapI===BR1I)setupBackrooms1();else setupBackrooms();}
   if(NET.host)netStartSend();
   $('menu').hidden=true;$('lobby').hidden=true;setTimeout(()=>cv.focus(),0);mobileTip();$('hud').hidden=false;$('btnQuit').hidden=false;$('quitDlg').hidden=true;
   setupHud();
@@ -1528,6 +1692,8 @@ function visibleTo(viewer,o){if(o.inVent!=null)return false;if(!o.alive)return !
 // ================= movement =================
 function moveEnt(e,dx,dy){
   if(!e.alive){e.x=clamp(e.x+dx,20,MAPW-20);e.y=clamp(e.y+dy,60,MAPH-10);return;}
+  if(e.spider){e.x=clamp(e.x+dx,30,MAPW-30);e.y=clamp(e.y+dy,70,MAPH-20);return;}   // 蜘蛛は壁を登れる
+  if(onWeb(e)){dx*=.45;dy*=.45;}   // 蜘蛛の巣に触れている間は遅い
   if(e.climb)return;
   if(S&&S.crabT>0&&!e.isImp)dy=0;   // カニ: 横にしか動けない
   if(circleOK(e.x+dx,e.y))e.x+=dx;
@@ -2563,7 +2729,7 @@ function botUpdate(e,dt){
   if(!e.alive){
     if(e.team!=='crew'){if(atGoal(e)){const p=randomRoomPoint();setGoal(e,p.x,p.y,'g'+Math.random());}}
     else{const t=e.tasks.find(t=>!t.done);
-      if(t){const st=STATIONS[t.s];setGoal(e,st.x,st.y,'task'+t.s);}
+      if(t&&STATIONS[t.s]){const st=STATIONS[t.s];setGoal(e,st.x,st.y,'task'+t.s);}
       else if(atGoal(e)){const p=randomRoomPoint();setGoal(e,p.x,p.y,'g'+Math.random());}}
     followPath(e,dt);
     if(atGoal(e)&&e.ai.goalKey&&e.ai.goalKey.startsWith('task')){e.doing+=dt;if(e.doing>=(e.ai.dur||(e.ai.dur=rand(3,6)))){const t=e.tasks.find(t=>!t.done);if(t)completeTask(e,t);e.doing=0;e.ai.dur=0;e.ai.goalKey=null;}}
@@ -2586,6 +2752,7 @@ function botUpdate(e,dt){
 // ================= player =================
 function playerUpdate(dt){
   const P=me();
+  if(S.br&&S.br.lv===3&&(S.br.stage!=='run'||P.bitten3>0||P.stunS>0||(P.spider&&P.grab))){P.moving=false;return;}   // 会議中・噛まれて苦しんでいる間・蜘蛛の捕食中は動けない
   if(P.crazed&&P.alive){S.scope=null;return;}   // くねくね中は自分では動けない
   if(S.scope){P.moving=false;if(!P.alive||S.phase!=='play'||S.modal||S.killedT>0){S.scope=null;return;}
     let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);if(joy.id!=null){ix+=joy.dx;iy+=joy.dy;}
@@ -2626,6 +2793,7 @@ function endScope(){if(!S||!S.scope)return;S.scope=null;snd('click');}
 function useTarget(){
   const P=me();if(P.inVent!=null)return null;
   if(S.scope)return{k:'scope'};
+  if(S.br&&S.br.lv===3){if(S.br.stage==='run'&&P.alive&&!P.spider&&S.br.steps.some(x=>dist(P,x)<90))return{k:'l3'};return null;}
   {const sc=scopeAt();if(sc&&P.alive&&dist(P,sc)<100)return{k:'scope'};}
   if(S.sab&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
   if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
@@ -2642,6 +2810,7 @@ function doUse(){
   if(!canAct())return;const u=useTarget();if(!u)return;
   const P=me();
   if(u.k==='scope'){if(S.scope)endScope();else startScope();return;}
+  if(u.k==='l3'){l3Use(P);return;}
   if(u.k==='ladder'){startClimb(P,u.L,u.to);return;}
   if(u.k==='task')openTask(u.t);
   else if(u.k==='sab')openSabFix();
@@ -2659,6 +2828,7 @@ function doVent(){if(!canAct())return;const P=me();
   if(P.ctrl){const pup=S.ents[P.ctrl.id];if(pup.inVent!=null)exitVent(pup);else{let bi=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(pup,v);if(d<bd){bd=d;bi=i;}});if(bi!=null)enterVent(pup,bi);}return;}const v=ventTarget();if(v==null)return;if(P.inVent!=null){exitVent(P);}else enterVent(P,v);refreshVentNav();}
 function canAct(){return S&&S.phase==='play'&&!S.modal&&S.killedT<=0;}
 function abilityReady(){const P=me();if(!P.alive)return false;
+  if(S.br&&S.br.lv===3){if(S.br.stage!=='run'||P.bitten3>0)return false;if(P.spider)return !P.grab&&(P.spCd||0)<=0&&!(P.stunS>0)&&l3Survivors().some(o=>o.bitten3<=0&&dist(o,P)<200);if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&P.irole==='bubble')return P.abCd<=0;return false;}
   if(S.br){if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&BR_IMP_AB.includes(P.irole))return P.abCd<=0&&!P.cannon&&!P.drill;
     if(P.nrole==='verity')return verityReady(P)||(P.vform>0&&!P.vMonKill&&!!S.mon&&!S.mon.dead&&dist(P,S.mon)<KILLR+60);return false;}
   if(P.isNeu){if(P.nrole==='vulture')return !!vultBody(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0;if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
@@ -2686,6 +2856,7 @@ function pickPlayers(box,n,onPick){
 function doAbility(){
   {const P=me();if(canAct()&&P&&P.alive&&P.nrole==='papa'&&!papaCam&&P.abCd>0){toast(`📷 カメラはあと${Math.ceil(P.abCd)}秒で使える`);return;}}
   if(!canAct()||!abilityReady())return;const P=me();
+  if(S.br&&S.br.lv===3){if(P.spider)spGrab(P);else if(P.isImp&&P.irole==='bubble')l3Shoot(P);else crewAbility(P);return;}
   if(S.br){if(P.isImp){impAbility(P,P.aim);return;}if(P.nrole==='verity'){if(P.vform>0){if(NET.client)rpc('verityMon',[P]);else verityKillMon(P);}else verityForm(P);return;}crewAbility(P);return;}
   if(P.isNeu){
     if(P.nrole==='vulture'){crewAbility(P);return;}
@@ -3099,13 +3270,13 @@ function endGame(w,reason,wid){
   // 横取り勝利: ラバーズ(+7) > マグロ(+5) > 神(+4)
   const chickenSafe=w==='crew'&&S.ents.some(e=>e.alive&&e.role==='chicken');
   if(chickenSafe)reason+='（チキンが生き残ったので横取りされない）';
-  if(!['arson','lovers','teru','vulture','br'].includes(w)&&!chickenSafe){
+  if(!['arson','lovers','teru','vulture','br','br3','br3s'].includes(w)&&!chickenSafe){
     const L=S.ents.filter(e=>e.lover!=null),tuna=S.ents.find(e=>e.alive&&e.nrole==='tuna'),god=S.ents.find(e=>e.alive&&e.nrole==='god'&&godReady(e));
     if(L.length&&L.every(e=>e.alive)){reason+=` …しかしラバーズ（${L.map(e=>e.name).join('♥')}）が横取り勝利！`;w='lovers';}
     else if(tuna){reason+=` …しかしマグロの${tuna.name}が横取り勝利！`;w='tuna';wid=tuna.id;}
     else if(god){reason+=` …しかし神の${god.name}が横取り勝利！`;w='god';wid=god.id;}
   }
-  const winners=w==='br'?S.ents.slice():w==='crew'?S.ents.filter(e=>e.team==='crew'&&!e.madmate):w==='imp'?S.ents.filter(e=>e.team==='imp'||e.madmate):w==='lovers'?S.ents.filter(e=>e.lover!=null||e.id===S.cupid):w==='draw'?[]:[S.ents[wid]];
+  const winners=w==='br'?S.ents.slice():w==='br3'?S.ents.filter(e=>e.alive&&!e.spider):w==='br3s'?S.ents.filter(e=>e.spider):w==='crew'?S.ents.filter(e=>e.team==='crew'&&!e.madmate):w==='imp'?S.ents.filter(e=>e.team==='imp'||e.madmate):w==='lovers'?S.ents.filter(e=>e.lover!=null||e.id===S.cupid):w==='draw'?[]:[S.ents[wid]];
   const opps=S.ents.filter(e=>e.nrole==='opp'&&e.alive&&!winners.includes(e));
   if(opps.length){winners.push(...opps);reason+=`（オポチュニストの${opps.map(e=>e.name).join('と')}も共存勝利）`;}
   const win=winners.includes(me());
@@ -3275,12 +3446,13 @@ function render(dt){
   if(S.br){const B=S.br,see=(x,y)=>!P.alive||canSee(P,x,y);
     for(const c of B.coupons){if(c.got||!see(c.x,c.y))continue;ctx.save();ctx.translate(c.x,c.y-14+Math.sin(tm*3+c.x)*3);ctx.rotate(-.15);ctx.fillStyle='#ffe14a';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();rr(ctx,-20,-12,40,24,4);ctx.fill();ctx.stroke();
       ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(-8,-12);ctx.lineTo(-8,12);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#a5321a';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('券',5,4);ctx.restore();}
-    const X=B.exit;if(see(X.x,X.y)||(B.open&&!B.lv)){ctx.save();ctx.fillStyle=B.open?'#2a8a3a':'#3a3a3a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillRect(X.x-40,X.y-110,80,110);ctx.strokeRect(X.x-40,X.y-110,80,110);
+    const X=B.exit;if(B.lv!==3&&(see(X.x,X.y)||(B.open&&!B.lv))){ctx.save();ctx.fillStyle=B.open?'#2a8a3a':'#3a3a3a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.fillRect(X.x-40,X.y-110,80,110);ctx.strokeRect(X.x-40,X.y-110,80,110);
       ctx.fillStyle=B.open?'#4cff7a':'#7a7a7a';ctx.fillRect(X.x-44,X.y-138,88,24);ctx.strokeRect(X.x-44,X.y-138,88,24);ctx.fillStyle='#000';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(B.open?'EXIT 非常口':'EXIT 🔒',X.x,X.y-121);ctx.restore();}
     if(S.mon&&!S.mon.dead&&see(S.mon.x,S.mon.y))drawWireMonster(ctx,S.mon,tm);
-    if(B.trains)for(const tr of B.trains){if(dist(P,tr)<2600||!P.alive)drawTrainSpider(ctx,tr,tm);}}
+    if(B.trains)for(const tr of B.trains){if(dist(P,tr)<2600||!P.alive)drawTrainSpider(ctx,tr,tm);}
+    if(B.lv===3)drawL3(P,tm,see);}
   for(const e of vis)if(e.berserk&&e.alive){ctx.save();const g=ctx.createRadialGradient(e.x,e.y-30,8,e.x,e.y-30,70);g.addColorStop(0,'rgba(255,40,20,.55)');g.addColorStop(1,'rgba(255,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y-30,70,0,TAU);ctx.fill();ctx.restore();}
-  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);if(e.crazed&&e.alive){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(tm*9+e.id)*.45);ctx.scale(1+Math.sin(tm*13+e.id)*.12,1-Math.sin(tm*13+e.id)*.08);ctx.translate(-e.x,-e.y);}drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});if(e.crazed&&e.alive)ctx.restore();
+  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);if((e.crazed||e.bitten3>0)&&e.alive){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(tm*9+e.id)*.45);ctx.scale(1+Math.sin(tm*13+e.id)*.12,1-Math.sin(tm*13+e.id)*.08);ctx.translate(-e.x,-e.y);}drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});if((e.crazed||e.bitten3>0)&&e.alive)ctx.restore();
     if(e.drill){ctx.save();ctx.translate(e.x,e.y-26);ctx.rotate(Math.atan2(e.drill.dy,e.drill.dx));ctx.fillStyle='#aab3c0';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(70,0);ctx.lineTo(20,-22);ctx.lineTo(20,22);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
     if(e.ctrlBy!=null&&(P.isImp||!P.alive)){ctx.font='20px system-ui';ctx.textAlign='center';ctx.fillText('🎮',e.x,e.y-70);}}
   ctx.globalAlpha=1;
@@ -3362,6 +3534,30 @@ function render(dt){
 
 let bubbleRects=[];
 // 黒い針金の人形の化物
+function drawL3(P,tm,see){
+  const B=S.br,c=ctx;
+  for(const w of B.webs){if(!see(w.x,w.y))continue;c.save();c.translate(w.x,w.y);c.strokeStyle='rgba(240,240,255,.8)';c.lineWidth=2;for(let k=0;k<8;k++){const a=k/8*TAU;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(a)*52,Math.sin(a)*30);c.stroke();}for(const r of[16,30,46]){c.beginPath();c.ellipse(0,0,r,r*.58,0,0,TAU);c.stroke();}c.restore();}
+  for(const st of B.steps){const i=B.steps.indexOf(st);if(!see(st.x,st.y)&&i!==B.si)continue;c.save();c.translate(st.x,st.y);
+    if(i===B.si){c.strokeStyle=`rgba(76,255,122,${.5+.4*Math.sin(tm*5)})`;c.lineWidth=5;c.beginPath();c.arc(0,-20,46,0,TAU);c.stroke();}
+    c.font='34px system-ui';c.textAlign='center';c.fillText(i<B.si?'✅':st.ic,0,-8);c.font='bold 13px "M PLUS Rounded 1c",sans-serif';c.lineWidth=4;c.strokeStyle='#000';c.fillStyle='#fff';const lb=st.n.replace(/（.*）/,'');c.strokeText(lb,0,-52);c.fillText(lb,0,-52);c.restore();}
+  for(const it of B.items){if(it.got||!see(it.x,it.y))continue;c.save();c.translate(it.x,it.y-18+Math.sin(tm*3+it.x)*3);
+    if(it.id==='pick'){c.font='30px system-ui';c.textAlign='center';c.fillText('⛏',0,10);}
+    else{c.fillStyle=it.c;c.strokeStyle='#000';c.lineWidth=3;c.beginPath();c.arc(-10,0,10,0,TAU);c.fill();c.stroke();c.fillRect(-2,-3,24,6);c.strokeRect(-2,-3,24,6);c.fillRect(14,0,4,8);c.fillRect(20,0,4,6);}
+    c.restore();}
+  for(const sh of B.shots){c.save();c.fillStyle='rgba(170,230,255,.6)';c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.arc(sh.x,sh.y,14,0,TAU);c.fill();c.stroke();c.restore();}
+  // 蜘蛛になった人の脚と、捕食の糸
+  for(const e of S.ents){if(!e.spider||!e.alive||!see(e.x,e.y))continue;c.save();c.translate(e.x,e.y-26);c.strokeStyle='#120808';c.lineWidth=5;c.lineCap='round';
+    for(let k=0;k<8;k++){const sd2=k<4?-1:1,i=k%4,ph=Math.sin(tm*10+k)*(e.moving?8:2);c.beginPath();c.moveTo(sd2*14,-8+i*8);c.lineTo(sd2*(44+i*4),-34+i*12+ph);c.lineTo(sd2*(58+i*6),18+i*10);c.stroke();}
+    c.fillStyle='#ff2020';for(const[x,y]of[[8,-30],[18,-32],[12,-40]]){c.beginPath();c.arc(x*(e.face||1),y,3.5,0,TAU);c.fill();}c.restore();
+    if(e.grab){const t=S.ents[e.grab.tgt];c.save();c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=3;c.setLineDash([8,5]);c.beginPath();c.moveTo(e.x,e.y-30);c.lineTo(t.x,t.y-30);c.stroke();c.setLineDash([]);
+      c.font='bold 22px sans-serif';c.textAlign='center';c.lineWidth=5;c.strokeStyle='#000';c.fillStyle='#ff5a5a';const tx=e.grab.t.toFixed(1);c.strokeText(tx,t.x,t.y-110);c.fillText(tx,t.x,t.y-110);c.restore();}
+    if(e.stunS>0){c.save();c.font='22px system-ui';c.textAlign='center';c.fillText('💫',e.x,e.y-100);c.restore();}}
+  // 天井から降りてくる大きな蜘蛛
+  if(B.big){const G=B.big;c.save();c.strokeStyle='rgba(230,230,240,.8)';c.lineWidth=2;c.beginPath();c.moveTo(G.x,G.y-2000);c.lineTo(G.x,G.y);c.stroke();c.translate(G.x,G.y);
+    c.strokeStyle='#0a0606';c.lineCap='round';c.lineWidth=9;for(let k=0;k<8;k++){const sd2=k<4?-1:1,i=k%4,ph=Math.sin(tm*6+k)*6;c.beginPath();c.moveTo(sd2*30,-10+i*10);c.lineTo(sd2*(110+i*10),-80+i*30+ph);c.lineTo(sd2*(150+i*12),40+i*24);c.stroke();}
+    c.fillStyle='#120a0a';c.beginPath();c.ellipse(0,-60,70,80,0,0,TAU);c.fill();c.beginPath();c.ellipse(0,20,48,44,0,0,TAU);c.fill();
+    c.fillStyle='#ff2020';for(const[x,y]of[[-16,20],[16,20],[-28,8],[28,8],[-8,34],[8,34]]){c.beginPath();c.arc(x,y,6,0,TAU);c.fill();}c.restore();}
+}
 function drawWireMonster(c,M,tm){
   const st=M.stun>0,j=st?0:1;c.save();c.translate(M.x,M.y);c.scale(M.face||1,1);c.lineCap='round';c.lineJoin='round';
   if(st){c.globalAlpha=.75;}
@@ -3730,9 +3926,11 @@ function setupHud(){
   $('btnPause').hidden=!!NET.mode;$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';
   $('taskbox').classList.toggle('min',isTouch());
   document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp||!!S.br;b.classList.remove('on');});if(S.br)S.chan='all';
-  $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
+  $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;
+  if(!$('btnSab').dataset.orig)$('btnSab').dataset.orig=$('btnSab').innerHTML;
+  if(S.br&&S.br.lv===3&&P.spider){$('btnSab').hidden=false;$('btnSab').innerHTML='<kbd>Z</kbd><span class="ic">🕸</span>巣を吐く';}else $('btnSab').innerHTML=$('btnSab').dataset.orig;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
   const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
-  {const brAb=S.br?(P.role==='sage'&&P.team==='crew'?ab:P.isImp?{sniper:['🎯','狙撃'],gimlet:['🔩','ドリル'],cannon:['🔫','波動砲'],viper:['🐍','鈍足の毒']}[P.irole]:P.nrole==='verity'?['🦵','変身/攻撃']:null):ab;
+  {const brAb=S.br&&S.br.lv===3?(P.spider?['🕸','捕まえる']:P.role==='sage'&&P.team==='crew'?ab:P.isImp&&P.irole==='bubble'?['🫧','バブル']:null):S.br?(P.role==='sage'&&P.team==='crew'?ab:P.isImp?{sniper:['🎯','狙撃'],gimlet:['🔩','ドリル'],cannon:['🔫','波動砲'],viper:['🐍','鈍足の毒']}[P.irole]:P.nrole==='verity'?['🦵','変身/攻撃']:null):ab;
    $('btnAbility').hidden=!brAb;if(brAb){$('abIc').textContent=brAb[0];$('abLabel').textContent=brAb[1];}}
   $('killIc').textContent=P.irole==='vamp'?'🦇':P.irole==='rocket'?'🙌':'🔪';$('killLabel').textContent=P.irole==='vamp'?'噛む':P.irole==='rocket'?'持ち上げ':'キル';if(ab){$('abIc').textContent=ab[0];$('abLabel').textContent=ab[1];}
   $('plog').innerHTML='';$('pchatIn').value='';
@@ -3755,7 +3953,9 @@ function updateHud(){
   }
   if(ul.innerHTML!==h)ul.innerHTML=h;
   const al=$('alert');
-  if(S.br&&S.br.lv===1&&S.br.trains&&S.br.trains.some(tr=>{const P=me(),a=(pathS(S.br.path,P.x,P.y)-tr.s)*tr.dir;return P.alive&&a>0&&a<3200;})){al.hidden=false;al.textContent='🚂 列車の化物が来る！ 穴に隠れろ！';}
+  if(S.br&&S.br.lv===3&&S.br.stage!=='run'){al.hidden=false;al.textContent=S.br.stage==='meet'?'🗳 会議中…':'…天井から何かが降りてくる…';}
+  else if(S.br&&S.br.lv===3&&(S.br.runT||0)<8&&!me().spider){al.hidden=false;al.textContent='😱 逃げないといけない！ 小屋の中へ！';}
+  else if(S.br&&S.br.lv===1&&S.br.trains&&S.br.trains.some(tr=>{const P=me(),a=(pathS(S.br.path,P.x,P.y)-tr.s)*tr.dir;return P.alive&&a>0&&a<3200;})){al.hidden=false;al.textContent='🚂 列車の化物が来る！ 穴に隠れろ！';}
   else if(me().crazed&&me().alive){al.hidden=false;al.textContent='😵 くねくねを見てしまった… 体が勝手に動く';}
   else if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
   else if(!S.sab&&S.crabT>0){al.hidden=false;al.textContent=`🦀 カニ発動中！ 横にしか歩けない（${Math.ceil(S.crabT)}秒）`;}
@@ -3914,6 +4114,7 @@ const RPC={
   callMeeting:(e,a)=>{if(S.phase!=='play'||!e.alive)return;const b=a[1]?S.bodies.find(x=>x.id===a[1].B):null;
     if(b){if(dist(e,b)>220)return;}else if(e.buttonUses<=0||S.meetingCd>0||(S.sab&&S.sab.type==='reactor')||dist(e,BTN)>140)return;callMeeting(e,b);},
   verityForm:(e)=>verityForm(e),
+  l3Use:(e)=>l3Use(e),spGrab:(e)=>spGrab(e),spWeb:(e)=>spWeb(e),l3Shoot:(e,a)=>{if(a&&typeof a==='object')e.aim={x:+a.x||1,y:+a.y||0};l3Shoot(e);},
   craze:(e)=>{if(e&&!e.isImp&&scopeAt()&&!e.crazed)craze(e);},
   verityMon:(e)=>{if(S.br&&e.vform>0&&S.mon&&dist(e,S.mon)<KILLR+80)verityKillMon(e);},
   papaShoot:(e,a)=>papaShoot(e,Array.isArray(a[1])?a[1].filter(n=>Number.isInteger(n)):null,a[2]&&typeof a[2]==='object'?{x:+a[2].x||0,y:+a[2].y||0,w:+a[2].w||560,h:+a[2].h||250}:null),
@@ -4003,7 +4204,7 @@ function netTick(dt){
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
-      bz:S.ents.map(e=>e.berserk?1:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{lv:S.br.lv||0,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
+      bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
@@ -4090,7 +4291,8 @@ function applySnap(d){
   S.bodies=d.bodies.map(([id,x,y,color,room])=>({id,x,y,color,room}));
   S.sab=d.sab;S.taskDone=d.td;S.taskTotal=d.tt;S.impKnow=d.ik||{};S.cupid=d.cu;S.flash=d.flash||0;
   S.beams=d.beams.map(([x,y,dx,dy,L,t,thin])=>({x,y,dx,dy,L,t,thin}));
-  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);e.crazed=!!(x.cz&&x.cz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
+  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);if(x.sp){const was=e.spider;e.spider=x.sp[i]===1;e.bitten3=x.sp[i]===2?1:0;if(e===me()&&e.spider&&!was)setupHud();}e.crazed=!!(x.cz&&x.cz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br&&x.br.lv===3){if(MAPI!==BR3I){loadMap(BR3I);setupBackrooms3();setupHud();}const l=x.br.l3,B=S.br;B.stage=l.st;B.t=l.t;B.runT=l.rt;B.si=l.si;B.inv=l.inv;B.items.forEach((it,i)=>{const q=l.it[i];if(q){it.x=q[0];it.y=q[1];it.got=!!q[2];}});B.webs=l.w;B.work=l.wk?{t:l.wk,n:''}:null;B.big=l.big?{x:l.big[0],y:l.big[1]}:null;S.ents.forEach((e,i)=>{e.grab=l.gr[i]?{tgt:l.gr[i][0],t:l.gr[i][1]}:null;});}
+  else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
@@ -4232,6 +4434,7 @@ addEventListener('keydown',e=>{
   else if(e.code==='Enter'||e.code==='KeyT'){if(S.phase==='play'){$('pchatIn').focus();e.preventDefault();}}
   else if(e.code==='KeyQ')doKillBtn();
   else if(e.code==='KeyV')doVent();
+  else if(e.code==='KeyZ'){if(S.br&&S.br.lv===3&&me().spider&&canAct())spWeb(me());}
   else if(e.code==='KeyX'){if(!$('btnSab').disabled&&!$('btnSab').hidden)$('sabMenu').hidden=!$('sabMenu').hidden;}
   else if(e.code==='KeyM'||e.code==='Tab'){toggleMap();e.preventDefault();}
 });
@@ -4288,7 +4491,7 @@ document.querySelectorAll('.chan').forEach(b=>b.onclick=()=>setChan(S&&S.chan===
 $('pchatIn').addEventListener('focus',()=>{for(const k in keys)keys[k]=false;});
 $('pchatIn').addEventListener('keydown',e=>{if(e.code==='Escape'){$('pchatIn').blur();cv.focus();}});
 $('btnUse').onclick=doUse;$('btnReport').onclick=doReport;$('btnKill').onclick=doKillBtn;$('btnVent').onclick=doVent;
-$('btnSab').onclick=()=>{$('sabMenu').hidden=!$('sabMenu').hidden;};
+$('btnSab').onclick=()=>{if(S&&S.br&&S.br.lv===3&&me().spider){spWeb(me());return;}$('sabMenu').hidden=!$('sabMenu').hidden;};
 document.querySelectorAll('#sabMenu button').forEach(b=>b.onclick=()=>{startSab(b.dataset.sab);$('sabMenu').hidden=true;});
 setInterval(()=>{const b=$('sabMush');if(b)b.hidden=!MAPS[MAPI].fungle;},500);
 $('btnMap').onclick=toggleMap;$('mapov').onclick=()=>{$('mapov').hidden=true;};
