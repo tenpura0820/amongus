@@ -603,6 +603,7 @@ function llmSystem(e){
     '村陣営（クルーメイト）。インポスターを倒して勝利しよう。証拠をもとに推理すること';
   return `あなたは宇宙船を舞台にした人狼系ゲーム（アモングアス風）のプレイヤー「${e.name}」です。${goal}。
 口調: ${PERSONA[e.name]?.style||'普通'}。${mustHide(e)?'【絶対ルール】あなたの役職（'+roleName(e)+'）は何があっても明かさない。聞かれたら「村人」と答え、正体が分かるようなこと（止まれない・ラバーズ・オイル・全員の役職が見える等）も言わない。':''}「現行犯」と言っていいのは、自分の目で実際にキルを見た時だけ（見ていない時は「〇〇かな…」と推測として言う）。現行犯だけでなく、状況証拠（死体の方から来たのに通報しない、アリバイの矛盾、ベント付近で急に現れた、タスクを全くしていない等）からも推理すること。ゲーム内のキャラとして日本語で話す。発言は1〜2文、60文字以内。
+【知識】シェリフは村陣営の役職で、キルできる。シェリフが撃っても自分が死ななければ、撃たれた人は人外（インポスターか第三陣営）。シェリフのキルを見ても、それだけでシェリフを疑わない。
 必ず次のJSONだけを出力: {"say":"発言","target":"話題にするプレイヤー名かnull","claim":"kill|vent|sus|safe|none","vote":"投票するプレイヤー名かskip"}`;
 }
 function llmFacts(e){
@@ -1798,6 +1799,7 @@ function loneWitness(k,v){
   if(near.length!==1)return;
   const w=near[0],face=faceOf(k);
   if(face===w||(w.isImp&&k.isImp))return;
+  if(k.sheriff&&!k.isImp&&!k.isNeu&&k.alive)return;   // シェリフのキルは村陣営の仕事
   if(w===me()){toast(`近くにいたのは ${face.name} だけだった…！`);return;}
   if(!w.isBot)return;
   w.susp[face.id]=100;if(w.ai.witnessKill==null){w.ai.witnessKill=face.id;w.ai.lone=true;}w.ai.urgent=true;
@@ -1963,7 +1965,10 @@ function doKill(k,v){if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);
   die(v,k);(k.ai.kills=k.ai.kills||[]).push(v.name);
   if(k.isImp&&k.isBot&&S.ents.some(o=>o.isImp&&o!==k&&o.alive))impSay(k,pick([`${v.name}をキルした。アリバイよろしく`,`${v.name}やった。${roleOf(v)}`]));
   k.x=v.x;k.y=v.y;k.tpc=(k.tpc||0)+1;k.killCd=cooldownOf(k);afterKillHooks(k);if(k.isNeu)(k.ai.ignore=k.ai.ignore||new Set()).add(v.id);k.path=null;k.ai.goalKey=null;
-  if(k.sheriff&&!k.isImp&&!k.isNeu){(k.ai.sheriffKills=k.ai.sheriffKills||[]).push(v.id);for(const w of ws)if(w.isBot)w.susp[k.id]=Math.min(99,w.susp[k.id]+35);
+  if(k.sheriff&&!k.isImp&&!k.isNeu){(k.ai.sheriffKills=k.ai.sheriffKills||[]).push(v.id);
+    // シェリフはキルできる村陣営。撃って生きているなら、撃たれたのは人外 → 疑わない（むしろ信用する）
+    for(const w of ws)if(w.isBot&&w!==v){w.susp[k.id]=Math.max(0,w.susp[k.id]-40);(w.ai.sawSheriff=w.ai.sawSheriff||[]).push({k:k.id,v:v.id});}
+    {const w0=ws.find(w=>w.isBot&&w!==v);if(w0&&Math.random()<.7)botSay(w0,pick([`${k.name}が撃った…シェリフだ！ ${v.name}は人外だったんだ`,`今のはシェリフの射撃だね。${k.name}は生きてるから${v.name}は村じゃない`,`${k.name}、シェリフだったのか！`]));}
     if(k.isBot)replyLater(k,()=>`${v.name}を撃った。自分は死んでないから、${v.name}は村陣営じゃなかった！`,.8);}
   else{const face=faceOf(k);for(const w of ws){if(w.isBot&&w!==face){w.susp[face.id]=100;w.ai.witnessKill=face.id;w.ai.urgent=true;}}
     const w0=ws.find(w=>w.isBot&&w!==face);if(w0)botSay(w0,`${face.name}がキルしていました！現行犯です！！`,{k:'kill',x:face.id,w:50});}
@@ -3046,6 +3051,7 @@ function buildMeetingKnowledge(M){
       for(const x of e.ai.clears||[]){if(!S.ents[x].alive)continue;q(M,rand(4,9),e.id,`${S.ents[x].name}がタスク終わらせるの何回も見たよ。白だと思う`,{k:'safe',x,w:-15});}
       e.ai.clears=null;
       for(const n of e.ai.notes||[]){if(said.has(n.x)||!S.ents[n.x].alive||n.x===e.id)continue;said.add(n.x);q(M,rand(2.5,7),e.id,n.text,{k:'sus',x:n.x,w:n.w});}
+      if(e.ai.sawSheriff&&e.ai.sawSheriff.length&&!e.ai.sheriffDefended){e.ai.sheriffDefended=true;const z=e.ai.sawSheriff[0],K=S.ents[z.k],V=S.ents[z.v];if(K.alive)q(M,rand(1.5,4),e.id,`${K.name}は${V.name}を撃ったけど、シェリフだから大丈夫。撃っても生きてるってことは${V.name}は人外だった。${K.name}は信用していい`,{k:'safe',x:K.id,w:-40});}
       if(e.ai.witnessKill!=null&&S.ents[e.ai.witnessKill].alive){const x=e.ai.witnessKill;said.add(x);q(M,rand(1.5,3.5),e.id,e.ai.lone?`${S.ents[x].name}がキルしてた！ 死体の近くには自分と${S.ents[x].name}しかいなかった！ ${S.ents[x].name}に投票して！`:`${S.ents[x].name}がキルしていました。現行犯です！ ${S.ents[x].name}に投票して！`,{k:'kill',x,w:60});}
       if(e.ai.sawVent!=null&&S.ents[e.ai.sawVent].alive&&!(e===caller&&!body)&&!said.has(e.ai.sawVent)){const x=e.ai.sawVent;said.add(x);q(M,rand(2,4),e.id,`${S.ents[x].name}がベントを使ってた！`,{k:'vent',x,w:55});}
       if(body&&e.ai.nearBody)for(const x of e.ai.nearBody){if(said.has(x)||!S.ents[x].alive||x===e.id)continue;said.add(x);q(M,rand(3,7),e.id,`死体の近くに${S.ents[x].name}がいた`,{k:'near',x,w:18});}
@@ -3169,7 +3175,7 @@ function updateMeeting(dt){
   }
   if(M.q.length&&M.q[0].at<=M.t&&M.t>=(M.nextAt||0)&&M.stage!=='result'&&(M.q[0].prio||!(S.cfg.voice&&TTS&&TTS.speaking&&M.t<(M.nextAt||0)+4))){
     const m=M.q.shift();
-    if(S.ents[m.who].alive){post(m.who,m.text,m.fx,m.llm);if(m.claim){M.claims[m.who]=m.claim;for(const g of S.ents)if(g.irole==='guesser'&&g.isBot)g.ai.guessAt=Math.min(g.ai.guessAt,M.t+rand(2,4));}M.nextAt=M.t+clamp(m.text.length*.1,1.8,4.5);}
+    if(S.ents[m.who].alive){post(m.who,m.text,m.fx,m.llm);if(m.claim){M.claims[m.who]=m.claim;if(m.claim==='sheriff')for(const b of S.ents)if(b.isBot&&b!==S.ents[m.who]&&b.susp[m.who]<100)b.susp[m.who]=Math.max(0,b.susp[m.who]*.3-10);for(const g of S.ents)if(g.irole==='guesser'&&g.isBot)g.ai.guessAt=Math.min(g.ai.guessAt,M.t+rand(2,4));}M.nextAt=M.t+clamp(m.text.length*.1,1.8,4.5);}
   }
   // 噛まれた人は会議中でも死ぬ
   for(const e of S.ents)if(e.bitten&&e.alive){e.bitten.t-=dt;if(e.bitten.t<=0){const by=S.ents[e.bitten.by];e.bitten=null;meetingDeath(e,`🦇 ${e.name}が突然倒れた…！`,by);if(S.phase!=='meeting')return;}}
