@@ -1205,7 +1205,7 @@ Object.assign(IROLES,{
   pusher:{n:'突き落と師',d:'F: ハシゴ（🪜）の上にいる人を、近くから突き落としてキル（キル間隔ごと）'},
   sniper:{n:'スナイパー',d:'F: 向いている方向に射程無限の拳銃を撃つ（キル間隔ごと・壁もすり抜ける）。銃声が全員に聞こえ、撃った場所に薬莢（痕跡）が残る'},
   snake:{n:'ヘビ',d:'F: 近くの人を「飲む」。同じ人に2回使うと、捕食モーションとともに死体を残さず丸のみ（設定でモーションなし）'},
-  kunekune:{n:'くねくね',d:'普通にキルできる。望遠鏡で自分を見た人は「くねくね」になってしまう（自分では動けず、くねくねしながら近くの人を勝手に追いかけてキルしてしまう）。望遠鏡のあるマップ（ファングル）でしか出ない'},
+  kunekune:{n:'くねくね',d:'普通にキルできる。望遠鏡で自分を見た人は「くねくね」になり、インポスター陣営になる（自分では動けず、くねくねしながら近くの人を勝手に追いかけてキルする。会議のあともそのまま）。F: 近くのくねくねになった人を「正常化」すると、その人は自分で動いてキルできる仲間になる。望遠鏡のあるマップ（ファングル）でしか出ない'},
   crab:{n:'カニ',d:'F: 10秒間、インポスター以外の全員が横（左右）にしか移動できなくなる（40秒ごと）'},
   double:{n:'ダブルキラー',d:'1試合に1回だけ、キルした直後に待ち時間なしでもう1回キルできる'},
   serial:{n:'シリアルキラー',d:'キルの待ち時間が15秒と短いが、最後のキルから60秒キルしないと死ぬ（会議中は時間が止まる）'},
@@ -2695,6 +2695,8 @@ function impReply(b,text,tgt){
   return pick(['了解','OK、バレないようにね','気をつけて','いいね、その作戦で']);
 }
 function impRoleThink(e){
+  // くねくね: くねくねになった仲間を見つけたら、近づいて正常化する
+  if(e.irole==='kunekune'){const c=S.ents.find(o=>o.crazed&&o.alive&&dist(o,e)<900);if(c){if(dist(e,c)<120)kuneTame(e,c);else{setGoal(e,c.x,c.y,'tame'+Math.floor(S.t));return true;}}}
   if(e.irole==='fraud'&&e.abCd<=0&&S.t>1){const t=stealTarget(e);if(t)stealId(e,t);}
   const ai=e.ai;
   if(e.cannon){e.path=null;e.moving=false;return true;}
@@ -2806,10 +2808,21 @@ e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}snd('alarm');
   else{const P=me();if(!P.alive||canSee(P,e.x,e.y))toast(`😵 ${e.name}の様子がおかしい…くねくねしている`);}
   netBc({t:'tell',text:`😵 だれかが「くねくね」を見てしまった…`});
 }
+// くねくね本人が「正常化」すると、自分で動いてキルできるインポスターの仲間になる
+function kuneTameTarget(k){let best=null,bd=130;for(const o of S.ents){if(!o.crazed||!o.alive||o===k)continue;const d=dist(k,o);if(d<bd){bd=d;best=o;}}return best;}
+function kuneTame(k,t){
+  if(NET.client){rpc('kuneTame',[k,t]);return;}
+  if(!k||!k.alive||k.irole!=='kunekune'||!t||!t.crazed||!t.alive||dist(k,t)>160)return;
+  t.crazed=false;t.tamed=true;t.isImp=true;t.team='imp';t.killCd=S.cfg.kcd*.5;t.path=null;if(t.ai){t.ai.goalKey=null;t.ai.target=null;}
+  snd('task');tell(k,`🌀 ${t.name}を正常化した。もう自分で動いてキルできる仲間だ`);
+  if(t===me()){splash('正常化された','くねくねに助けられた。もう自分で動ける。インポスターの仲間として、Qでキルしよう','#ff3b3b',{caller:t.id},null);S.killedT=2;setupHud();}
+  else tell(t.remote?t:null,'🌀 正常化された！ 自分で動いてキルできる（インポスター陣営）');
+  if(k===me())toast(`🌀 ${t.name}を正常化した`);
+}
 function kuneInView(x,y,r){return S.ents.some(k=>k.alive&&k.isImp&&k.irole==='kunekune'&&k.inVent==null&&Math.hypot(k.x-x,k.y-y)<r);}
 function crazedThink(e){
   const ai=e.ai;let best=null,bd=1e9;
-  for(const o of S.ents){if(o===e||!o.alive||o.crazed||o.inVent!=null||hid(o))continue;const d=dist(e,o);if(d<bd){bd=d;best=o;}}
+  for(const o of S.ents){if(o===e||!o.alive||o.crazed||o.isImp||o.inVent!=null||hid(o))continue;const d=dist(e,o);if(d<bd){bd=d;best=o;}}   // 仲間（インポスター）は襲わない
   if(!best){if(atGoal(e))wander(e);return;}
   setGoal(e,best.x,best.y,'craze'+Math.floor(S.t*2));
   if(bd<KILLR&&(e.crazeCd||0)<=0){if(silentKill(e,best)){e.crazeCd=18;(e.ai.kills=e.ai.kills||[]).push(best.name);checkWin();}}
@@ -2863,6 +2876,7 @@ function abilityReady(){const P=me();if(!P.alive)return false;
   if(P.isImp){const r=P.irole;
     if(r==='ventist'||r==='esci'||r==='shift'||r==='gimlet'||r==='mine'||r==='crab')return P.abCd<=0;
     if(r==='berserk')return !P.berserk;
+    if(r==='kunekune')return !!kuneTameTarget(P);
     if(r==='remote')return !!nearTarget(P)&&!(P.marks&&P.marks.has(nearTarget(P).id))||(P.abCd<=0&&P.marks&&[...P.marks].some(i=>S.ents[i].alive));
     if(r==='rocket')return !!(P.carry&&P.carry.length);
     if(r==='bubble'||r==='sniper')return P.killCd<=0;
@@ -2904,6 +2918,7 @@ function doAbility(){
   if(P.isImp){
     if(P.irole==='shift'){openModal('シェイプシフター: 誰に変身する？',box=>{pickPlayers(box,1,sel=>{if(sel[0]){closeModal();impAbility(P,sel[0].id);}});});return;}
     if(['ventist','esci','remote','rocket','gimlet','bubble','mine','pusher','sniper','snake','crab','berserk'].includes(P.irole)){impAbility(P,null);return;}
+    if(P.irole==='kunekune'){kuneTame(P,kuneTameTarget(P));return;}
     if(P.irole==='fraud'){stealId(P,stealTarget(P));return;}
     if(P.irole==='cannon'){startCannon(P);toast('波動砲チャージ中…3秒');}
     else if(P.irole==='tele')teleportAll(P);
@@ -3960,7 +3975,7 @@ function setupHud(){
   $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;
   if(!$('btnSab').dataset.orig)$('btnSab').dataset.orig=$('btnSab').innerHTML;
   if(S.br&&S.br.lv===3&&P.spider){$('btnSab').hidden=false;$('btnSab').innerHTML='<kbd>Z</kbd><span class="ic">🕸</span>巣を吐く';}else $('btnSab').innerHTML=$('btnSab').dataset.orig;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
-  const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
+  const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],kunekune:['🌀','正常化'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
   {const brAb=S.br&&S.br.lv===3?(P.spider?['🕸','捕まえる']:P.role==='sage'&&P.team==='crew'?ab:P.isImp&&P.irole==='bubble'?['🫧','バブル']:null):S.br?(P.role==='sage'&&P.team==='crew'?ab:P.isImp?{sniper:['🎯','狙撃'],gimlet:['🔩','ドリル'],cannon:['🔫','波動砲'],viper:['🐍','鈍足の毒']}[P.irole]:P.nrole==='verity'?['🦵','変身/攻撃']:null):ab;
    $('btnAbility').hidden=!brAb;if(brAb){$('abIc').textContent=brAb[0];$('abLabel').textContent=brAb[1];}}
   $('killIc').textContent=P.irole==='vamp'?'🦇':P.irole==='rocket'?'🙌':'🔪';$('killLabel').textContent=P.irole==='vamp'?'噛む':P.irole==='rocket'?'持ち上げ':'キル';if(ab){$('abIc').textContent=ab[0];$('abLabel').textContent=ab[1];}
@@ -4145,6 +4160,7 @@ const RPC={
   callMeeting:(e,a)=>{if(S.phase!=='play'||!e.alive)return;const b=a[1]?S.bodies.find(x=>x.id===a[1].B):null;
     if(b){if(dist(e,b)>220)return;}else if(e.buttonUses<=0||S.meetingCd>0||(S.sab&&S.sab.type==='reactor')||dist(e,BTN)>140)return;callMeeting(e,b);},
   verityForm:(e)=>verityForm(e),
+  kuneTame:(e,a)=>kuneTame(e,a[1]),
   l3Use:(e)=>l3Use(e),spGrab:(e)=>spGrab(e),spWeb:(e)=>spWeb(e),l3Shoot:(e,a)=>{if(a&&typeof a==='object')e.aim={x:+a.x||1,y:+a.y||0};l3Shoot(e);},
   craze:(e)=>{if(e&&!e.isImp&&scopeAt()&&!e.crazed)craze(e);},
   verityMon:(e)=>{if(S.br&&e.vform>0&&S.mon&&dist(e,S.mon)<KILLR+80)verityKillMon(e);},
