@@ -224,6 +224,8 @@ button{touch-action:manipulation}
 /* 会議: 左に人（参加者）、右上に会話、右下にチャット入力（スマホでも横並び） */
 @media (max-width:760px){.mbody{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);grid-template-rows:minmax(0,1fr)}.chat{border-left:4px solid #000;border-top:0}#mGrid{grid-template-columns:minmax(0,1fr)}}
 /* スマホ縦の会議: 画面からはみ出さないように */
+@media (max-width:760px),(pointer:coarse),(max-height:500px){.mhead{padding:6px 10px!important}.mhead h2{font-size:15px!important}#mTimer{font-size:12px!important;padding:2px 7px!important;border-width:2px!important}#mHint{font-size:11px!important}.mfoot{padding:6px 8px!important;gap:6px!important}.mfoot button{font-size:12.5px!important;padding:5px 9px!important;border-radius:9px!important;box-shadow:0 2px 0 #000!important}.mfoot .skipwrap{gap:5px!important}}
+@media (max-height:500px){#meeting{padding:3px}.tablet{height:100%!important;border-width:3px!important;border-radius:12px!important}.mhead{padding:3px 8px!important}.mhead h2{font-size:13px!important}#mGrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))!important;gap:4px!important;padding:5px!important}.pcard{padding:2px 4px!important;grid-template-columns:24px minmax(0,1fr)!important;font-size:11px!important;gap:4px!important}.pcard canvas{width:24px!important;height:29px!important}.mbody{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)!important}#chatLog{font-size:12px!important;padding:4px 6px!important;gap:4px!important}.msg p{padding:2px 6px!important}.msg b{font-size:10.5px!important}.msg .dot{width:14px;height:14px}.quick{padding:3px!important}.quick button{font-size:10.5px!important;padding:2px 5px!important}.chatIn{padding:3px!important}.mfoot{padding:3px 8px!important}.mfoot button{font-size:11.5px!important;padding:3px 8px!important}#mHint{font-size:10px!important}}
 @media (max-width:520px){#meeting{padding:4px}.mbody{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)!important;grid-template-rows:minmax(0,1fr)!important}#mGrid{grid-template-columns:minmax(0,1fr)!important;gap:4px!important;padding:5px!important}.pcard{padding:2px 4px!important;grid-template-columns:26px minmax(0,1fr)!important;font-size:11.5px!important;gap:4px!important}.pcard canvas{width:26px!important;height:31px!important}.pcard .tag{font-size:9px}#chatLog{font-size:13px!important;padding:6px!important}.quick button{font-size:11px;padding:3px 6px}.chatIn{padding:4px!important;gap:3px!important}.chatIn button{padding:0 6px!important}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
 
 /* ---------- splash / map ---------- */
@@ -3131,7 +3133,7 @@ function renderCards(){
     if(me().isImp&&e.isImp&&e!==me())tags.innerHTML+='<span class="tag" style="background:#c51111">🔴 仲間</span>';
     if(seesRoles(me())||e===me()||(me().lover===e.id)){const t=document.createElement('span');t.className='tag';t.style.background=TEAM[e.team].c;t.style.color='#111';t.textContent=roleName(e);tags.appendChild(t);}
     const chips=document.createElement('div');chips.className='chips';
-    if(M.stage==='result')for(const v in M.votes)if(M.votes[v]===e.id){for(let i=0;i<voteWeight(S.ents[v]);i++){const ch=document.createElement('span');ch.className='chip';ch.style.background=COLORS[S.ents[v].color].b;chips.appendChild(ch);}}
+    if(M.stage==='result')for(const v in M.votes)if(M.votes[v]===e.id){for(let i=0;i<voteWeight(S.ents[v]);i++){const ch=document.createElement('span');ch.className='chip';ch.style.background='#d6dbe4';ch.title='匿名の票';chips.appendChild(ch);}}   // 投票はだれが入れたか分からない（匿名）
     info.append(nm,tags,chips);b.append(c,info);
     if(M.votes[e.id]!==undefined&&M.stage!=='result'){const v=document.createElement('span');v.className='voted';v.textContent='投票済';b.appendChild(v);}
     b.disabled=!e.alive;
@@ -3139,7 +3141,7 @@ function renderCards(){
     g.appendChild(b);
   }
   const sk=$('skipChips');sk.innerHTML='';
-  if(M.stage==='result')for(const v in M.votes)if(M.votes[v]==='skip'){const ch=document.createElement('span');ch.className='chip';ch.style.background=COLORS[S.ents[v].color].b;sk.appendChild(ch);}
+  if(M.stage==='result')for(const v in M.votes)if(M.votes[v]==='skip'){const ch=document.createElement('span');ch.className='chip';ch.style.background='#d6dbe4';sk.appendChild(ch);}
 }
 function updateMeetingUI(){
   const M=S.M,P=me();
@@ -4635,7 +4637,8 @@ let selColor=0,selCostume='none';try{const k=localStorage.getItem('amongus-costu
   $('btnVoiceTest').onclick=()=>{loadVoices();const nm=['ChatGPT','Claude','Gemini'];nm.forEach((n,i)=>{const fake={isBot:true,alive:true,id:i+1,name:n};voiceOf(fake,`${n}です。よろしくね`,1,readCfg());});if(!jaVoices.length)toast('日本語の音声が見つかりません（Windowsの設定で日本語音声を追加してね）');};
   sync(true);
   loadLLM();for(const k in LLM_IDS){$(LLM_IDS[k][0]).value=LLM[k].key;$(LLM_IDS[k][1]).value=LLM[k].model;}
-  $('btnStart').onclick=()=>{snd('click');startGame(readCfg());};
+  function phoneFullscreen(){const d=document,el=d.documentElement;if(!isTouchDev()||d.fullscreenElement||d.webkitFullscreenElement)return;try{const f=el.requestFullscreen||el.webkitRequestFullscreen;if(f){const r=f.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}}catch(e){}}
+$('btnStart').onclick=()=>{snd('click');phoneFullscreen();startGame(readCfg());};
   let ph=0;
   function drawPreview(){const c=$('preview').getContext('2d');c.clearRect(0,0,400,480);drawCrew(c,190,440,selColor,1,ph,{s:5.4,moving:true,costume:selCostume});}
   window.drawPreview=drawPreview;
