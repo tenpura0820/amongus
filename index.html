@@ -4578,6 +4578,11 @@ document.querySelectorAll('.chan').forEach(b=>b.onclick=()=>setChan(S&&S.chan===
 $('pchatIn').addEventListener('focus',()=>{for(const k in keys)keys[k]=false;});
 $('pchatIn').addEventListener('keydown',e=>{if(e.code==='Escape'){$('pchatIn').blur();cv.focus();}});
 $('btnUse').onclick=doUse;$('btnReport').onclick=doReport;$('btnKill').onclick=doKillBtn;$('btnVent').onclick=doVent;
+// スマホ: ジョイスティックを押さえたまま（2本指で）ボタンをタップすると「クリック」が出ないので、指が触れた瞬間に反応させる
+setTimeout(()=>document.querySelectorAll('#actions button,#topRight button,#btnQuit').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'||b.disabled||b.hidden)return;e.preventDefault();b._tap=performance.now();try{b.onclick&&b.onclick.call(b,e);}catch(err){}},{passive:false});
+  b.addEventListener('click',e=>{if(b._tap&&performance.now()-b._tap<800){e.stopImmediatePropagation();e.preventDefault();}},true);
+}),0);
 $('btnSab').onclick=()=>{if(S&&S.br&&S.br.lv===3&&me().spider){spWeb(me());return;}$('sabMenu').hidden=!$('sabMenu').hidden;};
 document.querySelectorAll('#sabMenu button').forEach(b=>b.onclick=()=>{startSab(b.dataset.sab);$('sabMenu').hidden=true;});
 setInterval(()=>{const b=$('sabMush');if(b)b.hidden=!MAPS[MAPI].fungle;},500);
