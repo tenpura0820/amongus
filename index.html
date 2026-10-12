@@ -146,8 +146,12 @@ button{touch-action:manipulation}
 @media (max-width:640px){#pchat{bottom:auto;top:12px;left:auto;right:76px;transform:none;width:min(260px,46vw)}#plog{bottom:auto;top:62px;left:auto;right:12px;transform:none;width:min(300px,60vw)}}
 /* スマホ縦: 上のボタンと重ならないように、チャット欄は2段目に。ボタンは大きく */
 @media (pointer:coarse) and (orientation:portrait){
-  #pchat{top:60px!important;bottom:auto!important;left:8px!important;right:8px!important;width:auto!important;transform:none!important}
-  #plog{top:108px!important;bottom:auto!important;left:8px!important;right:8px!important;width:auto!important;transform:none!important;max-height:22vh}
+  /* 話しかける欄は左下に小さく（右下のボタンと重ならない幅） */
+  #pchat{top:auto!important;bottom:max(8px,env(safe-area-inset-bottom))!important;left:6px!important;right:auto!important;width:calc(100vw - 236px)!important;min-width:128px;transform:none!important;gap:3px!important}
+  #pchat input{font-size:11.5px!important;padding:4px 6px!important}
+  #pchat button{font-size:13px!important;padding:0 5px!important}
+  #pchat .nameBtn{display:none}
+  #plog{top:auto!important;bottom:48px!important;left:6px!important;right:auto!important;width:calc(100vw - 236px)!important;min-width:128px;transform:none!important;max-height:30vh;font-size:12px!important}
   #taskbox{top:6px}
   .act{width:70px;height:70px;font-size:10.5px}
   .act .ic{font-size:25px}
@@ -222,9 +226,10 @@ button{touch-action:manipulation}
 .mfoot button.vote{background:var(--task);color:#06210b}
 .mfoot button:disabled{opacity:.4}
 #mHint{font-weight:800;color:#fff;text-shadow:1px 1px 0 #000;font-size:14px}
-@media (max-width:760px){.mbody{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 230px}.chat{border-left:0;border-top:4px solid #000}#mGrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
+/* 会議: 左に人（参加者）、右上に会話、右下にチャット入力（スマホでも横並び） */
+@media (max-width:760px){.mbody{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);grid-template-rows:minmax(0,1fr)}.chat{border-left:4px solid #000;border-top:0}#mGrid{grid-template-columns:minmax(0,1fr)}}
 /* スマホ縦の会議: 画面からはみ出さないように */
-@media (max-width:520px){#meeting{padding:4px}.mbody{grid-template-rows:minmax(0,40%) minmax(0,1fr)!important}.pcard{padding:3px 6px!important}.pcard canvas{height:38px!important}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
+@media (max-width:520px){#meeting{padding:4px}.mbody{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)!important;grid-template-rows:minmax(0,1fr)!important}#mGrid{grid-template-columns:minmax(0,1fr)!important;gap:4px!important;padding:5px!important}.pcard{padding:2px 4px!important;grid-template-columns:26px minmax(0,1fr)!important;font-size:11.5px!important;gap:4px!important}.pcard canvas{width:26px!important;height:31px!important}.pcard .tag{font-size:9px}#chatLog{font-size:13px!important;padding:6px!important}.quick button{font-size:11px;padding:3px 6px}.chatIn{padding:4px!important;gap:3px!important}.chatIn button{padding:0 6px!important}.tablet{grid-template-columns:minmax(0,1fr);border-width:4px;border-radius:16px}#mGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.pcard{min-width:0;grid-template-columns:36px minmax(0,1fr);padding:4px 6px;font-size:13px}.pcard canvas{width:36px;height:43px}.pcard>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.chat{min-width:0}.chatIn{min-width:0}.chatIn button{padding:0 9px}.mhead{padding:8px 10px}.mfoot{padding:8px;gap:6px}.mfoot button{font-size:14px;padding:8px 10px}.quick{flex-wrap:wrap}}
 
 /* ---------- splash / map ---------- */
 #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.88);text-align:center;padding:16px;gap:10px}
@@ -323,7 +328,7 @@ button{touch-action:manipulation}
   <div id="alert" hidden></div>
   <div id="toast"></div>
   <div id="roomName"></div>
-  <div id="topRight"><button class="mini" id="btnPause" title="一時停止（P）: 止めている間は全員と話せる">⏸</button><button class="mini" id="btnFull" title="全画面">⛶</button><button class="mini" id="btnHelp" title="役職の説明 (H)">？</button><button class="mini" id="btnMap" title="マップ (M)">🗺</button></div>
+  <div id="topRight"><button class="mini" id="btnVoice" title="近アモ: 近くにいる人とだけ声で話せる（オンライン）" hidden>🔇</button><button class="mini" id="btnPause" title="一時停止（P）: 止めている間は全員と話せる">⏸</button><button class="mini" id="btnFull" title="全画面">⛶</button><button class="mini" id="btnHelp" title="役職の説明 (H)">？</button><button class="mini" id="btnMap" title="マップ (M)">🗺</button></div>
   <div id="sabMenu" hidden>
     <button data-sab="lights">💡 停電させる</button>
     <button data-sab="reactor">☢ リアクター崩壊</button>
@@ -340,7 +345,7 @@ button{touch-action:manipulation}
     <button class="act" id="btnUse"><kbd>E</kbd><span class="ic">✋</span>使う</button>
   </div>
   <div id="plog"></div>
-  <form id="pchat" autocomplete="off"><button type="button" class="nameBtn" title="AIの名前を入れる（4キー）">👤</button><button type="button" class="chan" hidden title="インポスター仲間だけに話す (I)">🔴</button><button type="button" class="mic" aria-label="マイク (C)" title="マイク ON/OFF (C)">🎤</button><input id="pchatIn" maxlength="50" placeholder="AIみんなに話しかける（Enter）／🎤で声"><button aria-label="送信">💬</button></form>
+  <form id="pchat" autocomplete="off"><button type="button" class="nameBtn" title="AIの名前を入れる（4キー）">👤</button><button type="button" class="chan" hidden title="インポスター仲間だけに話す (I)">🔴</button><button type="button" class="mic" aria-label="マイク (C)" title="マイク ON/OFF (C)">🎤</button><input id="pchatIn" maxlength="50" placeholder="みんなに話しかける"><button aria-label="送信">💬</button></form>
   <div id="joy" hidden><i></i></div>
 </div>
 
@@ -869,6 +874,7 @@ function drawStars(ox,oy,speed=0){
 
 // ================= map prerender =================
 const mapCv=document.createElement('canvas');
+let MAPCV_S=1;const isTouchDev=()=>matchMedia('(pointer:coarse)').matches;
 // ===== ファングルの地面: 島・砂浜・キノコの森・段々の山を描く（四角い部屋の箱にしない） =====
 const FG_BUILD=['降下艇','食堂','倉庫','会議室','キッチン','研究室','温室','リアクター','寝室','遊戯室','上部エンジン','通信室'];
 // 自分の端末に読み込んだファングルの背景画像（公開サイトには入れない。この端末のブラウザにだけ保存）
@@ -981,8 +987,10 @@ function drawBackroomsGround(c){
     c.fillStyle='#fffbe2';c.fillRect(x-46,y-12,92,24);c.strokeStyle='rgba(120,100,40,.6)';c.lineWidth=3;c.strokeRect(x-46,y-12,92,24);}
 }
 function drawMapCanvas(){
-  mapCv.width=MAPW;mapCv.height=MAPH;
-  const c=mapCv.getContext('2d');
+  // 軽くする: マップの絵は縮小して持ち、描く時に引き伸ばす（スマホは半分、大きいマップは7割）
+  MAPCV_S=isTouchDev()?.5:(MAPW*MAPH>9e6?.7:1);
+  mapCv.width=Math.ceil(MAPW*MAPCV_S);mapCv.height=Math.ceil(MAPH*MAPCV_S);
+  const c=mapCv.getContext('2d');c.setTransform(MAPCV_S,0,0,MAPCV_S,0,0);
 
   if(MAPS[MAPI].lv3){drawLv3Ground(c);return;}
   if(MAPS[MAPI].lv1){drawLv1Ground(c);return;}
@@ -1827,7 +1835,7 @@ function papaInView(e){return S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&o.inVent
 function renderPhoto(r,ids){
   const W=320,H=Math.round(W*r.h/r.w),c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.fillStyle='#14171f';x.fillRect(0,0,W,H);const k=W/r.w;
-  x.drawImage(mapCv,r.x,r.y,r.w,r.h,0,0,W,H);
+  x.drawImage(mapCv,r.x*MAPCV_S,r.y*MAPCV_S,r.w*MAPCV_S,r.h*MAPCV_S,0,0,W,H);
   x.save();x.scale(k,k);x.translate(-r.x,-r.y);
   for(const b of S.bodies)if(b.x>r.x-40&&b.x<r.x+r.w+40&&b.y>r.y-20&&b.y<r.y+r.h+60)drawCrew(x,b.x,b.y,b.color,1,0,{dead:true});
   for(const id of ids.slice().sort((a,b)=>S.ents[a].y-S.ents[b].y)){const o=S.ents[id],lk=faceOf(o);drawCrew(x,o.x,o.y,lk.color,o.face,o.walk,{costume:S.mushT>0?'mush':lk.costume,long:o.vform>0});}
@@ -2969,7 +2977,7 @@ function callMeeting(caller,body){if(S&&S.br)return;if(S.lockT>0){if(caller===me
   S.M=M;
   netBc({t:'meeting',caller:caller.id,body:body?{id:body.id,room:body.room}:null});
   snd('alarm');
-  splash(body?'死体発見！':'緊急会議！',body?`${caller.name} が ${S.ents[body.id].name} の死体を見つけた`:`${caller.name} が緊急ボタンを押した`,'#ff3b3b',{body,caller:caller.id},null);
+  splash(body?'死体発見！':'緊急会議！',(body?`${caller.name} が ${S.ents[body.id].name} の死体を見つけた`:`${caller.name} が緊急ボタンを押した`)+(S.bodies.length?`（死体 ${S.bodies.length}人）`:''),'#ff3b3b',{body,caller:caller.id},null);
   buildMeetingKnowledge(M);
   S.impVote=null;
   {const ib=S.ents.find(o=>o.isImp&&o.isBot&&o.alive);const cs=S.ents.filter(o=>o.alive&&!o.isImp);
@@ -3108,6 +3116,8 @@ function showMeetingUI(){fillGuess();
   const M=S.M;hideSplash();
   $('meeting').hidden=false;if(!NET.client)$('chatLog').innerHTML='';$('chatInput').value='';
   if(!NET.client)post(-1,M.body?`${S.ents[M.caller].name}が${M.body.room}で${S.ents[M.body.id].name}の死体を通報した`:`${S.ents[M.caller].name}が緊急会議を開いた`);
+  // 見つかった死体（残っている死体だけ。丸のみ・溶けた等で死体が残らない人は出ない。左のカードでは死んでいるのが分かる）
+  if(!NET.client){const bs=(M.bodiesAll||[]).filter(b=>S.ents[b.id]);if(bs.length)post(-1,`💀 見つかった死体: ${bs.map(b=>`${S.ents[b.id].name}（${b.room||'?'}）`).join('・')} — ${bs.length}人`);}
   if(!me().alive)post(-1,'あなたは幽霊です。発言はクルーには届きません',null,false,true);
   renderCards();updateMeetingUI();
   S.bodies=[];
@@ -3451,7 +3461,7 @@ function render(dt){
   const cam=S.cam;
   drawStars(cam.x,cam.y);
   ctx.save();ctx.translate(VW/2,VH/2);ctx.scale(sc,sc);ctx.translate(-cam.x,-cam.y);
-  ctx.drawImage(mapCv,0,0);
+  ctx.drawImage(mapCv,0,0,mapCv.width/MAPCV_S,mapCv.height/MAPCV_S);
   const tm=performance.now()/1000;
   // dynamic map overlays
   if(S.sab){const p=SABP[S.sab.type];ctx.strokeStyle=`rgba(255,60,60,${.5+.5*Math.sin(tm*8)})`;ctx.lineWidth=5;ctx.strokeRect(p.x-30,p.y-46,60,44);}
@@ -3979,7 +3989,7 @@ async function llmProx(b,sp,text,hs){
 // ================= HUD =================
 function setupHud(){
   const P=me();
-  $('btnPause').hidden=!!NET.mode;$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';
+  $('btnPause').hidden=!!NET.mode;$('btnVoice').hidden=!NET.mode;if(NET.mode&&VOICE.stream)setTimeout(voiceCallAll,800);$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';
   $('taskbox').classList.toggle('min',isTouch());
   document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp||!!S.br;b.classList.remove('on');});if(S.br)S.chan='all';
   $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;
@@ -4210,7 +4220,7 @@ async function hostRoom(){
   if(!window.Peer)return toast('オンライン機能を読み込めませんでした（インターネット接続を確認してね）');
   leaveRoom(true);
   const code=[...Array(5)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');
-  const peer=new Peer('amgs-'+code);NET.peer=peer;
+  const peer=new Peer('amgs-'+code);NET.peer=peer;voiceHook(peer);
   peer.on('open',()=>{NET.mode='host';NET.code=code;hostLobby();setOnlineUI();toast('部屋を作りました: '+code);});
   peer.on('connection',conn=>{conn.on('data',d=>hostRecv(conn,d));conn.on('close',()=>hostDrop(conn));});
   peer.on('error',err=>{if(err.type==='unavailable-id'){hostRoom();return;}toast('オンラインのエラー: '+err.type);});
@@ -4244,7 +4254,7 @@ function netStartSend(){
     if(!e.remote)continue;
     sendTo(e,{t:'start',myId:e.id,map:MAPI,tt:S.taskTotal,
       cfg:{imps:S.cfg.imps,neu:S.cfg.neu,disc:S.cfg.disc,vote:S.cfg.vote,kcd:S.cfg.kcd,tasks:S.cfg.tasks,confirm:S.cfg.confirm},
-      ents:S.ents.map(o=>({id:o.id,name:o.name,color:o.color,costume:o.costume,isBot:o.isBot,team:o.team,role:o.role,irole:o.irole,nrole:o.nrole,isImp:!!o.isImp,isNeu:!!o.isNeu,
+      ents:S.ents.map(o=>({pid:o.id===0?NET.peer&&NET.peer.id:o.remote?o.pid:null,id:o.id,name:o.name,color:o.color,costume:o.costume,isBot:o.isBot,team:o.team,role:o.role,irole:o.irole,nrole:o.nrole,isImp:!!o.isImp,isNeu:!!o.isNeu,
         killCd:o.killCd,abCd:o.abCd,abUses:o.abUses,shield:o.shield,sheriff:o.sheriff,tasks:o===e?o.tasks.map(t=>({s:t.s,done:false})):[]}))});
   }
 }
@@ -4274,7 +4284,7 @@ async function joinRoom(){
   if(!window.Peer)return toast('オンライン機能を読み込めませんでした（インターネット接続を確認してね）');
   const code=$('inRoom').value.trim().toUpperCase();if(code.length<4)return toast('部屋コードを入れてね');
   leaveRoom(true);
-  const peer=new Peer();NET.peer=peer;
+  const peer=new Peer();NET.peer=peer;voiceHook(peer);
   peer.on('open',()=>{
     const conn=peer.connect('amgs-'+code,{reliable:true});NET.conn=conn;
     conn.on('open',()=>{NET.mode='client';NET.code=code;const c=readCfg();conn.send({t:'hello',name:c.name,color:c.color,costume:c.costume});setOnlineUI();toast('部屋に入りました！ ホストの開始を待っています');});
@@ -4282,6 +4292,31 @@ async function joinRoom(){
     conn.on('close',()=>{if(NET.mode==='client'){leaveRoom(true);alert('ホストとの接続が切れました');}});
   });
   peer.on('error',err=>toast(err.type==='peer-unavailable'?'その部屋が見つかりません（コードを確認してね）':'オンラインのエラー: '+err.type));
+}
+// ===== 近アモ（近距離ボイスチャット）: オンラインの部屋で、近くにいる人の声だけ聞こえる =====
+const VOICE={on:false,stream:null,calls:new Map(),audios:new Map()};
+function voicePeers(){return S?S.ents.filter(e=>e.pid&&NET.peer&&e.pid!==NET.peer.id).map(e=>e.pid):[];}
+function voiceHook(peer){peer.on('call',call=>{try{call.answer(VOICE.stream||undefined);}catch(e){}voiceAttach(call);});}
+function voiceAttach(call){
+  VOICE.calls.set(call.peer,call);
+  call.on('stream',st=>{let a=VOICE.audios.get(call.peer);if(!a){a=new Audio();a.autoplay=true;a.playsInline=true;VOICE.audios.set(call.peer,a);}a.srcObject=st;a.volume=0;a.play().catch(()=>{});});
+  call.on('close',()=>{VOICE.calls.delete(call.peer);const a=VOICE.audios.get(call.peer);if(a){a.srcObject=null;VOICE.audios.delete(call.peer);}});
+}
+function voiceCallAll(){if(!NET.peer)return;for(const pid of voicePeers()){const old=VOICE.calls.get(pid);if(old&&old.open&&VOICE.stream&&old.localStream)continue;try{const c=NET.peer.call(pid,VOICE.stream||new MediaStream());if(c)voiceAttach(c);}catch(e){}}}
+async function toggleVoice(){
+  if(!NET.mode){toast('近アモはオンラインの部屋で使えます');return;}
+  if(VOICE.on){VOICE.on=false;if(VOICE.stream)VOICE.stream.getTracks().forEach(t=>t.enabled=false);$('btnVoice').textContent='🔇';toast('近アモ: 自分の声を止めた（周りの声は聞こえる）');return;}
+  try{if(!VOICE.stream){VOICE.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});for(const c of VOICE.calls.values())try{c.close();}catch(e){}VOICE.calls.clear();voiceCallAll();}
+    VOICE.stream.getTracks().forEach(t=>t.enabled=true);VOICE.on=true;$('btnVoice').textContent='🎙';toast('近アモ: 近くにいる人に声が届く');}
+  catch(e){toast('マイクが使えませんでした（許可してね）');}
+}
+// 声の大きさ: 会議・振り返りは全員に届く。試合中は距離で小さくなる（幽霊は幽霊どうし）
+function voiceTick(){
+  if(!VOICE.audios.size||!S)return;const P=me();
+  for(const[pid,a]of VOICE.audios){const e=S.ents.find(o=>o.pid===pid);let v=0;
+    if(e){if(S.phase==='meeting'||S.phase==='review'||S.phase==='end')v=1;
+      else if(S.phase==='play'){if(!P.alive)v=e.alive?Math.max(0,1-Math.max(0,dist(P,e)-300)/500):1;else if(e.alive&&e.inVent==null&&P.inVent==null){const d=dist(P,e);v=d<260?1:d>720?0:1-(d-260)/460;}}}
+    a.volume=clamp(v,0,1);}
 }
 function leaveRoom(silent){
   if(S&&S.isClient)quitGame();
@@ -4412,7 +4447,7 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
   updateMicLevel(dt);micReactUpdate(dt);if(liveMic&&(liveMic.t-=dt)<=0)liveMic=null;
   if(S)update(dt);
-  render(dt);
+  render(dt);voiceTick();
   requestAnimationFrame(frame);
 }
 function update(dt){
@@ -4570,7 +4605,7 @@ $('inFgBg').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const im=new I
   URL.revokeObjectURL(im.src);loadFgBg();};im.src=URL.createObjectURL(f);ev.target.value='';};
 loadFgBg();
 $('qChat').onsubmit=e=>{e.preventDefault();const v=$('qChatIn').value.trim();$('qChatIn').value='';if(v)playerSay(v);};
-$('btnPause').onclick=togglePause;$('btnResume').onclick=togglePause;
+$('btnPause').onclick=togglePause;$('btnVoice').onclick=toggleVoice;$('btnResume').onclick=togglePause;
 $('btnScale').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;if(M.scaleA==null){M.scaleA=M.sel;M.sel=null;renderCards();updateMeetingUI();return;}if(M.sel===M.scaleA)return;useBalance(P,S.ents[M.scaleA],S.ents[M.sel]);M.scaleA=null;};
 $('btnGuess').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;const t=S.ents[M.sel];if(!t.alive||(t.isImp&&P.role!=='nguesser')||t===P)return;doGuess(P,t,$('guessSel').value);};
 $('btnSkip').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote')return;if(M.scale){toast('天秤の発動中はスキップできない');return;}M.votes[me().id]='skip';if(NET.client)rpc('vote',['skip']);snd('click');renderCards();updateMeetingUI();};
