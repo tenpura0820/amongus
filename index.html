@@ -1384,9 +1384,15 @@ function setupBackrooms1(){
   for(const e of S.ents){if(e.susp)e.susp.fill(0);e.inVent=null;e.climb=null;e.path=null;e.disguise=null;e.invisT=0;e.bubble=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;e.ai.urgent=false;}}
   S.cam={x:st.x,y:st.y};
 }
+// バックルームは1つのレベルをクリアするごとに全員が復活する
+function brReviveAll(){
+  let n=0;for(const e of S.ents){if(e.alive)continue;e.alive=true;e.inVent=null;e.climb=null;e.path=null;e.bitten=null;e.swallow=null;n++;if(e===me()){S.killedT=0;hideSplash();}}
+  S.bodies=[];return n;
+}
 function goLv1(by){
   if(NET.client)return;
-  loadMap(BR1I);setupBackrooms1();netBc({t:'br'});setupHud();snd('alarm');
+  const rv=brReviveAll();
+  loadMap(BR1I);setupBackrooms1();netBc({t:'br'});setupHud();snd('alarm');if(rv)setTimeout(()=>toast(`✨ Lv.0 クリア！ やられていた${rv}人も全員復活した`),4600);
   splash('バックルーム Lv.1',`${by?by.name+'が非常口を開けた…その先は、終わりの見えない線路のトンネルだった。':''}赤い列車のような蜘蛛の化物が、10〜20秒ごとにものすごい速さで走ってくる。線路わきの「穴」に隠れてやりすごし、一番奥の非常口をめざそう（奥ほど穴は少ない）`,'#ff5a3a',{lineup:S.ents.filter(e=>e.alive).map(e=>e.id)},null);S.splashT=4.5;
 }
 function brUpdate1(dt){
@@ -1463,7 +1469,8 @@ function setupBackrooms3(){
 }
 function goLv3(by){
   if(NET.client)return;
-  loadMap(BR3I);setupBackrooms3();placeAtTable();netBc({t:'br'});setupHud();brIntro();
+  const rv=brReviveAll();
+  loadMap(BR3I);setupBackrooms3();placeAtTable();netBc({t:'br'});setupHud();brIntro();if(rv)setTimeout(()=>toast(`✨ Lv.1 クリア！ やられていた${rv}人も全員復活した`),3200);
 }
 const L3_MEET=['じゃあ会議を始めよう','最近、変な音しない？','タスクは順調？','このあたり、なんだか暗いよね','ここ、本当にバックルームなのかな…','みんな揃ってる？','天井のほう…何か動かなかった？'];
 const L3_REACT=['な、なにあれ…！？','天井から何か降りてくる…','く、蜘蛛…？ でかすぎる…','動かないで…刺激しないで…','目が…こっちを見てる…','嘘でしょ…'];
