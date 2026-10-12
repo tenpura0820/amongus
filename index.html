@@ -2798,7 +2798,10 @@ const SCOPE_R=620,SCOPE_SPEED=1100;
 function craze(e){
   if(NET.client){rpc('craze',[e]);return;}
   if(!e||!e.alive||e.crazed||e.irole==='kunekune')return;
-  e.crazed=true;e.crazeCd=6;e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}snd('alarm');
+  e.crazed=true;e.crazeCd=6;
+  // くねくねになった人はインポスター陣営になる
+  e.isImp=true;e.team='imp';e.isNeu=false;e.irole=null;e.sheriff=false;if(e===me())setupHud();
+e.path=null;if(e.ai){e.ai.goalKey=null;e.ai.target=null;}snd('alarm');
   if(e===me()){S.scope=null;splash('くねくねを見てしまった…','もう自分では動けない。体が勝手にくねくねして、近くの人を追いかけてしまう…','#e8e8ff',{body:null,caller:e.id},null);S.killedT=2.4;}
   else{const P=me();if(!P.alive||canSee(P,e.x,e.y))toast(`😵 ${e.name}の様子がおかしい…くねくねしている`);}
   netBc({t:'tell',text:`😵 だれかが「くねくね」を見てしまった…`});
@@ -3030,6 +3033,7 @@ function buildMeetingKnowledge(M){
   }
 }
 function post(who,text,fx,fromLLM,raw){
+  if(who>=0&&S.ents[who]&&S.ents[who].crazed&&S.ents[who].alive){text=pick(KUNE_WORDS);fx=null;}
   const M=S.M,sp=S.ents[who];
   if(who>0&&!fromLLM&&!raw)text=styl(sp,text);
   if(!raw)netBc({t:'post',who,text,llm:!!fromLLM});
@@ -3758,7 +3762,9 @@ function micText(txt){
 // ================= proximity chat =================
 // あなたの言葉は全員のAIに届く（生きている間は生きているAI、幽霊の間は幽霊のAI）
 function hearers(sp){if(S.hold||S.paused)return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive);if(S.phase==='review')return S.ents.filter(o=>o!==sp&&o.isBot);return S.ents.filter(o=>o!==sp&&o.isBot&&o.alive===sp.alive&&(sp.alive?o.inVent==null:true));}
+const KUNE_WORDS=['くねくね','くね…くね…','くねくねくねくね','く…ね…','くねっ…くねっ…','くねくね…くねくね…'];
 function say(e,text,toPlayer,raw){
+  if(e&&e.crazed&&e.alive)text=pick(KUNE_WORDS);   // くねくねになった人は「くねくね」としか言えない
   e.bubble={text,t:5};
   if(!raw)netBc({t:'say',who:e.id,text,tp:!!toPlayer});
   const P=me();
