@@ -1677,11 +1677,14 @@ function startGame(cfg){
   if(ents[0].team==='crew'&&cfg.role.startsWith('crew:')){const r=cfg.role.slice(5);ents[0].role=r;rpool=rpool.filter(x=>x!==r);crewIds.splice(crewIds.indexOf(0),1);}
   for(const id of crewIds){if(!rpool.length)break;ents[id].role=rpool.shift();}
   // インポスターの役職
-  let ipool=shuffle((cfg.iroles||[]).filter(r=>ISPECIAL.includes(r)&&(r!=='kunekune'||!!MAPS[MAPI].scope)));   // くねくねは望遠鏡のあるマップだけ
+  let ipool=shuffle((cfg.iroles||[]).filter(r=>ISPECIAL.includes(r)&&r!=='kunekune'));   // くねくねは下で別に決める（ファングルで33%）
   const impIds=shuffle(ents.filter(e=>e.isImp).map(e=>e.id));
   for(const e of ents){e.irole=null;e.bitten=null;e.cannon=null;e.aim={x:1,y:0};}
   if(ents[0].isImp&&cfg.role.startsWith('imp:')){const r=cfg.role.slice(4);if(r!=='none'&&(r!=='kunekune'||!!MAPS[MAPI].scope)){ents[0].irole=r;ipool=ipool.filter(x=>x!==r);}impIds.splice(impIds.indexOf(0),1);}
   for(const id of impIds){if(!ipool.length)break;ents[id].irole=ipool.shift();}
+  // ファングル（望遠鏡のあるマップ）では 33% の確率で、インポスターのだれか1人がくねくねになる
+  if(MAPS[MAPI].scope&&(cfg.iroles||[]).includes('kunekune')&&!ents.some(e=>e.irole==='kunekune')&&Math.random()<.33){
+    const cand=ents.filter(e=>e.isImp&&!(e.id===0&&cfg.role.startsWith('imp:')&&cfg.role!=='imp:none'));if(cand.length)pick(cand).irole='kunekune';}
   for(const e of ents){if(e.irole==='cannon'||e.irole==='tele')e.abCd=20;if(e.irole==='bomb')e.abUses=1;}
   // 第三陣営の役職
   let npool=shuffle((cfg.nroles||[]).filter(r=>NSPECIAL.includes(r)));
