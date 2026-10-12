@@ -1591,6 +1591,27 @@ function brThink(e){
 }
 function brReply(b,sp,text){
   const B=S.br,M=S.mon;
+  if(B.lv===1){
+    if(/インポ|怪し|犯人|人外|キル|疑/.test(text))return pick(['今はそんな場合じゃない！ 列車に気をつけて','ここでは全員仲間だよ','仲間割れしてる間に列車が来るよ！']);
+    if(/列車|電車|化物|蜘蛛|来る|逃げ|怖|こわ/.test(text))return pick(['音がしたらすぐ穴に入って！','前からも後ろからも来るから気をつけて','穴の中なら大丈夫！']);
+    if(/穴|隠れ/.test(text))return pick(['黄色い点線の所が穴だよ','奥のほうは穴が少ないから、次の穴の場所を先に確認しよう','穴に入ってれば捕まらない！']);
+    if(/出口|非常口|奥|どこ|EXIT|exit/.test(text)){const p=Math.round(pathS(B.path,b.x,b.y)/B.path.len*100);return `たぶん今${clamp(p,0,100)}%くらい。一番奥に非常口があるはず`;}
+    if(/ついて|一緒|来て|集合/.test(text))return pick(['わかった、一緒に進もう！','離れずに行こう','ついていく！']);
+    return pick(['了解！ 線路の奥を目指そう','気をつけて進もう','うん、仲間だから大丈夫','わかった！']);}
+  if(B.lv===3){
+    if(b.spider)return pick(['キシャアア…','…ギ…ギギ…','（蜘蛛は答えない）']);
+    if(b.bitten3>0)return pick(['う…ぁ…体が…','た…すけ…て…','痛い…熱い…']);
+    if(B.stage==='meet')return pick(['うん、それで次の議題は…','そうだね、みんなの意見を聞こう','今のところ異常はないかな','なんか天井が気になるけど…']);
+    if(B.stage==='spider')return pick(['し、静かに…動かないで…','あれ…こっちを見てる…','逃げる準備して…']);
+    const st=B.steps[B.si];
+    if(/インポ|怪し|犯人|人外|疑/.test(text))return pick(['今は蜘蛛から逃げるのが先！','ここでは全員仲間だよ','仲間割れしてる場合じゃない！']);
+    if(/蜘蛛|くも|クモ|逃げ|怖|こわ|化物/.test(text))return pick(['見つかったら壁の向こうまで逃げて！ あいつは壁を登ってくる','糸で引っぱられたら賢者を呼んで！','巣を踏むと足が遅くなるから気をつけて']);
+    if(/鍵|かぎ|ピッケル|持ち物|アイテム/.test(text))return B.inv.length?`今持ってるのは${B.inv.map(id=>(L3_ITEMS.find(i=>i[0]===id)||[0,L3_GOT[id]])[1]).join('、')}だよ`:'まだ何も持ってない。小屋の中を探そう';
+    if(/次|何する|どうする|順番|手順/.test(text))return st?`次は「${st.n}」だよ`:'もうすぐ逃げられる！';
+    if(/釜戸|鉄|焼/.test(text))return B.work?`今焼いてる。あと${Math.ceil(B.work.t)}秒！`:'鉄と石炭がそろったら釜戸で焼こう';
+    if(/ボート|湖|出口/.test(text))return 'ボートは湖の桟橋。ピンクの鍵が要るけど、順番どおりに全部やらないと動かない';
+    if(/ついて|一緒|来て|集合/.test(text))return pick(['わかった、一緒に行こう！','離れないでね','ついていく！']);
+    return pick(['了解！ 早く逃げよう','がんばろう、みんなで逃げるんだ','うん、仲間だから大丈夫']);}
   if(/インポ|怪し|犯人|人外|キル|疑/.test(text))return pick(['ここでは全員仲間だよ！ 疑い合ってる場合じゃない','今は役職なんて関係ない、協力しよう！','仲間割れしたら化物の思うつぼだよ']);
   if(/クーポン|券|枚/.test(text))return B.open?'クーポンはもう全部そろったよ！ 非常口へ急ごう':`いま${B.got}枚。あと${B.need-B.got}枚だね、手分けして探そう`;
   if(/非常口|出口|EXIT|exit/.test(text))return B.open?`非常口は${B.exit.room}だよ！ 矢印の方向！`:'クーポンが全部そろわないと開かないみたい';
@@ -1600,7 +1621,11 @@ function brReply(b,sp,text){
   return pick(['了解！ みんなで脱出しよう','仲間だから安心して','うん、協力しよう！','わかった！','ここ、ずっと同じ景色で迷いそう…']);
 }
 const BR_LINES=['ここどこ…？ 黄色い壁がずっと続いてる','蛍光灯のブーンって音が頭に響く…','カーペットが湿ってる…気持ち悪い','さっきもこの部屋通らなかった？','ノークリップしちゃったのかな','みんな離れないで！','クーポン集めて非常口を探そう','向こうで何か動いた気がする…','この部屋、何もない…','出口はどこにあるの…'];
-function brChatter(e){if(!e.alive||Math.random()>.004)return;botSay(e,pick(BR_LINES));}
+const BR1_LINES=['線路がどこまでも続いてる…','また音がした…レールが震えてる','穴の場所、覚えておかないと','奥に行くほど穴が少なくなってる気がする','足元、まくら木につまずかないで','この先に本当に非常口があるの…？','電車じゃない…あれは生き物だ','ライトが少なくて暗いね…'];
+const BR3_LINES=['鍵、どこに落ちてるんだろう…','地下室、暗くて怖い…','釜戸の火、まだ消えてないよね？','ボートまでたどり着けば逃げられる…','天井の音…まだいる？','あの子、もう元には戻らないのかな…','順番どおりにやらないと開かないみたい','蜘蛛の巣を踏まないように気をつけて'];
+function brChatter(e){if(!e.alive||Math.random()>.004)return;const B=S.br;
+  if(B.lv===3){if(B.stage!=='run'||e.spider||e.bitten3>0)return;botSay(e,pick(BR3_LINES));return;}
+  botSay(e,pick(B.lv===1?BR1_LINES:BR_LINES));}
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
@@ -3546,14 +3571,14 @@ function drawL3(P,tm,see){
     c.restore();}
   for(const sh of B.shots){c.save();c.fillStyle='rgba(170,230,255,.6)';c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.arc(sh.x,sh.y,14,0,TAU);c.fill();c.stroke();c.restore();}
   // 蜘蛛になった人の脚と、捕食の糸
-  for(const e of S.ents){if(!e.spider||!e.alive||!see(e.x,e.y))continue;c.save();c.translate(e.x,e.y-26);c.strokeStyle='#120808';c.lineWidth=5;c.lineCap='round';
+  for(const e of S.ents){if(!e.spider||!e.alive||!see(e.x,e.y))continue;c.save();c.translate(e.x,e.y-26);c.scale(.7,.7);c.strokeStyle='#120808';c.lineWidth=5;c.lineCap='round';
     for(let k=0;k<8;k++){const sd2=k<4?-1:1,i=k%4,ph=Math.sin(tm*10+k)*(e.moving?8:2);c.beginPath();c.moveTo(sd2*14,-8+i*8);c.lineTo(sd2*(44+i*4),-34+i*12+ph);c.lineTo(sd2*(58+i*6),18+i*10);c.stroke();}
     c.fillStyle='#ff2020';for(const[x,y]of[[8,-30],[18,-32],[12,-40]]){c.beginPath();c.arc(x*(e.face||1),y,3.5,0,TAU);c.fill();}c.restore();
     if(e.grab){const t=S.ents[e.grab.tgt];c.save();c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=3;c.setLineDash([8,5]);c.beginPath();c.moveTo(e.x,e.y-30);c.lineTo(t.x,t.y-30);c.stroke();c.setLineDash([]);
       c.font='bold 22px sans-serif';c.textAlign='center';c.lineWidth=5;c.strokeStyle='#000';c.fillStyle='#ff5a5a';const tx=e.grab.t.toFixed(1);c.strokeText(tx,t.x,t.y-110);c.fillText(tx,t.x,t.y-110);c.restore();}
     if(e.stunS>0){c.save();c.font='22px system-ui';c.textAlign='center';c.fillText('💫',e.x,e.y-100);c.restore();}}
   // 天井から降りてくる大きな蜘蛛
-  if(B.big){const G=B.big;c.save();c.strokeStyle='rgba(230,230,240,.8)';c.lineWidth=2;c.beginPath();c.moveTo(G.x,G.y-2000);c.lineTo(G.x,G.y);c.stroke();c.translate(G.x,G.y);
+  if(B.big){const G=B.big;c.save();c.strokeStyle='rgba(230,230,240,.8)';c.lineWidth=2;c.beginPath();c.moveTo(G.x,G.y-2000);c.lineTo(G.x,G.y);c.stroke();c.translate(G.x,G.y);c.scale(.45,.45);
     c.strokeStyle='#0a0606';c.lineCap='round';c.lineWidth=9;for(let k=0;k<8;k++){const sd2=k<4?-1:1,i=k%4,ph=Math.sin(tm*6+k)*6;c.beginPath();c.moveTo(sd2*30,-10+i*10);c.lineTo(sd2*(110+i*10),-80+i*30+ph);c.lineTo(sd2*(150+i*12),40+i*24);c.stroke();}
     c.fillStyle='#120a0a';c.beginPath();c.ellipse(0,-60,70,80,0,0,TAU);c.fill();c.beginPath();c.ellipse(0,20,48,44,0,0,TAU);c.fill();
     c.fillStyle='#ff2020';for(const[x,y]of[[-16,20],[16,20],[-28,8],[28,8],[-8,34],[8,34]]){c.beginPath();c.arc(x,y,6,0,TAU);c.fill();}c.restore();}
