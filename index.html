@@ -680,7 +680,7 @@ const DIR8=[...Array(8)].map((_,i)=>[Math.cos(i/8*TAU),Math.sin(i/8*TAU)]);
 function circleOK(x,y,r=14){if(!wpt(x,y))return false;for(const d of DIR8)if(!wpt(x+d[0]*r,y+d[1]*r))return false;return true;}
 function los(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d/7);for(let i=1;i<n;i++){const t=i/n;if(!wpt(x1+(x2-x1)*t,y1+(y2-y1)*t))return false;}return true;}
 // 視界用: 薄い壁（合計 WALL_SEE までの厚さ）は見通せる
-const WALL_SEE=130;
+const WALL_SEE=28;   // 壁の向こうは見えない（端っこで少しだけ先まで見える程度）
 function losSee(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),n=Math.ceil(d/7),st=d/n;let w=0;for(let i=1;i<n;i++){const t=i/n;if(!wpt(x1+(x2-x1)*t,y1+(y2-y1)*t)){w+=st;if(w>WALL_SEE)return false;}}return true;}
 function nearRoom(x,y){const r=roomOf(x,y);if(r!=='通路')return r;let best=ROOMS[0],bd=1e9;for(const q of ROOMS){const d=Math.hypot(q.x+q.w/2-x,q.y+q.h/2-y);if(d<bd){bd=d;best=q;}}return best.n;}
 function roomOf(x,y){for(const r of ROOMS)if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return r.n;return '通路';}
@@ -3737,7 +3737,7 @@ function render(dt){
     fctx.fillStyle=g;fctx.beginPath();
     for(let i=0;i<N;i++){const a=i/N*TAU,ca=Math.cos(a),sa=Math.sin(a);let d=0;
       let wall=0;while(d<r){d+=stp;if(!wpt(ox+ca*d,oy+sa*d)){wall+=stp;if(wall>WALL_SEE)break;}}
-      d=Math.min(r,d+40);
+      d=Math.min(r,d+(wall>0?70:40));   // 壁に当たったら、そこから少しだけ先まで見える
       i?fctx.lineTo(ox+ca*d,oy+sa*d):fctx.moveTo(ox+ca*d,oy+sa*d);}
     fctx.closePath();fctx.fill();
     fctx.beginPath();fctx.arc(ox,oy,60,0,TAU);fctx.fillStyle='rgba(0,0,0,1)';fctx.fill();
