@@ -254,7 +254,7 @@ button{touch-action:manipulation}
 #edMsg{flex:1;min-width:180px;font-size:12.5px;color:#ffe680}
 .edBtns{display:flex;flex-wrap:wrap;gap:4px}
 #edCodeBox{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px}
-#edCode{width:min(560px,86vw);height:160px;font-family:monospace;font-size:11px;border:2px solid #000;border-radius:8px}
+#edCode{width:min(560px,86vw);height:180px;font-family:monospace;font-size:12px;border:3px solid #000;border-radius:8px;background:#fff;color:#111;-webkit-text-fill-color:#111;word-break:break-all}
 #pauseBar{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:90;background:rgba(10,12,24,.92);border:3px solid #ffd53d;border-radius:14px;padding:10px 16px;font-weight:800;color:#ffe680;text-align:center;max-width:92vw}
 #pauseBar button{margin-left:8px;border:2px solid #000;border-radius:10px;background:#ffd53d;padding:4px 12px;font-weight:800}
 #topRight{right:68px!important}
@@ -4967,12 +4967,13 @@ $('btnPause').onclick=togglePause;
   // コード: このコードを送ってもらえれば、正式なステージとして入れられる
   const enc=d=>'AMGS1:'+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
   const dec=t=>{t=String(t).trim();if(t.startsWith('AMGS1:'))t=t.slice(6);return JSON.parse(decodeURIComponent(escape(atob(t))));};
-  $('edExport').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();const code=enc(ED.data);$('edCodeTitle').textContent='📤 このコードを送ってね（正式なステージとして採用できる）';$('edCode').value=code;$('edCode').readOnly=true;$('edCodeOk').hidden=true;$('edCodeCopy').hidden=false;$('edCodeBox').hidden=false;
+  $('edExport').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();const code=enc(ED.data);$('edCodeTitle').textContent='📤 このコードを全部コピーして、チャットに貼って送ってね（正式なステージとして採用できる）';$('edCode').value=code;$('edCode').readOnly=true;$('edCodeOk').hidden=true;$('edCodeCopy').hidden=false;$('edCodeBox').hidden=false;
     try{navigator.clipboard.writeText(code).then(()=>msg('コードをコピーしました。チャットに貼り付けて送ってください'),()=>{});}catch(e){}};
   $('edImport').onclick=()=>{$('edCodeTitle').textContent='📥 コードを貼り付けて「読み込む」';$('edCode').value='';$('edCode').readOnly=false;$('edCodeOk').hidden=false;$('edCodeCopy').hidden=true;$('edCodeBox').hidden=false;};
   $('edCodeCopy').onclick=()=>{$('edCode').select();try{document.execCommand('copy');}catch(e){}try{navigator.clipboard.writeText($('edCode').value);}catch(e){}msg('コピーしました');};
   $('edCodeOk').onclick=()=>{try{const d=dec($('edCode').value);if(!d||!Array.isArray(d.rooms))throw 0;d.tasks=d.tasks||[];d.vents=d.vents||[];d.ladders=d.ladders||[];ED.data=d;$('edName').value=d.name||'';save();$('edCodeBox').hidden=true;draw();msg('読み込みました');}catch(e){msg('コードが読めませんでした');}};
   $('edCodeCancel').onclick=()=>$('edCodeBox').hidden=true;
+  $('edCode').addEventListener('focus',()=>{if($('edCode').readOnly)setTimeout(()=>{try{$('edCode').select();$('edCode').setSelectionRange(0,1e6);}catch(e){}},0);});
   $('edReset').onclick=()=>{if(!confirm('最初の見本に戻しますか？（いまのステージは消えます）'))return;ED.data=defaultStage();$('edName').value=ED.data.name;save();draw();};
   $('edClose').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();$('editor').hidden=true;};
   $('edName').oninput=()=>{ED.data.name=$('edName').value;save();};
