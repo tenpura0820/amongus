@@ -70,7 +70,7 @@ input,select{font-family:var(--body)}
 #actions{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,auto);gap:10px;pointer-events:auto;justify-items:end}
 .act{position:relative;width:84px;height:84px;border-radius:18px;border:3px solid #000;background:#e8edf5;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;box-shadow:0 4px 0 #000;padding:0}
 .act .ic{font-size:30px;line-height:1;font-family:system-ui}
-.act:disabled{opacity:.32;cursor:default}
+.act:disabled,.act.dim{opacity:.32;cursor:default}
 .act.kill{background:#ff5a5a}
 .act.report{background:#ffb02e}
 .act.sab{background:#ff8a8a}
@@ -2867,7 +2867,7 @@ function useTarget(){
   return null;
 }
 function reportTarget(){const P=me();if(S.br)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
-function killTarget(){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
+function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
 function doUse(){
@@ -2887,7 +2887,7 @@ function doUse(){
 }
 function doReport(){if(!canAct())return;const b=reportTarget();if(b)callMeeting(me(),b);}
 function doKillBtn(){if(!S||S.phase!=='play'||S.killedT>0)return;if(S.modal)closeModal();   // タスク（偽タスク）の操作中でもキルできる
-const P=me();if(P.killCd>0&&P.irole!=='rocket')return;if(P.irole==='rocket'&&P.killCd>0)return;const t=killTarget();if(!t)return;
+const P=me();if(P.killCd>0&&P.irole!=='rocket')return;if(P.irole==='rocket'&&P.killCd>0)return;const t=killTarget(isTouchDev()?25:0);if(!t)return;
   if(P.ctrl){remoteKill(P,S.ents[P.ctrl.id],t);return;}doKill(P,t);}
 function doVent(){if(!canAct())return;const P=me();
   if(P.ctrl){const pup=S.ents[P.ctrl.id];if(pup.inVent!=null)exitVent(pup);else{let bi=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(pup,v);if(d<bd){bd=d;bi=i;}});if(bi!=null)enterVent(pup,bi);}return;}const v=ventTarget();if(v==null)return;if(P.inVent!=null){exitVent(P);}else enterVent(P,v);refreshVentNav();}
@@ -4043,8 +4043,10 @@ function updateHud(){
   $('btnKill').hidden=!isKiller(P);
   if(P.nrole==='arson')$('btnIgnite').disabled=!(play&&P.alive&&allDoused(P));
   if(!$('btnAbility').hidden){$('btnAbility').disabled=!(play&&abilityReady());$('abCd').textContent=!P.alive?'':P.nrole==='papa'?(papaCam?'📷':P.abCd>0?Math.ceil(P.abCd):''):P.cannon?Math.ceil(P.cannon.t):P.invisT>0?'👻':(['bubble','sniper','pusher'].includes(P.irole)&&P.killCd>0)?Math.ceil(P.killCd):(P.role==='sci'||P.role==='sage'||(P.role==='doppel'&&P.dop)||['cannon','tele','fraud','ventist','esci','shift','remote','gimlet','mine','crab'].includes(P.irole)||P.nrole==='arson')&&P.abCd>0?Math.ceil(P.abCd):'';}
+  // スマホ: ボタンを「無効」にするとタップ自体が受け付けられないので、薄く表示するだけにして、押した瞬間に判定する（歩きながらでも押せる）
+  if(isTouchDev())for(const id of ['btnUse','btnReport','btnKill','btnAbility','btnVent','btnSab']){const b=$(id);if(!b)continue;b.classList.toggle('dim',b.disabled);b.disabled=false;}
   if(P.isImp||P.isNeu||P.sheriff){
-    $('btnKill').disabled=!(S.phase==='play'&&S.killedT<=0&&P.killCd<=0&&killTarget());
+    $('btnKill').disabled=!(S.phase==='play'&&S.killedT<=0&&P.killCd<=0&&killTarget());if(isTouchDev()){const b=$('btnKill');b.classList.toggle('dim',b.disabled);b.disabled=false;}
     $('hud').style.zIndex=S.modal&&P.alive&&isKiller(P)?'5':'';   // タスク画面の上にもキルボタンを出す
     $('killCd').textContent=P.alive&&P.killCd>0?Math.ceil(P.killCd):'';
   }
