@@ -241,6 +241,7 @@ button{touch-action:manipulation}
 .llmrow input{min-width:0;background:#141a33;border:2px solid #3a4566;border-radius:8px;color:var(--fg);padding:5px 7px;font-weight:800}
 .msg .ai{font-size:10px;background:#111;color:#fff;border-radius:5px;padding:0 4px;margin-left:4px}
 #btnQuit{position:fixed;right:12px;top:12px;z-index:100;width:48px;height:48px}
+#adminDlg{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:16px}
 #editor{position:fixed;inset:0;z-index:130;background:#0b0e14;display:flex;flex-direction:column;color:#fff;font-weight:800}
 #editor button{border:2px solid #000;border-radius:9px;background:#e8edf5;color:#111;font-weight:800;padding:4px 8px;font-size:13px;cursor:pointer}
 #editor button.on{background:#ffd23d}
@@ -388,6 +389,7 @@ button{touch-action:manipulation}
 <button class="mini" id="btnQuit" hidden title="試合をやめる (Esc)">🚪</button>
 <div id="reviewBar" hidden><b id="rvTitle"></b><span id="rvSub"></span><span id="rvTime"></span><button id="rvNext">結果へ ▶</button></div>
 <div id="pauseBar" hidden>⏸ 一時停止中 — 全員と話せる（下の欄に書いて送信）　<button type="button" id="btnResume">▶ 再開</button></div>
+<div id="adminDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">🔒 管理者コード</h3><p style="margin:0 0 8px;font-weight:800;color:var(--muted)">ステージを作るには管理者コードが必要です</p><input id="adminIn" inputmode="numeric" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px;border:3px solid #000;border-radius:10px;font-size:18px;font-weight:800;text-align:center"><div id="adminErr" style="color:#ff6a6a;font-weight:800;min-height:20px;margin-top:4px"></div><div style="display:flex;gap:8px;justify-content:center;margin-top:6px"><button class="big" id="adminOk">OK</button><button class="big alt" id="adminNo">やめる</button></div></div></div>
 <div id="editor" hidden>
   <div class="edTop"><input id="edName" maxlength="16" placeholder="ステージの名前"><span id="edTools"></span><span class="edZoom"><button id="edZin">＋</button><button id="edZout">－</button></span></div>
   <div class="edProps" id="edProps"></div>
@@ -4976,10 +4978,22 @@ $('btnPause').onclick=togglePause;
   $('edName').oninput=()=>{ED.data.name=$('edName').value;save();};
   // 管理者コード（コードそのものは書かず、SHA-256のハッシュだけで照合する）
   const ADMIN_HASH='1b3da4b05014a3b25ca6b244cfeea58ad008dcd3f0c78f8c030f7318f3c5402d';
-  async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
-  async function adminOk(){try{if(localStorage.getItem('amongus-admin')===ADMIN_HASH)return true;}catch(e){}const t=prompt('🔒 ステージを作るには管理者コードが必要です');if(!t)return false;
-    let h='';try{h=await sha(t.trim());}catch(e){toast('この画面では確認できません（https か localhost で開いてね）');return false;}
-    if(h!==ADMIN_HASH){toast('管理者コードがちがいます');return false;}try{localStorage.setItem('amongus-admin',h);}catch(e){}return true;}
+  // SHA-256（https でなくても動くように、自前でも計算できる）
+  function sha256js(str){const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+    const b=new TextEncoder().encode(str),l=b.length,n=((l+9+63)>>6)<<6,m=new Uint8Array(n);m.set(b);m[l]=0x80;const bl=l*8;for(let i=0;i<8;i++)m[n-1-i]=(i<4?(bl>>>(i*8)):0)&255;
+    let H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];const w=new Array(64),r=(x,k)=>(x>>>k)|(x<<(32-k));
+    for(let o=0;o<n;o+=64){for(let i=0;i<16;i++)w[i]=(m[o+i*4]<<24)|(m[o+i*4+1]<<16)|(m[o+i*4+2]<<8)|m[o+i*4+3];
+      for(let i=16;i<64;i++){const s0=r(w[i-15],7)^r(w[i-15],18)^(w[i-15]>>>3),s1=r(w[i-2],17)^r(w[i-2],19)^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0;}
+      let[a,bb,c2,d,e,f,g,h]=H;for(let i=0;i<64;i++){const S1=r(e,6)^r(e,11)^r(e,25),ch=(e&f)^(~e&g),t1=(h+S1+ch+K[i]+w[i])|0,S0=r(a,2)^r(a,13)^r(a,22),mj=(a&bb)^(a&c2)^(bb&c2),t2=(S0+mj)|0;h=g;g=f;f=e;e=(d+t1)|0;d=c2;c2=bb;bb=a;a=(t1+t2)|0;}
+      H=H.map((v,i)=>(v+[a,bb,c2,d,e,f,g,h][i])|0);}
+    return H.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');}
+  // 全角の数字や空白が入っていても大丈夫にする
+  const normCode=t=>String(t||'').replace(/[０-９Ａ-Ｚａ-ｚ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/[\s　\-ー－]/g,'');
+  function askAdmin(){return new Promise(res=>{const box=$('adminDlg'),inp=$('adminIn');box.hidden=false;inp.value='';$('adminErr').textContent='';setTimeout(()=>inp.focus(),50);
+    const done=v=>{box.hidden=true;$('adminOk').onclick=$('adminNo').onclick=null;inp.onkeydown=null;res(v);};
+    $('adminOk').onclick=()=>{const h=sha256js(normCode(inp.value));if(h===ADMIN_HASH){try{localStorage.setItem('amongus-admin',h);}catch(e){}done(true);}else{$('adminErr').textContent='管理者コードがちがいます';snd('click');}};
+    $('adminNo').onclick=()=>done(false);inp.onkeydown=e=>{if(e.key==='Enter')$('adminOk').onclick();};});}
+  async function adminOk(){try{if(localStorage.getItem('amongus-admin')===ADMIN_HASH)return true;}catch(e){}return await askAdmin();}
   $('btnEditor').onclick=async()=>{if(!(await adminOk()))return;snd('click');let d=null;try{d=JSON.parse(localStorage.getItem('amongus-custom-stage')||'null');}catch(e){}ED.data=d||defaultStage();ED.data.ladders=ED.data.ladders||[];ED.data.tasks=ED.data.tasks||[];ED.data.vents=ED.data.vents||[];
     $('edName').value=ED.data.name||'';$('editor').hidden=false;tools();props();requestAnimationFrame(fit);msg(HINT[ED.tool]);};
   addEventListener('resize',()=>{if(!$('editor').hidden)fit();});
