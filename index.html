@@ -288,7 +288,6 @@ button{touch-action:manipulation}
       <label class="row">投票時間<input type="range" id="inVote" min="15" max="120" step="5" value="45"><b id="vVote">45s</b></label>
       <label class="row">第三陣営<input type="range" id="inNeu" min="0" max="12" value="5"><b id="vNeu">5</b></label>
       <label class="row">マップ<select id="inMap"><option value="-1">🎲 ランダム（バックルーム以外）</option></select></label>
-      <div class="row" id="fgBgRow">ファングルの背景<span><button type="button" class="mini" id="btnFgBg" style="width:auto;padding:0 10px">🖼 画像を読み込む</button> <button type="button" class="mini" id="btnFgBgDel" style="width:auto;padding:0 10px" hidden>消す</button><input type="file" id="inFgBg" accept="image/*" hidden> <small id="fgBgSt" style="opacity:.75"></small></span></div>
       <label class="row">あなたの陣営<select id="inRole"><option value="random">ランダム</option><option value="crew">村陣営（役職ランダム）</option><option value="crew:villager">村陣営: 村人</option><option value="crew:labtech">村陣営: 臨床検査技師</option><option value="crew:stunt">村陣営: スタントマン</option><option value="crew:sheriff">村陣営: シェリフ</option><option value="crew:mayor">村陣営: 村長</option><option value="crew:sci">村陣営: サイエンティスト</option><option value="crew:redhood">村陣営: ナイス赤ずきん</option><option value="crew:mad">村陣営: 狂人</option><option value="crew:meyer">村陣営: メイヤー</option><option value="crew:balance">村陣営: 天秤</option><option value="crew:home">村陣営: 自宅警備員</option><option value="crew:nguesser">村陣営: ゲッサー</option><option value="crew:sage">村陣営: 賢者</option><option value="crew:chicken">村陣営: チキン</option><option value="crew:noct">村陣営: 夜行性</option><option value="crew:noise">村陣営: ノイズメーカー</option><option value="crew:doppel">村陣営: ドッペル</option><option value="crew:heir">村陣営: 継承者</option><option value="crew:qed">村陣営: Q,E,D</option><option value="crew:avenger">村陣営: 報復者</option><option value="crew:valty">村陣営: ヴァルティ（列車のみ）</option><option value="imp">インポスター（役職ランダム）</option><option value="imp:none">インポスター: 通常</option><option value="imp:guesser">インポスター: イビルゲッサー</option><option value="imp:vamp">インポスター: ヴァンパイア</option><option value="imp:cannon">インポスター: 波動砲</option><option value="imp:bomb">インポスター: 自爆魔</option><option value="imp:tele">インポスター: テレポーター</option><option value="imp:fraud">インポスター: 詐欺師</option><option value="imp:ventist">インポスター: イビルティスト</option><option value="imp:esci">インポスター: イビルサイエンティスト</option><option value="imp:viper">インポスター: バイパー</option><option value="imp:shift">インポスター: シェイプシフター</option><option value="imp:remote">インポスター: リモコン</option><option value="imp:rocket">インポスター: ロケット</option><option value="imp:gimlet">インポスター: ギムレット</option><option value="imp:bubble">インポスター: バブルランチャー</option><option value="imp:mine">インポスター: 扇状地</option><option value="imp:pusher">インポスター: 突き落と師</option><option value="imp:sniper">インポスター: スナイパー</option><option value="imp:snake">インポスター: ヘビ</option><option value="imp:crab">インポスター: カニ</option><option value="imp:double">インポスター: ダブルキラー</option><option value="imp:serial">インポスター: シリアルキラー</option><option value="imp:berserk">インポスター: バーサーカー</option><option value="imp:poison">インポスター: 毒（列車のみ）</option><option value="imp:kunekune">インポスター: くねくね（ファングルのみ）</option><option value="neu">第三陣営（役職ランダム）</option><option value="neu:killer">第三陣営: キラー</option><option value="neu:god">第三陣営: 神</option><option value="neu:tuna">第三陣営: マグロ</option><option value="neu:cupid">第三陣営: キューピッド</option><option value="neu:opp">第三陣営: オポチュニスト</option><option value="neu:vulture">第三陣営: ヴァルチャー</option><option value="neu:verity">第三陣営: Verity</option><option value="neu:papa">第三陣営: パパラッチ</option><option value="neu:teru">第三陣営: てるてる</option><option value="neu:arson">第三陣営: アーソニスト</option></select></label>
       <div class="row" style="grid-template-columns:110px 1fr">村の役職<div id="roleToggles" class="roleToggles"></div></div>
       <div class="row" style="grid-template-columns:110px 1fr">インポスターの役職<div id="iroleToggles" class="roleToggles"></div></div>
@@ -544,7 +543,7 @@ const MAPS=[
     links:[],
     ground:[[288,928,442,608,'b'],[688,858,854,109,'b'],[704,1296,454,214,'b'],[1082,1056,109,304,'b'],[1104,954,176,141,'b'],[755,1402,243,214,'b'],[384,1504,64,240,'b'],[880,1446,118,608,'j'],[960,1811,1702,128,'j'],[960,1440,1382,141,'j'],[1594,1440,83,499,'j'],[1926,1440,77,499,'j'],[2240,1440,90,499,'j'],[2278,1562,64,230,'j'],[2240,1030,83,122,'m']],
     // L=梯子 G=グラップラー（ロープで一気に移動）。座標は拡大前
-    ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[2240,544],[2048,294],'G'],[[1696,314],[1440,909],'G']]}),
+    ladderPts:[[[1904,1536],[1904,1229],'L'],[[2224,1536],[2224,1229],'L'],[[1958,998],[1958,800],'L'],[[2406,1030],[2406,659],'L'],[[1856,710],[2240,528],'G'],[[1696,314],[1440,909],'G']]}),
   genTrain(),
   genBackrooms(),
   genBackrooms1(),
@@ -887,7 +886,7 @@ let MAPCV_S=1;const isTouchDev=()=>matchMedia('(pointer:coarse)').matches;
 const FG_BUILD=['降下艇','食堂','倉庫','会議室','キッチン','研究室','温室','リアクター','寝室','遊戯室','上部エンジン','通信室'];
 // 自分の端末に読み込んだファングルの背景画像（公開サイトには入れない。この端末のブラウザにだけ保存）
 let FG_BG=null;
-function loadFgBg(){try{const u=localStorage.getItem('amongus-fungle-bg');if(!u){FG_BG=null;fgBgStatus();
+function loadFgBg(){try{try{localStorage.removeItem('amongus-fungle-bg');}catch(e){}const u=null;if(!u){FG_BG=null;fgBgStatus();
   // ゲームと同じ場所に fungle.jpg があれば、それをそのままステージにする
   const im=new Image();im.onload=()=>{if(localStorage.getItem('amongus-fungle-bg'))return;FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src='fungle.jpg';return;}const im=new Image();im.onload=()=>{FG_BG=im;fgBgStatus();if(MAPS[MAPI]&&MAPS[MAPI].fungle&&mapCv)drawMapCanvas();};im.src=u;}catch(e){}}
 function fgBgStatus(){const st=document.getElementById('fgBgSt'),del=document.getElementById('btnFgBgDel');let ls=null;try{ls=localStorage.getItem('amongus-fungle-bg');}catch(e){}if(st)st.textContent=FG_BG?(ls?'読み込み済み（この端末だけ）':'ステージ画像あり'):'未設定（自動で描いた絵）';if(del)del.hidden=!ls;}
@@ -4812,12 +4811,6 @@ cv.addEventListener('pointerup',joyEnd);cv.addEventListener('pointercancel',joyE
 // meeting controls
 $('btnVote').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote'||M.sel==null)return;if(M.scale&&!M.scale.includes(M.sel)){toast('天秤で選ばれた2人にしか投票できない');return;}M.votes[me().id]=M.sel;if(NET.client)rpc('vote',[M.sel]);snd('click');renderCards();updateMeetingUI();};
 $('btnPhoto').onclick=()=>{papaShow(me());if(S.M)updateMeetingUI();};
-$('btnFgBg').onclick=()=>$('inFgBg').click();
-$('btnFgBgDel').onclick=()=>{try{localStorage.removeItem('amongus-fungle-bg');}catch(e){}FG_BG=null;fgBgStatus();if(MAPS[MAPI].fungle)drawMapCanvas();};
-$('inFgBg').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{
-  const W=Math.min(2400,im.width),H=Math.round(W*im.height/im.width),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);
-  let u=c.toDataURL('image/jpeg',.85);try{localStorage.setItem('amongus-fungle-bg',u);}catch(e){try{u=c.toDataURL('image/jpeg',.6);localStorage.setItem('amongus-fungle-bg',u);}catch(e2){toast('画像が大きすぎて保存できなかった');}}
-  URL.revokeObjectURL(im.src);loadFgBg();};im.src=URL.createObjectURL(f);ev.target.value='';};
 loadFgBg();
 $('qChat').onsubmit=e=>{e.preventDefault();const v=$('qChatIn').value.trim();$('qChatIn').value='';if(v)playerSay(v);};
 $('btnPause').onclick=togglePause;$('btnVoice').onclick=toggleVoice;$('btnResume').onclick=togglePause;
