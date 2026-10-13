@@ -1230,7 +1230,7 @@ NROLES.teru={n:'てるてる',d:'タスクを3個終わらせたうえで、会�
 NROLES.opp={n:'オポチュニスト',d:'キルはできない。試合が終わった時に生きていれば、勝った陣営と一緒に勝利（共存勝利）。とにかく生き残ろう'};
 NROLES.vulture={n:'ヴァルチャー',d:'死体の方向が矢印で分かる。F: 死体を食べる。決めた数（設定・初期2個）を食べた瞬間に単独勝利（横取りされない・優先度+9）'};
 NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。会議を3回生き残ると F「変身」が1回だけ使える（30秒間）。変身中は手足が長くなり、キルの待ち時間0秒・キルされない・全員が緊急ボタンも通報もできない。変身すると役職は見えなくなる。インポスターが全員死んだ時、自分が生きていてインポスターを1人以上キルしていれば単独勝利'};
-NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
+NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。自分も四角の中に写っていないと撮れない。写真に何度も写っている人は怪しまれる（自分は毎回写るので、出しすぎると疑われる）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','verity','papa'];
 const PAPA_NEED=5,PAPA_SHOWS=2,PAPA_WINDOW=20;
 const VERITY_T=30;
@@ -1846,9 +1846,9 @@ function renderPhoto(r,ids){
 function papaShoot(e,ids,rect){if(NET.client){rpc('papaShoot',[e,ids,rect]);return;}
   if(e.nrole!=='papa'||!e.alive||e.abCd>0||S.phase!=='play')return;
   const vs=ids?ids.map(i=>S.ents[i]).filter(o=>o&&o!==e&&o.alive&&!hid(o)&&o.inVent==null):papaInView(e);e.abCd=15;S.fx.push({x:e.x,y:e.y-40,t:.6});
-  if(!rect){const xs=vs.length?vs.map(o=>o.x):[e.x],ys=vs.length?vs.map(o=>o.y):[e.y],cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2-30;
+  if(!rect){const xs=[e.x,...vs.map(o=>o.x)],ys=[e.y,...vs.map(o=>o.y)],cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2-30;
     const w=Math.max(560,Math.max(...xs)-Math.min(...xs)+160),h=w*.45;rect={x:cx-w/2,y:cy-h/2,w,h};}
-  (e.photoImgs=e.photoImgs||[]).push(renderPhoto(rect,vs.map(o=>o.id)));
+  (e.photoImgs=e.photoImgs||[]).push(renderPhoto(rect,[e.id,...vs.map(o=>o.id)]));
   if(e===me()||canSee(me(),e.x,e.y))snd('click');
   if(!vs.length){if(e.photoImgs)e.photoImgs.pop();tell(e,'📸 だれも写らなかった…');return;}
   e.photos.push(vs.map(o=>o.id));
@@ -1868,11 +1868,14 @@ function drawViewfinder(){
   for(const[cx,cy,dx,dy]of[[x0,y0,1,1],[x0+r.w,y0,-1,1],[x0,y0+r.h,1,-1],[x0+r.w,y0+r.h,-1,-1]]){ctx.beginPath();ctx.moveTo(cx+dx*L,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+dy*L);ctx.stroke();}
   ctx.lineWidth=1.5;ctx.strokeStyle='rgba(255,255,255,.6)';ctx.strokeRect(x0,y0,r.w,r.h);
   ctx.beginPath();ctx.moveTo(r.sx-10,r.sy);ctx.lineTo(r.sx+10,r.sy);ctx.moveTo(r.sx,r.sy-10);ctx.lineTo(r.sx,r.sy+10);ctx.stroke();
-  ctx.fillStyle='#ff3b3b';ctx.beginPath();ctx.arc(x0+16,y0+16,6,0,TAU);ctx.fill();ctx.font='bold 13px "M PLUS Rounded 1c",sans-serif';ctx.fillStyle='#fff';ctx.fillText('F で撮影 ／ Esc でやめる',x0+28,y0+21);
+  ctx.fillStyle='#ff3b3b';ctx.beginPath();ctx.arc(x0+16,y0+16,6,0,TAU);ctx.fill();ctx.font='bold 13px "M PLUS Rounded 1c",sans-serif';ctx.fillStyle='#fff';ctx.fillText('自分も入れて F で撮影 ／ Esc でやめる',x0+28,y0+21);
   ctx.restore();
 }
 function papaSnap(){
-  const P=me(),r=camRect().world;papaCam=null;
+  const P=me(),r=camRect().world;
+  // 自分も写っていないと撮れない（自撮り込み）
+  if(!(P.x>r.x&&P.x<r.x+r.w&&P.y-30>r.y&&P.y-30<r.y+r.h+30)){toast('📸 自分も四角の中に写るように撮ろう');return;}
+  papaCam=null;
   const ids=S.ents.filter(o=>o!==P&&o.alive&&!hid(o)&&o.inVent==null&&o.x>r.x&&o.x<r.x+r.w&&o.y-30>r.y&&o.y-30<r.y+r.h+30&&canSee(P,o.x,o.y)).map(o=>o.id);
   papaShoot(P,ids,r);S.flash=Math.max(S.flash||0,.25);
 }
@@ -1882,7 +1885,13 @@ function chatPhotos(imgs){imgs=(imgs||[]).filter(Boolean);if(!imgs.length)return
   const log=$('chatLog');log.appendChild(d);log.scrollTop=log.scrollHeight;}
 function papaShow(e){if(NET.client){rpc('papaShow',[e]);return;}
   if(!papaCanShow(e))return;const M=S.M;
-  const ids=[...new Set(e.photos.flat())];e.photos=[];
+  const ids=[...new Set(e.photos.flat())];
+  // 写真に何度も写っている人は怪しまれる（パパラッチ本人は自分の写真に毎回写る）
+  S.photoSeen=S.photoSeen||{};for(const ph of e.photos)for(const id of new Set([e.id,...ph]))S.photoSeen[id]=(S.photoSeen[id]||0)+1;
+  for(const b of S.ents){if(!b.isBot||!b.alive)continue;for(const id in S.photoSeen){const n=S.photoSeen[id];if(+id===b.id||n<2||b.susp[id]>=100)continue;if(b.isImp&&S.ents[id].isImp)continue;b.susp[id]=Math.min(99,b.susp[id]+12*(n-1));}}
+  {const sus=Object.entries(S.photoSeen).filter(([id,n])=>n>=3&&S.ents[id].alive).sort((a,b)=>b[1]-a[1])[0];const sp=sus&&S.ents.find(b=>b.isBot&&b.alive&&b.id!==+sus[0]);
+   if(sp)q(M,rand(3,6),sp.id,pick([`${S.ents[sus[0]].name}、写真に何回も写ってる…いつも近くにいるの怪しくない？`,`また${S.ents[sus[0]].name}が写ってる。${sus[1]}回目だよ`,`写真の${S.ents[sus[0]].name}、毎回いるよね…`]),{k:'sus',x:+sus[0],w:25});}
+  e.photos=[];
   // 会議が終わった時に生きていれば、この写真が数に入る（追放・推理キルされたら無効）
   e.papaPend=ids;(M.papaShown=M.papaShown||{})[e.id]=1;
   // 文字ではなく、撮った写真そのものを出す（だれが出したかは分からない）
