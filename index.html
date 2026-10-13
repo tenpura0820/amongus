@@ -1081,6 +1081,11 @@ function floorPattern(c,r){
   else if(p==='grass'){c.strokeStyle='rgba(30,70,20,.35)';for(let k=0;k<r.w*r.h/700;k++){const x=r.x+rnd()*r.w,y=r.y+rnd()*r.h;c.moveTo(x,y);c.lineTo(x+2,y-8);}c.stroke();}
   else if(p==='stone'){for(let k=0;k<r.w*r.h/2500;k++){c.beginPath();c.ellipse(r.x+rnd()*r.w,r.y+rnd()*r.h,8+rnd()*18,6+rnd()*12,rnd()*3,0,TAU);c.fill();}}
 }
+// リアクターは2人で止める: もう1つの手形の場所（同じ部屋の少し離れた歩ける所）
+function reactorPanel2(){const a=SABP.reactor;
+  for(const[dx,dy]of[[220,0],[-220,0],[0,180],[0,-180],[160,140],[-160,140],[300,0],[-300,0],[140,0],[-140,0]]){const x=a.x+dx,y=a.y+dy;if(circleOK(x,y+30)&&roomOf(x,y)===roomOf(a.x,a.y))return{x,y,n:a.n};}
+  for(const[dx,dy]of[[220,0],[-220,0],[0,180],[0,-180],[120,0],[-120,0]]){const x=a.x+dx,y=a.y+dy;if(circleOK(x,y+30))return{x,y,n:a.n};}
+  return{x:a.x+90,y:a.y,n:a.n};}
 function drawMapCanvas(){
   // 軽くする: マップの絵は縮小して持ち、描く時に引き伸ばす（スマホは半分、大きいマップは7割）
   MAPCV_S=isTouchDev()?.5:(MAPW*MAPH>9e6?.7:1);
@@ -1149,7 +1154,7 @@ function drawMapCanvas(){
   // stations
   for(const s of STATIONS){box(s.x-20,s.y-34,40,26,'#2f3a4c');c.fillStyle='#57d0ff';c.fillRect(s.x-14,s.y-30,28,14);}
   box(SABP.lights.x-24,SABP.lights.y-40,48,32,'#4a3d24');
-  box(SABP.reactor.x-20,SABP.reactor.y-40,40,32,'#3a2a2a');
+  box(SABP.reactor.x-20,SABP.reactor.y-40,40,32,'#3a2a2a');if(SABP.reactor2)box(SABP.reactor2.x-20,SABP.reactor2.y-40,40,32,'#3a2a2a');
   // labels
   if(MAPS[MAPI].fungle&&FG_BG)return;
   c.font='bold 28px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.textBaseline='middle';
@@ -1209,6 +1214,7 @@ function loadMap(i){
   else{MAPW=m.W;MAPH=m.H;ROOMS=m.rooms;HALLS=m.halls;STATIONS=m.stations;VENTS=m.vents;BTN=m.btn;SABP=m.sabp;}
   HALLS.forEach(h=>{if(m.custom){h.f=h.f0||'#6b7480';return;}h.f='#6b7480';if(m.fungle&&h.zone){h.f=h.zone==='j'?'#7a3f5c':h.zone==='m'?'#3f6b58':'#dcc08a';return;}if(m.fungle){const cx=h.x+h.w/2,cy=h.y+h.h/2,r=ROOMS.slice().sort((a,b)=>Math.hypot(a.x+a.w/2-cx,a.y+a.h/2-cy)-Math.hypot(b.x+b.w/2-cx,b.y+b.h/2-cy))[0];h.f=r&&r.f==='#8a4a68'?'#7a3f5c':r&&r.high?'#3f6b58':'#dcc08a';}});makePlatforms(m);RECTS=[...ROOMS,...HALLS];
   buildWalk();
+  SABP.reactor2=reactorPanel2();
   STATIONS.forEach(s=>s.room=roomOf(s.x,s.y));VENTS.forEach(v=>v.room=roomOf(v.x,v.y));
   buildPathGrid();
   LADDERS=m.plats||[];
@@ -2751,7 +2757,8 @@ function crewThink(e){
   if(!S.tr&&ai.body&&S.bodies.includes(ai.body)){setGoal(e,ai.body.x,ai.body.y,'body');if(dist(e,ai.body)<130){callMeeting(e,ai.body);}return;}
   ai.body=null;
   if(!S.tr&&ai.urgent&&e.buttonUses>0&&S.meetingCd<=0&&!(S.sab&&S.sab.type==='reactor')){setGoal(e,BTN.x,BTN.y+75,'btn');if(dist(e,BTN)<110)callMeeting(e,null);return;}
-  if(S.sab&&e.nrole!=='god'){const p=SABP[S.sab.type];if(S.sab.type==='reactor'||S.sab.fixers.includes(e.id)){setGoal(e,p.x,p.y+30,'fix');return;}}
+  if(S.sab&&e.nrole!=='god'){let p=SABP[S.sab.type];if(S.sab.type==='reactor'&&SABP.reactor2){const P=me(),hp=P.alive&&!P.isImp&&dist(P,SABP.reactor)<90?0:P.alive&&!P.isImp&&dist(P,SABP.reactor2)<90?1:-1;e.ai.rpanel=hp>=0?1-hp:(e.id%2);p=e.ai.rpanel?SABP.reactor2:SABP.reactor;}
+    if(S.sab.type==='reactor'||S.sab.fixers.includes(e.id)){setGoal(e,p.x,p.y+30,'fix'+(S.sab.type==='reactor'?e.ai.rpanel:''));return;}}
   if(roleThink(e)||orderThink(e)||followThink(e))return;
   if(S.tr&&ai.witnessKill!=null){const k=S.ents[ai.witnessKill];if(k&&k.alive&&dist(e,k)<520){if(!(ai.goalKey||'').startsWith('trflee')||atGoal(e)){let best=null,bv=-1;for(let i=0;i<6;i++){const q=randomRoomPoint();const v=dist(q,k)-dist(q,e)*.3;if(v>bv){bv=v;best=q;}}setGoal(e,best.x,best.y,'trflee'+Math.random());}return;}}
   if(S.tr&&trBotTask(e))return;
@@ -3019,7 +3026,7 @@ function botUpdate(e,dt){
     const k=e.ai.goalKey||'';
     if(k.startsWith('task')){e.doing+=dt;if(e.doing>=(e.ai.dur||(e.ai.dur=rand(3,7)))){const t=e.tasks.find(t=>!t.done&&'task'+t.s===k);if(t)completeTask(e,t);e.doing=0;e.ai.dur=0;e.ai.goalKey=null;}}
     else if(k.startsWith('fake')){e.doing+=dt;if(e.doing>=e.ai.fakeDur){const ft=e.isImp&&e.tasks.find(t=>!t.done&&STATIONS[t.s]===e.ai.fake);if(ft)completeTask(e,ft);e.ai.fakeDone=true;e.doing=0;e.ai.goalKey=null;}}
-    else if(k==='fix'&&S.sab){if(dist(e,SABP[S.sab.type])<60){S.sab.prog+=dt;if(S.sab.prog>=2.5)fixSab();}}
+    else if(k.startsWith('fix')&&S.sab){if(S.sab.type==='reactor'){if(dist(e,SABP.reactor)<70)S.sab.hA=S.t;if(SABP.reactor2&&dist(e,SABP.reactor2)<70)S.sab.hB=S.t;}else if(dist(e,SABP[S.sab.type])<60){S.sab.prog+=dt;if(S.sab.prog>=2.5)fixSab();}}
     else if(k.startsWith('wander')){e.ai.idle-=dt;if(e.ai.idle<=0||e.nrole==='tuna')e.ai.goalKey=null;}
   }
 }
@@ -3089,8 +3096,8 @@ function useTarget(){
     let ci=-1,cd=70;S.tr.chairs.forEach((c,i)=>{const d=dist(P,c);if(d<cd&&!S.ents.some(o=>o.sitting&&o.sitting.i===i)){cd=d;ci=i;}});if(ci>=0)return{k:'chair',i:ci};}
   if(S.br&&S.br.lv===3){if(S.br.stage==='run'&&P.alive&&!P.spider&&S.br.steps.some(x=>dist(P,x)<90))return{k:'l3'};return null;}
   {const sc=scopeAt();if(sc&&P.alive&&dist(P,sc)<100)return{k:'scope'};}
-  if(S.sab&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
-  if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
+  if(S.sab&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85||(S.sab.type==='reactor'&&SABP.reactor2&&dist(P,SABP.reactor2)<85))return{k:'sab'};}
+  if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85||(S.sab.type==='reactor'&&SABP.reactor2&&dist(P,SABP.reactor2)<85))return{k:'sab'};}
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks){if(!t.done&&dist(P,STATIONS[t.s])<75)return{k:'task',t};}
   if(P.alive){const l=nearLadder(P);if(l)return{k:'ladder',L:l.L,to:l.to};}
   if(P.alive&&!S.tr&&dist(P,BTN)<115)return{k:'btn'};
@@ -3709,6 +3716,7 @@ function render(dt){
   ctx.drawImage(mapCv,0,0,mapCv.width/MAPCV_S,mapCv.height/MAPCV_S);
   const tm=performance.now()/1000;
   // dynamic map overlays
+  if(S.sab&&S.sab.type==='reactor'&&SABP.reactor2){const q=SABP.reactor2;ctx.strokeStyle=`rgba(255,60,60,${.5+.5*Math.sin(tm*8)})`;ctx.lineWidth=5;ctx.strokeRect(q.x-30,q.y-46,60,44);}
   if(S.sab){const p=SABP[S.sab.type];ctx.strokeStyle=`rgba(255,60,60,${.5+.5*Math.sin(tm*8)})`;ctx.lineWidth=5;ctx.strokeRect(p.x-30,p.y-46,60,44);}
   if(P.team==='crew'||P.isImp||P.isNeu)for(const t of P.tasks){if(t.done)continue;const s=STATIONS[t.s];ctx.strokeStyle=`rgba(255,213,61,${.55+.45*Math.sin(tm*5)})`;ctx.lineWidth=4;ctx.strokeRect(s.x-25,s.y-39,50,36);}
   if(P.alive){ctx.fillStyle='#c51111';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.arc(BTN.x,BTN.y,18,0,TAU);ctx.fill();ctx.stroke();}
@@ -3845,7 +3853,7 @@ function render(dt){
   // arrows to objectives
   const targets=[];
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks)if(!t.done)targets.push({...STATIONS[t.s],c:'#ffd53d'});
-  if(S.sab)targets.push({...SABP[S.sab.type],c:'#ff3b3b'});
+  if(S.sab)targets.push({...SABP[S.sab.type],c:'#ff3b3b'});if(S.sab&&S.sab.type==='reactor'&&SABP.reactor2)targets.push({...SABP.reactor2,c:'#ff3b3b'});
   if(S.noise)targets.push({x:S.noise.x,y:S.noise.y,c:'#ff7b2e',label:'📢'+S.noise.name});
   // ヴァルチャー: どこにある死体でも方向が分かる
   if(P.nrole==='vulture'&&P.alive)for(const b of S.bodies)targets.push({x:b.x,y:b.y,c:'#c8a060',label:'🦅'});
@@ -4280,7 +4288,7 @@ function updateHud(){
   const ul=$('tasklist');let h='';
   if(S.br)h=brHud();else if(S.tr&&!P.isImp)h=trHud();else{
   if(S.tr)h+=trHud();
-  if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める (${Math.ceil(S.sab.t)}秒)`}</li>`;
+  if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
   else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='god'?`<li style="color:#ffe08a">${godReady(P)?'✨ タスク完了！ 生きていれば横取りできる':`✨ 横取りまで タスク ${P.tasks.filter(t=>t.done).length}/${P.tasks.length}`}</li>`:''}${P.nrole==='papa'?`<li style="color:#ffd23d">${papaCam?'📷 構え中: マウスで四角を動かして F で撮影 ／ ':''}📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
@@ -4346,7 +4354,7 @@ function openTask(t){
 function openSabFix(){
   const type=S.sab.type;
   if(type==='lights')openModal(`${SABP.lights.n}: ブレーカー`,(b,done,m)=>mgSwitches(b,done,m),{sab:true,onDone:fixSab});
-  else openModal(`${SABP.reactor.n}: 手をかざして止める`,(b,done,m)=>mgHold(b,done,m,{hold:2.5,label:'🖐 長押しで停止'}),{sab:true,onDone:fixSab});
+  else openModal(`${SABP.reactor.n}: 2人で同時に手をかざして止める`,(b,done,m)=>mgReactor(b,done,m),{sab:true,onDone:()=>{}});
 }
 function loop(m,fn){let last=performance.now();const f=now=>{if(!m.alive)return;const dt=Math.min(.05,(now-last)/1000);last=now;fn(dt);requestAnimationFrame(f);};requestAnimationFrame(f);}
 function cvPos(c,e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
@@ -4378,6 +4386,20 @@ function mgDownload(box,done,m){
   const bar=document.createElement('div');bar.className='pbar';bar.innerHTML='<i></i>';box.appendChild(bar);
   const msg=document.createElement('div');msg.className='msg';box.appendChild(msg);
   b.onclick=()=>{b.disabled=true;let p=0;loop(m,dt=>{p+=dt/6;bar.firstChild.style.width=Math.min(100,p*100)+'%';msg.textContent=p<1?`残り ${Math.ceil((1-p)*6)} 秒…`:'完了！';if(p>=1&&m.alive)done();});};
+}
+// リアクター: 手形に手をかざし続ける。もう片方の手形にも、だれかが同時に手をかざすと止まる
+function reactPanelOf(e){return SABP.reactor2&&dist(e,SABP.reactor2)<dist(e,SABP.reactor)?1:0;}
+function reactHold(e,i){if(NET.client){rpc('reactHold',[e,i]);return;}if(!S.sab||S.sab.type!=='reactor')return;if(i===1)S.sab.hB=S.t;else S.sab.hA=S.t;}
+function mgReactor(box,done,m){
+  const P=me(),me_i=reactPanelOf(P);
+  const b=document.createElement('button');b.className='holdbtn';b.textContent='🖐 手をかざし続ける';box.appendChild(b);
+  const st=document.createElement('div');st.className='msg';box.appendChild(st);
+  let on=false,sent=0;const down=e=>{on=true;b.classList.add('on');try{b.setPointerCapture(e.pointerId);}catch(_){}};const up=()=>{on=false;b.classList.remove('on');};
+  b.onpointerdown=down;b.onpointerup=up;b.onpointercancel=up;m.keyHold=v=>{on=v;b.classList.toggle('on',v);};
+  loop(m,dt=>{if(!S.sab||S.sab.type!=='reactor'){done();return;}
+    if(on){sent-=dt;if(sent<=0){sent=.12;reactHold(P,me_i);}}
+    const other=me_i?S.sab.hA:S.sab.hB,both=on&&other!=null&&S.t-other<.4;
+    st.textContent=!on?'押し続けてね（2人そろうと止まる）':both?'✅ 2人そろった！ そのまま…':`もう1つの手形（${me_i?'左':'右'}側）にも、だれかが手をかざす必要がある…`;});
 }
 function mgHold(box,done,m,st){
   const need=st.hold||3;
@@ -4453,6 +4475,7 @@ const RPC={
   callMeeting:(e,a)=>{if(S.phase!=='play'||!e.alive)return;const b=a[1]?S.bodies.find(x=>x.id===a[1].B):null;
     if(b){if(dist(e,b)>220)return;}else if(e.buttonUses<=0||S.meetingCd>0||(S.sab&&S.sab.type==='reactor')||dist(e,BTN)>140)return;callMeeting(e,b);},
   verityForm:(e)=>verityForm(e),
+  reactHold:(e,a)=>reactHold(e,a[1]===1?1:0),
   kuneTame:(e,a)=>kuneTame(e,a[1]),
   l3Use:(e)=>l3Use(e),trUse:(e,a)=>{if(a[1]==='eat')trEat(e,a[2]|0);else if(a[1]==='sit')trSit(e,a[2]|0);},trPoison:(e,a)=>trPoison(e,a[1]|0),spGrab:(e)=>spGrab(e),spWeb:(e)=>spWeb(e),l3Shoot:(e,a)=>{if(a&&typeof a==='object')e.aim={x:+a.x||1,y:+a.y||0};l3Shoot(e);},
   craze:(e)=>{if(e&&!e.isImp&&scopeAt()&&!e.crazed)craze(e);},
@@ -4770,6 +4793,7 @@ function update(dt){
   for(const e of S.ents)if(e.crazeCd>0)e.crazeCd=Math.max(0,e.crazeCd-dt);
   // 望遠鏡で「くねくね」を見てしまったか（自分）
   {const P=me();if(S.scope&&P.alive&&!P.crazed&&!P.isImp&&kuneInView(S.scope.x,S.scope.y,SCOPE_R*.9))craze(P);}
+  if(S.sab&&S.sab.type==='reactor'){const a=S.sab.hA!=null&&S.t-S.sab.hA<.35,b=S.sab.hB!=null&&S.t-S.sab.hB<.35;if(a&&b){S.sab.both=(S.sab.both||0)+dt;if(S.sab.both>=1){fixSab();}}else S.sab.both=0;}
   if(S.sab&&S.sab.type==='reactor'){S.sab.t-=dt;if(S.sab.t<=0){endGame('imp','リアクターがメルトダウンした');return;}}
   if(S.modal&&S.modal.sab&&!S.sab)closeModal();
   if(!$('mapov').hidden&&(S.hudT<=0))drawMinimap();
