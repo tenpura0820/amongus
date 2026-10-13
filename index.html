@@ -241,6 +241,19 @@ button{touch-action:manipulation}
 .llmrow input{min-width:0;background:#141a33;border:2px solid #3a4566;border-radius:8px;color:var(--fg);padding:5px 7px;font-weight:800}
 .msg .ai{font-size:10px;background:#111;color:#fff;border-radius:5px;padding:0 4px;margin-left:4px}
 #btnQuit{position:fixed;right:12px;top:12px;z-index:100;width:48px;height:48px}
+#editor{position:fixed;inset:0;z-index:130;background:#0b0e14;display:flex;flex-direction:column;color:#fff;font-weight:800}
+#editor button{border:2px solid #000;border-radius:9px;background:#e8edf5;color:#111;font-weight:800;padding:4px 8px;font-size:13px;cursor:pointer}
+#editor button.on{background:#ffd23d}
+.edTop,.edProps,.edBottom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;background:#1c2230;border-bottom:2px solid #000}
+.edBottom{border-top:2px solid #000;border-bottom:0}
+#edTools{display:flex;flex-wrap:wrap;gap:4px}
+#edName{width:150px;padding:5px 8px;border:2px solid #000;border-radius:8px;font-weight:800}
+.edProps select,.edProps input{padding:3px 6px;border:2px solid #000;border-radius:7px;font-weight:800}
+#edCv{flex:1;width:100%;min-height:0;touch-action:none;display:block;background:#0b0e14}
+#edMsg{flex:1;min-width:180px;font-size:12.5px;color:#ffe680}
+.edBtns{display:flex;flex-wrap:wrap;gap:4px}
+#edCodeBox{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px}
+#edCode{width:min(560px,86vw);height:160px;font-family:monospace;font-size:11px;border:2px solid #000;border-radius:8px}
 #pauseBar{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:90;background:rgba(10,12,24,.92);border:3px solid #ffd53d;border-radius:14px;padding:10px 16px;font-weight:800;color:#ffe680;text-align:center;max-width:92vw}
 #pauseBar button{margin-left:8px;border:2px solid #000;border-radius:10px;background:#ffd53d;padding:4px 12px;font-weight:800}
 #topRight{right:68px!important}
@@ -308,6 +321,7 @@ button{touch-action:manipulation}
         <div class="llmrow"><b>Gemini</b><input type="password" id="kGoogle" placeholder="Google AI APIキー" autocomplete="off"><input id="mGoogle" placeholder="モデル"></div>
       </details>
       <div class="online"><b>🌐 オンライン</b><button type="button" id="btnHost">🏠 部屋を作る</button><input id="inRoom" maxlength="5" placeholder="部屋コード" autocomplete="off"><button type="button" id="btnJoin">🚪 部屋に入る</button></div>
+      <button type="button" id="btnEditor" style="margin:6px 0;padding:8px 14px;border:3px solid #000;border-radius:12px;background:#ffd23d;font-weight:900">🛠 ステージを作る</button>
       <button class="big" id="btnStart">スタート</button>
     </div>
     <div class="roleHelp" id="roleHelpMenu"></div>
@@ -374,6 +388,13 @@ button{touch-action:manipulation}
 <button class="mini" id="btnQuit" hidden title="試合をやめる (Esc)">🚪</button>
 <div id="reviewBar" hidden><b id="rvTitle"></b><span id="rvSub"></span><span id="rvTime"></span><button id="rvNext">結果へ ▶</button></div>
 <div id="pauseBar" hidden>⏸ 一時停止中 — 全員と話せる（下の欄に書いて送信）　<button type="button" id="btnResume">▶ 再開</button></div>
+<div id="editor" hidden>
+  <div class="edTop"><input id="edName" maxlength="16" placeholder="ステージの名前"><span id="edTools"></span><span class="edZoom"><button id="edZin">＋</button><button id="edZout">－</button></span></div>
+  <div class="edProps" id="edProps"></div>
+  <canvas id="edCv"></canvas>
+  <div class="edBottom"><span id="edMsg"></span><span class="edBtns"><button id="edCheck">✅ チェック</button><button id="edPlay">▶ 遊んでみる</button><button id="edExport">📤 コードを出す</button><button id="edImport">📥 コードを読み込む</button><button id="edReset">🗑 最初から</button><button id="edClose">✖ 閉じる</button></span></div>
+  <div id="edCodeBox" hidden><div class="mpanel"><h3 id="edCodeTitle">コード</h3><textarea id="edCode" spellcheck="false"></textarea><div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button id="edCodeOk">読み込む</button><button id="edCodeCopy">コピー</button><button id="edCodeCancel">閉じる</button></div></div></div>
+</div>
 <div id="quitDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">試合をやめる？</h3><p style="margin:0 0 14px;font-weight:800;color:var(--muted)">設定画面に戻ります（ゲームは一時停止中・下の欄で全員と話せる）</p><div style="display:flex;gap:10px;justify-content:center"><button class="big" id="qYes" style="background:#ff5a5a">やめる</button><button class="big alt" id="qNo">続ける</button></div><form id="qChat" autocomplete="off" style="display:flex;gap:6px;margin-top:14px"><input id="qChatIn" placeholder="一時停止中は全員と話せる（Enterで送信）" style="flex:1;min-width:0;border:2px solid #000;border-radius:8px;padding:7px 9px;font-weight:800"><button style="border:2px solid #000;border-radius:8px;background:var(--crew);padding:0 12px">送信</button></form><div id="qLog" style="margin-top:8px;max-height:26vh;overflow:auto;text-align:left;font-size:13.5px;font-weight:800"></div></div></div>
 <div id="lobby" hidden><b>🌐 部屋コード <span id="lbCode"></span></b><p id="lbInfo"></p><ul id="lbList"></ul><button id="lbLeave">部屋を出る</button></div>
 <div id="mapov" hidden><canvas id="mapCv" width="1500" height="900"></canvas></div>
@@ -549,7 +570,33 @@ const MAPS=[
   genBackrooms1(),
   genBackrooms3(),
 ];
-const BRI=MAPS.length-3,BR1I=MAPS.length-2,BR3I=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
+const BRI=MAPS.length-3,BR1I=MAPS.length-2,BR3I=MAPS.length-1;
+// ===== 自作ステージ =====
+const CUSTOM_TYPES=[['wires','配線修理'],['numbers','起動シーケンス'],['download','データ転送'],['hold','燃料補給'],['swipe','カード認証'],['asteroids','隕石を撃つ'],['shields','シールド起動']];
+function defaultStage(){return{v:1,name:'わたしのステージ',rooms:[{x:200,y:300,w:700,h:460,n:'広間',f:'#9aa4b2',wc:'#4a5262',pat:'tile'},{x:860,y:470,w:520,h:120,hall:1,f:'#6b7480',wc:'#4a5262',pat:'tile'},{x:1340,y:260,w:560,h:540,n:'倉庫',f:'#8a6a48',wc:'#5a3a20',pat:'wood'}],
+  tasks:[{x:300,y:420,t:'wires'},{x:1500,y:400,t:'download'},{x:1750,y:700,t:'swipe'}],vents:[{x:300,y:700,net:0},{x:1800,y:500,net:0}],btn:{x:550,y:500},lights:{x:1450,y:700},reactor:{x:800,y:400},ladders:[]};}
+function buildCustom(d){
+  // マイナスの座標でも使えるように、全体をずらしてマップの中に収める
+  const rs=d.rooms||[];const mx=rs.length?Math.min(...rs.map(r=>r.x)):150,my=rs.length?Math.min(...rs.map(r=>r.y)):150,DX=150-mx,DY=150-my;
+  const sh=o=>o?{...o,x:(o.x|0)+DX,y:(o.y|0)+DY}:o;d={...d,rooms:rs.map(sh),tasks:(d.tasks||[]).map(sh),vents:(d.vents||[]).map(sh),btn:sh(d.btn),lights:sh(d.lights),reactor:sh(d.reactor),ladders:(d.ladders||[]).map(l=>({...l,a:sh(l.a),b:sh(l.b)})),src:d};
+  const rooms=[],halls=[];let x1=600,y1=600;
+  for(const r of d.rooms||[]){const o={n:r.hall?'通路':(String(r.n||'部屋').slice(0,12)),x:r.x|0,y:r.y|0,w:Math.max(40,r.w|0),h:Math.max(40,r.h|0),f:r.f||'#7d8794',f0:r.f||'#6b7480',wc:r.wc||'#4a5262',pat:r.pat||'tile',high:!!r.high};(r.hall?halls:rooms).push(o);x1=Math.max(x1,o.x+o.w);y1=Math.max(y1,o.y+o.h);}
+  if(!rooms.length)rooms.push({n:'広間',x:200,y:200,w:600,h:400,f:'#9aa4b2',wc:'#4a5262',pat:'tile'});
+  const inRoom=(x,y)=>(rooms.find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)||rooms[0]).n;
+  const r0=rooms[0];
+  const stations=(d.tasks||[]).map(t=>({t:CUSTOM_TYPES.some(q=>q[0]===t.t)?t.t:'wires',n:(CUSTOM_TYPES.find(q=>q[0]===t.t)||CUSTOM_TYPES[0])[1],x:t.x|0,y:t.y|0,hold:3}));
+  if(!stations.length)stations.push({t:'wires',n:'配線修理',x:r0.x+80,y:r0.y+90,hold:3});
+  const vents=(d.vents||[]).map(v=>({x:v.x|0,y:v.y|0,net:(v.net|0)%3}));
+  const btn=d.btn?{x:d.btn.x|0,y:d.btn.y|0}:{x:r0.x+r0.w/2,y:r0.y+r0.h/2};
+  const L=d.lights||{x:r0.x+70,y:r0.y+80},X=d.reactor||{x:r0.x+r0.w-80,y:r0.y+80};
+  const m={name:'🛠 '+String(d.name||'自作ステージ').slice(0,16),W:x1+250,H:y1+250,rooms,halls,stations,vents,btn,
+    sabp:{lights:{x:L.x|0,y:L.y|0,n:inRoom(L.x,L.y)},reactor:{x:X.x|0,y:X.y|0,n:inRoom(X.x,X.y)}},custom:true,scaledDone:true,src:d.src};
+  m.plats=(d.ladders||[]).map(l=>({a:{x:l.a.x|0,y:l.a.y|0},b:{x:l.b.x|0,y:l.b.y|0},room:inRoom(l.a.x,l.a.y),top:inRoom(l.b.x,l.b.y),g:!!l.g}));
+  return m;
+}
+let customSaved=null;try{customSaved=JSON.parse(localStorage.getItem('amongus-custom-stage')||'null');}catch(e){}
+MAPS.push(buildCustom(customSaved||defaultStage()));MAPS[MAPS.length-1].hidden=true;
+const CUSTOMI=MAPS.length-1;   // バックルームのマップ番号（一覧で選ぶと必ずバックルーム）
 let ROOMS,HALLS,RECTS,STATIONS,VENTS,BTN,SABP,MAPI=0;
 const KILLR=85;   // キルできる距離
 
@@ -1016,6 +1063,18 @@ function drawBackroomsGround(c){
     const g=c.createRadialGradient(x,y,10,x,y,150);g.addColorStop(0,'rgba(255,250,210,.32)');g.addColorStop(1,'rgba(255,250,210,0)');c.fillStyle=g;c.fillRect(x-150,y-150,300,300);
     c.fillStyle='#fffbe2';c.fillRect(x-46,y-12,92,24);c.strokeStyle='rgba(120,100,40,.6)';c.lineWidth=3;c.strokeRect(x-46,y-12,92,24);}
 }
+// 床の模様（自作ステージで選べる）
+function floorPattern(c,r){
+  const p=r.pat||'tile';let sd=(r.x*7+r.y*13)|0;const rnd=()=>(sd=(sd*16807+11)%2147483647)/2147483647;
+  if(p==='none')return;
+  c.strokeStyle='rgba(0,0,0,.13)';c.fillStyle='rgba(0,0,0,.12)';c.lineWidth=2;c.beginPath();
+  if(p==='tile'){for(let x=Math.floor(r.x/40)*40;x<r.x+r.w;x+=40){c.moveTo(x,r.y);c.lineTo(x,r.y+r.h);}for(let y=Math.floor(r.y/40)*40;y<r.y+r.h;y+=40){c.moveTo(r.x,y);c.lineTo(r.x+r.w,y);}c.stroke();}
+  else if(p==='wood'){for(let y=r.y+22;y<r.y+r.h;y+=22){c.moveTo(r.x,y);c.lineTo(r.x+r.w,y);}c.stroke();for(let k=0;k<r.w*r.h/5000;k++)c.fillRect(r.x+rnd()*r.w,r.y+Math.floor(rnd()*r.h/22)*22,2,22);}
+  else if(p==='metal'){for(let x=r.x-r.h;x<r.x+r.w;x+=34){c.moveTo(x,r.y+r.h);c.lineTo(x+r.h,r.y);}c.stroke();}
+  else if(p==='carpet'){for(let k=0;k<r.w*r.h/900;k++){c.beginPath();c.arc(r.x+rnd()*r.w,r.y+rnd()*r.h,2+rnd()*3,0,TAU);c.fill();}}
+  else if(p==='grass'){c.strokeStyle='rgba(30,70,20,.35)';for(let k=0;k<r.w*r.h/700;k++){const x=r.x+rnd()*r.w,y=r.y+rnd()*r.h;c.moveTo(x,y);c.lineTo(x+2,y-8);}c.stroke();}
+  else if(p==='stone'){for(let k=0;k<r.w*r.h/2500;k++){c.beginPath();c.ellipse(r.x+rnd()*r.w,r.y+rnd()*r.h,8+rnd()*18,6+rnd()*12,rnd()*3,0,TAU);c.fill();}}
+}
 function drawMapCanvas(){
   // 軽くする: マップの絵は縮小して持ち、描く時に引き伸ばす（スマホは半分、大きいマップは7割）
   MAPCV_S=isTouchDev()?.5:(MAPW*MAPH>9e6?.7:1);
@@ -1030,15 +1089,14 @@ function drawMapCanvas(){
   c.fillStyle='#14171f';
   for(const r of RECTS)c.fillRect(r.x-12,r.y-58,r.w+24,r.h+70);
   for(const r of RECTS){
-    if(r.w>=r.h||ROOMS.includes(r)){c.fillStyle='#4a5262';c.fillRect(r.x,r.y-46,r.w,46);c.fillStyle='#3b4250';c.fillRect(r.x,r.y-12,r.w,12);c.fillStyle='#5a6476';c.fillRect(r.x,r.y-46,r.w,6);}
+    if(r.w>=r.h||ROOMS.includes(r)){c.fillStyle=r.wc||'#4a5262';c.fillRect(r.x,r.y-46,r.w,46);c.fillStyle='#3b4250';c.fillRect(r.x,r.y-12,r.w,12);c.fillStyle='#5a6476';c.fillRect(r.x,r.y-46,r.w,6);}
   }
   for(const r of [...HALLS,...ROOMS]){
     c.fillStyle=r.f;c.fillRect(r.x,r.y,r.w,r.h);
     c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();
-    c.strokeStyle='rgba(0,0,0,.13)';c.lineWidth=2;c.beginPath();
-    for(let x=Math.floor(r.x/40)*40;x<r.x+r.w;x+=40){c.moveTo(x,r.y);c.lineTo(x,r.y+r.h);}
-    for(let y=Math.floor(r.y/40)*40;y<r.y+r.h;y+=40){c.moveTo(r.x,y);c.lineTo(r.x+r.w,y);}
-    c.stroke();c.restore();
+    floorPattern(c,r);
+    c.restore();
+    if(r.high){c.save();c.strokeStyle='rgba(255,230,120,.5)';c.lineWidth=6;c.setLineDash([18,10]);c.strokeRect(r.x+4,r.y+4,r.w-8,r.h-8);c.restore();}
   }
   }
   // decorations
@@ -1076,7 +1134,7 @@ function drawMapCanvas(){
   box(1720,1460,180,26,'#2b3440');
   disc(2180,1360,40,'#7fb0e0');
   c.restore();
-  }else if(!MAPS[MAPI].fungle){
+  }else if(!MAPS[MAPI].fungle&&!MAPS[MAPI].custom){
     // 自動生成マップの家具（木箱など）
     ROOMS.forEach((r,i)=>{if(i%3===0)box(r.x+r.w-100,r.y+30,50,50,'#b88a52');if(i%3===1)disc(r.x+r.w/2,r.y+r.h/2+30,36,'#c9d2df');});
   }
@@ -1143,7 +1201,7 @@ function loadMap(i){
   scaleMap(m);
   if(m.skeld){MAPW=m.W;MAPH=m.H2||m.H;ROOMS=SKELD_ROOMS;HALLS=SKELD_HALLS;STATIONS=SKELD_STATIONS;VENTS=SKELD_VENTS;BTN=SKELD_BTN;SABP=SKELD_SABP;}
   else{MAPW=m.W;MAPH=m.H;ROOMS=m.rooms;HALLS=m.halls;STATIONS=m.stations;VENTS=m.vents;BTN=m.btn;SABP=m.sabp;}
-  HALLS.forEach(h=>{h.f='#6b7480';if(m.fungle&&h.zone){h.f=h.zone==='j'?'#7a3f5c':h.zone==='m'?'#3f6b58':'#dcc08a';return;}if(m.fungle){const cx=h.x+h.w/2,cy=h.y+h.h/2,r=ROOMS.slice().sort((a,b)=>Math.hypot(a.x+a.w/2-cx,a.y+a.h/2-cy)-Math.hypot(b.x+b.w/2-cx,b.y+b.h/2-cy))[0];h.f=r&&r.f==='#8a4a68'?'#7a3f5c':r&&r.high?'#3f6b58':'#dcc08a';}});makePlatforms(m);RECTS=[...ROOMS,...HALLS];
+  HALLS.forEach(h=>{if(m.custom){h.f=h.f0||'#6b7480';return;}h.f='#6b7480';if(m.fungle&&h.zone){h.f=h.zone==='j'?'#7a3f5c':h.zone==='m'?'#3f6b58':'#dcc08a';return;}if(m.fungle){const cx=h.x+h.w/2,cy=h.y+h.h/2,r=ROOMS.slice().sort((a,b)=>Math.hypot(a.x+a.w/2-cx,a.y+a.h/2-cy)-Math.hypot(b.x+b.w/2-cx,b.y+b.h/2-cy))[0];h.f=r&&r.f==='#8a4a68'?'#7a3f5c':r&&r.high?'#3f6b58':'#dcc08a';}});makePlatforms(m);RECTS=[...ROOMS,...HALLS];
   buildWalk();
   STATIONS.forEach(s=>s.room=roomOf(s.x,s.y));VENTS.forEach(v=>v.room=roomOf(v.x,v.y));
   buildPathGrid();
@@ -1778,7 +1836,7 @@ function brChatter(e){if(!e.alive||Math.random()>.004)return;const B=S.br;
 function startGame(cfg){
   if(tabRetired)return;
   resetLeftovers();GEN++;
-  if(cfg.map===-1)cfg={...cfg,map:pick(MAPS.map((m,i)=>i).filter(i=>!MAPS[i].backrooms))};   // ステージランダム（バックルーム以外）
+  if(cfg.map===-1)cfg={...cfg,map:pick(MAPS.map((m,i)=>i).filter(i=>!MAPS[i].backrooms&&!MAPS[i].custom))};   // ステージランダム（バックルーム以外）
   if(MAPS[cfg.map||0]&&MAPS[cfg.map||0].train){cfg={...cfg,imps:Math.min(cfg.imps,2),neu:0,iroles:['pusher','poison'],nroles:[],role:cfg.role.startsWith('neu')?'random':cfg.role};}   // 列車: インポスターは最大2人・第三陣営なし
   const brStart=!NET.client&&((cfg.map||0)===BRI||(cfg.map||0)===BR1I||(cfg.map||0)===BR3I||Math.random()*100<(cfg.brPct??BR_PER));
   const mapI=brStart?((cfg.map||0)===BR1I?BR1I:(cfg.map||0)===BR3I?BR3I:BRI):(cfg.map||0);
@@ -4461,7 +4519,7 @@ function hostLobby(){const list=lobbyList();renderLobby(list);netBc({t:'lobby',l
 function netStartSend(){
   for(const e of S.ents){
     if(!e.remote)continue;
-    sendTo(e,{t:'start',myId:e.id,map:MAPI,tt:S.taskTotal,
+    sendTo(e,{t:'start',myId:e.id,map:MAPI,custom:MAPI===CUSTOMI?MAPS[CUSTOMI].src:null,tt:S.taskTotal,
       cfg:{imps:S.cfg.imps,neu:S.cfg.neu,disc:S.cfg.disc,vote:S.cfg.vote,kcd:S.cfg.kcd,tasks:S.cfg.tasks,confirm:S.cfg.confirm},
       ents:S.ents.map(o=>({pid:o.id===0?NET.peer&&NET.peer.id:o.remote?o.pid:null,id:o.id,name:o.name,color:o.color,costume:o.costume,isBot:o.isBot,team:o.team,role:o.role,irole:o.irole,nrole:o.nrole,isImp:!!o.isImp,isNeu:!!o.isNeu,
         killCd:o.killCd,abCd:o.abCd,abUses:o.abUses,shield:o.shield,sheriff:o.sheriff,tasks:o===e?o.tasks.map(t=>({s:t.s,done:false})):[]}))});
@@ -4569,7 +4627,7 @@ function clientRecv(d){
 function clientStart(d){
   // 前の試合は静かに片付ける（ホストに「抜けた」と送らない）
   if(S){S=null;}hideSplash();$('reviewBar').hidden=true;
-  resetLeftovers();GEN++;loadMap(d.map);
+  resetLeftovers();GEN++;if(d.custom){MAPS[CUSTOMI]=buildCustom(d.custom);MAPI=-1;}loadMap(d.map);
   const c=readCfg();
   const ents=d.ents.map(o=>({...o,x:BTN.x,y:BTN.y+100,face:1,walk:0,moving:false,alive:true,inVent:null,doing:0,invisT:0,bubble:null,labLog:[],
     speed:231,susp:new Float32Array(d.ents.length),seen:{},track:{},obs:{},ai:{},oil:o.nrole==='arson'?new Set():null,stillT:0,aim:{x:1,y:0},tpc:-1,buttonUses:1,lover:null,cannon:null,bitten:null}));
@@ -4813,7 +4871,121 @@ $('btnVote').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote'||M.sel==null)retur
 $('btnPhoto').onclick=()=>{papaShow(me());if(S.M)updateMeetingUI();};
 loadFgBg();
 $('qChat').onsubmit=e=>{e.preventDefault();const v=$('qChatIn').value.trim();$('qChatIn').value='';if(v)playerSay(v);};
-$('btnPause').onclick=togglePause;$('btnVoice').onclick=toggleVoice;$('btnResume').onclick=togglePause;
+$('btnPause').onclick=togglePause;
+// ================= ステージエディター =================
+(function(){
+  const cv=$('edCv'),c=cv.getContext('2d');
+  const TOOLS=[['move','✋ 動かす'],['room','⬜ 部屋'],['hall','▭ 通路'],['high','⛰ 高い所'],['task','📋 タスク'],['vent','🕳 ベント'],['lights','💡 停電の場所'],['reactor','☢ リアクター'],['btn','🔴 緊急ボタン'],['ladder','🪜 梯子'],['rope','🧗 ロープ'],['erase','🧽 消す']];
+  const FLOOR=[['#9aa4b2','明るい灰'],['#7d8794','灰'],['#8a6a48','木'],['#bfa64e','黄'],['#4f7a45','草'],['#5f8fa8','水色'],['#8a4a68','紫'],['#6d4040','赤茶'],['#e8cf9c','砂']];
+  const WALL=[['#4a5262','鉄'],['#7a2a2a','赤'],['#5a3a20','木'],['#d9c56c','黄（壁紙）'],['#3e3e46','石'],['#2f5d2a','緑'],['#e8edf5','白']];
+  const PAT=[['tile','タイル'],['wood','木の板'],['carpet','カーペット'],['metal','鉄板'],['grass','草'],['stone','石'],['none','なし']];
+  const ED={data:null,tool:'room',s:.3,ox:-100,oy:-100,drag:null,pend:null,opts:{n:'部屋',f:'#9aa4b2',wc:'#4a5262',pat:'tile',task:'wires',net:0}};
+  const snap=v=>Math.round(v/20)*20;
+  const W=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/ED.s+ED.ox,y:(e.clientY-r.top)/ED.s+ED.oy};};
+  function save(){try{localStorage.setItem('amongus-custom-stage',JSON.stringify(ED.data));}catch(e){}MAPS[CUSTOMI]=buildCustom(ED.data);ensureOption();}
+  function ensureOption(){let o=[...$('inMap').options].find(o=>+o.value===CUSTOMI);if(!o){o=document.createElement('option');o.value=CUSTOMI;$('inMap').appendChild(o);}o.textContent=MAPS[CUSTOMI].name;}
+  function msg(t){$('edMsg').textContent=t;}
+  function tools(){const w=$('edTools');w.innerHTML='';for(const[k,n]of TOOLS){const b=document.createElement('button');b.textContent=n;b.className=ED.tool===k?'on':'';b.onclick=()=>{ED.tool=k;ED.pend=null;tools();props();draw();msg(HINT[k]);};w.appendChild(b);}}
+  const HINT={move:'物をドラッグで動かす。何もない所をドラッグで画面を動かす',room:'ドラッグで部屋を作る（歩ける床）。部屋どうしは「通路」でつなぐ',hall:'ドラッグで通路を作る（部屋と重ねるとつながる）',high:'ドラッグで高い所を作る。普通の床とつなげず、梯子かロープで行けるようにする',
+    task:'クリックでタスクを置く（床の上に）',vent:'クリックでベントを置く。同じグループ（A/B/C）どうしで移動できる',lights:'クリックで停電を直す場所を置く',reactor:'クリックでリアクターを直す場所を置く',btn:'クリックで緊急ボタンを置く',ladder:'下の点 → 上の点 の順にクリック（2つの床をつなぐ）',rope:'出発点 → 到着点 の順にクリック（ロープで一気に移動）',erase:'クリックした物を消す'};
+  function sel(id,list,val,on){const x=document.createElement('select');x.id=id;for(const[v,n]of list){const o=document.createElement('option');o.value=v;o.textContent=n;x.appendChild(o);}x.value=val;x.onchange=()=>on(x.value);return x;}
+  function lab(t,el){const l=document.createElement('label');l.style.display='flex';l.style.gap='4px';l.style.alignItems='center';l.append(t,el);return l;}
+  function props(){const p=$('edProps');p.innerHTML='';const o=ED.opts;
+    if(['room','hall','high'].includes(ED.tool)){if(ED.tool!=='hall'){const i=document.createElement('input');i.value=o.n;i.maxLength=12;i.style.width='90px';i.oninput=()=>o.n=i.value;p.append(lab('名前',i));}
+      p.append(lab('床の色',sel('edF',FLOOR,o.f,v=>o.f=v)),lab('壁の色',sel('edW',WALL,o.wc,v=>o.wc=v)),lab('模様',sel('edP',PAT,o.pat,v=>o.pat=v)));}
+    else if(ED.tool==='task')p.append(lab('タスクの種類',sel('edT',CUSTOM_TYPES,o.task,v=>o.task=v)));
+    else if(ED.tool==='vent')p.append(lab('グループ',sel('edV',[['0','A'],['1','B'],['2','C']],String(o.net),v=>o.net=+v)));
+    else p.append(document.createTextNode(HINT[ED.tool]||''));}
+  function fit(){const r=cv.getBoundingClientRect();cv.width=r.width*devicePixelRatio;cv.height=r.height*devicePixelRatio;draw();}
+  function draw(){
+    const d=ED.data;if(!d)return;const dp=devicePixelRatio,s=ED.s;c.setTransform(dp,0,0,dp,0,0);c.fillStyle='#0b0e14';c.fillRect(0,0,cv.width,cv.height);
+    c.save();c.scale(s,s);c.translate(-ED.ox,-ED.oy);
+    c.strokeStyle='rgba(255,255,255,.06)';c.lineWidth=1/s;c.beginPath();const vw=cv.width/dp/s,vh=cv.height/dp/s;for(let x=Math.floor(ED.ox/100)*100;x<ED.ox+vw;x+=100){c.moveTo(x,ED.oy);c.lineTo(x,ED.oy+vh);}for(let y=Math.floor(ED.oy/100)*100;y<ED.oy+vh;y+=100){c.moveTo(ED.ox,y);c.lineTo(ED.ox+vw,y);}c.stroke();
+    for(const r of d.rooms.filter(r=>r.hall).concat(d.rooms.filter(r=>!r.hall))){if(!r.hall){c.fillStyle=r.wc||'#4a5262';c.fillRect(r.x,r.y-40,r.w,40);}c.fillStyle=r.f;c.fillRect(r.x,r.y,r.w,r.h);c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();floorPattern(c,r);c.restore();
+      if(r.high){c.save();c.strokeStyle='#ffe680';c.lineWidth=6;c.setLineDash([18,10]);c.strokeRect(r.x+3,r.y+3,r.w-6,r.h-6);c.restore();}
+      if(!r.hall){c.fillStyle='rgba(255,255,255,.75)';c.font='bold 30px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText((r.high?'⛰ ':'')+r.n,r.x+r.w/2,r.y+r.h/2);}}
+    c.font='28px system-ui';c.textAlign='center';c.textBaseline='middle';
+    for(const t of d.tasks){c.fillStyle='#2f3a4c';c.fillRect(t.x-22,t.y-36,44,30);c.fillStyle='#57d0ff';c.fillRect(t.x-16,t.y-31,32,16);c.fillStyle='#fff';c.font='bold 16px sans-serif';c.fillText((CUSTOM_TYPES.find(q=>q[0]===t.t)||[0,'?'])[1],t.x,t.y+12);}
+    for(const v of d.vents){c.fillStyle='#2d3340';c.fillRect(v.x-24,v.y-15,48,30);c.strokeStyle='#000';c.lineWidth=3;c.strokeRect(v.x-24,v.y-15,48,30);c.fillStyle='#ffd23d';c.font='bold 20px sans-serif';c.fillText('ABC'[v.net|0],v.x,v.y);}
+    c.font='34px system-ui';if(d.lights)c.fillText('💡',d.lights.x,d.lights.y-16);if(d.reactor)c.fillText('☢',d.reactor.x,d.reactor.y-16);
+    if(d.btn){c.fillStyle='#c51111';c.strokeStyle='#000';c.lineWidth=4;c.beginPath();c.arc(d.btn.x,d.btn.y,22,0,TAU);c.fill();c.stroke();}
+    for(const l of d.ladders){c.save();if(l.g){c.strokeStyle='#d8b07a';c.lineWidth=8;c.setLineDash([18,10]);c.beginPath();c.moveTo(l.a.x,l.a.y);c.lineTo(l.b.x,l.b.y);c.stroke();}
+      else{const dx=l.b.x-l.a.x,dy=l.b.y-l.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*16,ny=dx/L*16;c.strokeStyle='#c8a46a';c.lineWidth=6;c.beginPath();c.moveTo(l.a.x+nx,l.a.y+ny);c.lineTo(l.b.x+nx,l.b.y+ny);c.moveTo(l.a.x-nx,l.a.y-ny);c.lineTo(l.b.x-nx,l.b.y-ny);for(let k=0;k<=L;k+=24){const x=l.a.x+dx*k/L,y=l.a.y+dy*k/L;c.moveTo(x+nx,y+ny);c.lineTo(x-nx,y-ny);}c.stroke();}
+      c.fillStyle='#ffe680';for(const q of[l.a,l.b]){c.beginPath();c.arc(q.x,q.y,9,0,TAU);c.fill();}c.restore();}
+    if(ED.pend){c.fillStyle='#ff5a5a';c.beginPath();c.arc(ED.pend.x,ED.pend.y,14,0,TAU);c.fill();}
+    if(ED.drag&&ED.drag.kind==='rect'){const g=ED.drag,x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1);c.strokeStyle='#ffd23d';c.lineWidth=4/s;c.setLineDash([12,8]);c.strokeRect(x,y,Math.abs(g.x1-g.x0),Math.abs(g.y1-g.y0));}
+    c.restore();
+  }
+  function hit(p){const d=ED.data,R2=(30/ED.s)**2,near=(o)=>o&&(o.x-p.x)**2+(o.y-p.y)**2<Math.max(R2,1600);
+    for(let i=d.tasks.length-1;i>=0;i--)if(near(d.tasks[i]))return{list:'tasks',i};
+    for(let i=d.vents.length-1;i>=0;i--)if(near(d.vents[i]))return{list:'vents',i};
+    for(const k of['btn','lights','reactor'])if(near(d[k]))return{key:k};
+    for(let i=d.ladders.length-1;i>=0;i--){if(near(d.ladders[i].a))return{lad:i,end:'a'};if(near(d.ladders[i].b))return{lad:i,end:'b'};}
+    for(let i=d.rooms.length-1;i>=0;i--){const r=d.rooms[i];if(p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h)return{list:'rooms',i};}
+    return null;}
+  function objOf(h){const d=ED.data;return h.list?d[h.list][h.i]:h.key?d[h.key]:d.ladders[h.lad][h.end];}
+  cv.addEventListener('pointerdown',e=>{if(!ED.data)return;cv.setPointerCapture(e.pointerId);const p=W(e),sp={x:snap(p.x),y:snap(p.y)},d=ED.data,t=ED.tool,o=ED.opts;
+    if(t==='room'||t==='hall'||t==='high'){ED.drag={kind:'rect',x0:sp.x,y0:sp.y,x1:sp.x,y1:sp.y};return;}
+    if(t==='move'){const h=hit(p);if(h){const ob=objOf(h);ED.drag={kind:'obj',ob,dx:p.x-ob.x,dy:p.y-ob.y};}else ED.drag={kind:'pan',sx:e.clientX,sy:e.clientY,ox:ED.ox,oy:ED.oy};return;}
+    if(t==='erase'){const h=hit(p);if(!h)return;if(h.list)d[h.list].splice(h.i,1);else if(h.key)d[h.key]=null;else d.ladders.splice(h.lad,1);save();draw();return;}
+    if(t==='task')d.tasks.push({x:sp.x,y:sp.y,t:o.task});
+    else if(t==='vent')d.vents.push({x:sp.x,y:sp.y,net:o.net});
+    else if(t==='lights'||t==='reactor'||t==='btn')d[t]={x:sp.x,y:sp.y};
+    else if(t==='ladder'||t==='rope'){if(!ED.pend){ED.pend=sp;msg(t==='ladder'?'次は上の点をクリック':'次は到着点をクリック');draw();return;}d.ladders.push({a:ED.pend,b:sp,g:t==='rope'});ED.pend=null;msg(HINT[t]);}
+    save();draw();});
+  cv.addEventListener('pointermove',e=>{const g=ED.drag;if(!g)return;const p=W(e);
+    if(g.kind==='rect'){g.x1=snap(p.x);g.y1=snap(p.y);}
+    else if(g.kind==='obj'){g.ob.x=snap(p.x-g.dx);g.ob.y=snap(p.y-g.dy);}
+    else if(g.kind==='pan'){ED.ox=g.ox-(e.clientX-g.sx)/ED.s;ED.oy=g.oy-(e.clientY-g.sy)/ED.s;}
+    draw();});
+  const up=()=>{const g=ED.drag;ED.drag=null;if(!g)return;
+    if(g.kind==='rect'){const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
+      if(w>=60&&h>=60){const o=ED.opts;ED.data.rooms.push({x,y,w,h,n:ED.tool==='hall'?'':(o.n||'部屋'),f:o.f,wc:o.wc,pat:o.pat,hall:ED.tool==='hall'?1:0,high:ED.tool==='high'?1:0});save();}else msg('もう少し大きくドラッグしてね');}
+    else if(g.kind==='obj')save();
+    draw();};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',e=>{e.preventDefault();const p=W(e),k=e.deltaY<0?1.15:1/1.15;ED.s=clamp(ED.s*k,.06,1.5);const r=cv.getBoundingClientRect();ED.ox=p.x-(e.clientX-r.left)/ED.s;ED.oy=p.y-(e.clientY-r.top)/ED.s;draw();},{passive:false});
+  const zoom=k=>{const r=cv.getBoundingClientRect(),cx=ED.ox+r.width/2/ED.s,cy=ED.oy+r.height/2/ED.s;ED.s=clamp(ED.s*k,.06,1.5);ED.ox=cx-r.width/2/ED.s;ED.oy=cy-r.height/2/ED.s;draw();};
+  $('edZin').onclick=()=>zoom(1.25);$('edZout').onclick=()=>zoom(1/1.25);
+  // チェック: 全部の場所に歩いて（梯子・ロープも使って）行けるか
+  function check(){
+    const prev=MAPI;MAPS[CUSTOMI]=buildCustom(ED.data);MAPI=-1;loadMap(CUSTOMI);const probs=[];
+    const base=compOf(BTN.x,BTN.y+70);if(base<0)probs.push('緊急ボタンが床の上にない');
+    const reach=new Set([base]);let grew=true;while(grew){grew=false;for(const L of LADDERS){const a=compOf(L.a.x,L.a.y),b=compOf(L.b.x,L.b.y);if(a<0||b<0)continue;if(reach.has(a)&&!reach.has(b)){reach.add(b);grew=true;}if(!L.g&&reach.has(b)&&!reach.has(a)){reach.add(a);grew=true;}if(L.g&&reach.has(b)&&!reach.has(a)){reach.add(a);grew=true;}}}
+    LADDERS.forEach((L,i)=>{if(compOf(L.a.x,L.a.y)<0||compOf(L.b.x,L.b.y)<0)probs.push(`${L.g?'ロープ':'梯子'}${i+1}の端が床の上にない`);});
+    STATIONS.forEach((t,i)=>{const k=compOf(t.x,t.y+8);if(k<0)probs.push(`タスク${i+1}（${t.n}）が床の上にない`);else if(!reach.has(k))probs.push(`タスク${i+1}（${t.n}）に行けない`);});
+    VENTS.forEach((v,i)=>{if(compOf(v.x,v.y)<0)probs.push(`ベント${i+1}が床の上にない`);});
+    for(const k of['lights','reactor']){const q=SABP[k];const kk=compOf(q.x,q.y+30);if(kk<0||!reach.has(kk))probs.push(`${k==='lights'?'停電':'リアクター'}の修理場所に行けない`);}
+    const nets=[0,1,2].map(n=>VENTS.filter(v=>v.net===n).length).filter(x=>x===1).length;if(nets)probs.push('1つだけのベントのグループがある（同じグループに2つ以上置こう）');
+    if(!ED.data.btn)probs.push('緊急ボタンがない（1つ目の部屋の真ん中に置かれる）');
+    loadMap(prev>=0&&prev!==CUSTOMI?prev:0);
+    msg(probs.length?'⚠ '+probs.slice(0,4).join('／')+(probs.length>4?` ほか${probs.length-4}件`:''):'✅ 問題なし！ 遊べるステージです');return probs;}
+  $('edCheck').onclick=check;
+  $('edPlay').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();check();$('editor').hidden=true;$('inMap').value=String(CUSTOMI);MAPI=-1;snd('click');startGame(readCfg());};
+  // コード: このコードを送ってもらえれば、正式なステージとして入れられる
+  const enc=d=>'AMGS1:'+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  const dec=t=>{t=String(t).trim();if(t.startsWith('AMGS1:'))t=t.slice(6);return JSON.parse(decodeURIComponent(escape(atob(t))));};
+  $('edExport').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();const code=enc(ED.data);$('edCodeTitle').textContent='📤 このコードを送ってね（正式なステージとして採用できる）';$('edCode').value=code;$('edCode').readOnly=true;$('edCodeOk').hidden=true;$('edCodeCopy').hidden=false;$('edCodeBox').hidden=false;
+    try{navigator.clipboard.writeText(code).then(()=>msg('コードをコピーしました。チャットに貼り付けて送ってください'),()=>{});}catch(e){}};
+  $('edImport').onclick=()=>{$('edCodeTitle').textContent='📥 コードを貼り付けて「読み込む」';$('edCode').value='';$('edCode').readOnly=false;$('edCodeOk').hidden=false;$('edCodeCopy').hidden=true;$('edCodeBox').hidden=false;};
+  $('edCodeCopy').onclick=()=>{$('edCode').select();try{document.execCommand('copy');}catch(e){}try{navigator.clipboard.writeText($('edCode').value);}catch(e){}msg('コピーしました');};
+  $('edCodeOk').onclick=()=>{try{const d=dec($('edCode').value);if(!d||!Array.isArray(d.rooms))throw 0;d.tasks=d.tasks||[];d.vents=d.vents||[];d.ladders=d.ladders||[];ED.data=d;$('edName').value=d.name||'';save();$('edCodeBox').hidden=true;draw();msg('読み込みました');}catch(e){msg('コードが読めませんでした');}};
+  $('edCodeCancel').onclick=()=>$('edCodeBox').hidden=true;
+  $('edReset').onclick=()=>{if(!confirm('最初の見本に戻しますか？（いまのステージは消えます）'))return;ED.data=defaultStage();$('edName').value=ED.data.name;save();draw();};
+  $('edClose').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();$('editor').hidden=true;};
+  $('edName').oninput=()=>{ED.data.name=$('edName').value;save();};
+  // 管理者コード（コードそのものは書かず、SHA-256のハッシュだけで照合する）
+  const ADMIN_HASH='1b3da4b05014a3b25ca6b244cfeea58ad008dcd3f0c78f8c030f7318f3c5402d';
+  async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+  async function adminOk(){try{if(localStorage.getItem('amongus-admin')===ADMIN_HASH)return true;}catch(e){}const t=prompt('🔒 ステージを作るには管理者コードが必要です');if(!t)return false;
+    let h='';try{h=await sha(t.trim());}catch(e){toast('この画面では確認できません（https か localhost で開いてね）');return false;}
+    if(h!==ADMIN_HASH){toast('管理者コードがちがいます');return false;}try{localStorage.setItem('amongus-admin',h);}catch(e){}return true;}
+  $('btnEditor').onclick=async()=>{if(!(await adminOk()))return;snd('click');let d=null;try{d=JSON.parse(localStorage.getItem('amongus-custom-stage')||'null');}catch(e){}ED.data=d||defaultStage();ED.data.ladders=ED.data.ladders||[];ED.data.tasks=ED.data.tasks||[];ED.data.vents=ED.data.vents||[];
+    $('edName').value=ED.data.name||'';$('editor').hidden=false;tools();props();requestAnimationFrame(fit);msg(HINT[ED.tool]);};
+  addEventListener('resize',()=>{if(!$('editor').hidden)fit();});
+  if(customSaved)ensureOption();
+  window.__ED=ED;
+})();$('btnVoice').onclick=toggleVoice;$('btnResume').onclick=togglePause;
 $('btnScale').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;if(M.scaleA==null){M.scaleA=M.sel;M.sel=null;renderCards();updateMeetingUI();return;}if(M.sel===M.scaleA)return;useBalance(P,S.ents[M.scaleA],S.ents[M.sel]);M.scaleA=null;};
 $('btnGuess').onclick=()=>{const M=S.M,P=me();if(!M||M.sel==null)return;const t=S.ents[M.sel];if(!t.alive||(t.isImp&&P.role!=='nguesser')||t===P)return;doGuess(P,t,$('guessSel').value);};
 $('btnSkip').onclick=()=>{const M=S.M;if(!M||M.stage!=='vote')return;if(M.scale){toast('天秤の発動中はスキップできない');return;}M.votes[me().id]='skip';if(NET.client)rpc('vote',['skip']);snd('click');renderCards();updateMeetingUI();};
