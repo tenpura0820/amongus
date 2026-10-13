@@ -1287,7 +1287,7 @@ function afterKillHooks(k){
   if(k.irole==='double'&&!k.doubleUsed){k.doubleUsed=true;k.killCd=0;tell(k,'🔪 ダブルキル！ もう1回すぐキルできる');}
   if(k.berserk){k.bKills=(k.bKills||0)+1;if(k.bKills>=2&&!k.frenzy){k.frenzy=true;tell(k,'😡 理性を失った…もう仲間の区別がつかない！');}}
 }
-function cooldownOf(k){return k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
+function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
 function isLoverPair(a,b){return a.lover!=null&&a.lover===b.id;}
 
 // 前の試合の残り（読み上げ・チャット・画面・遅れて届くAIの返事）を全部消す
@@ -1343,9 +1343,9 @@ function trDeck(){return ROOMS.find(r=>r.n==='展望デッキ');}
 function inDeck(e){const d=trDeck();return d&&e.x>d.x&&e.x<d.x+d.w&&e.y>d.y&&e.y<d.y+d.h;}
 function trTaskDone(e,kind){
   const t=e.trTasks&&e.trTasks.find(x=>x.t===kind&&!x.done);e.lastTask=S.t;
-  if(!t)return false;t.done=true;if(e.team==='crew'&&!e.isImp&&kind!=='eat'){S.tr.time=Math.max(0,S.tr.time-3);}   // 食べるタスクは「食べた分」だけ減る
+  if(!t)return false;t.done=true;if(e.team==='crew'&&!e.isImp&&kind!=='eat'){S.tr.time=Math.max(0,S.tr.time-8);}   // 食べるタスクは「食べた分」だけ減る
   if(e===me()){snd('task');toast(`✅ ${t.n}`);}
-  if(e.trTasks.every(x=>x.done)){e.trTasks=[];e.trNext=S.t+40;}   // 全部終わったら40秒休んで、また新しいタスク
+  if(e.trTasks.every(x=>x.done)){e.trTasks=[];e.trNext=S.t+20;}   // 全部終わったら20秒休んで、また新しいタスク
   return true;
 }
 function trEat(e,i){
@@ -1401,7 +1401,7 @@ function trHud(){const T=S.tr,P=me();let h='';
   if(P.knife)h+='<li style="color:#ffd23d">🔪 キルの所有権を持っている（クルーをキルすると自分が死ぬ）</li>';
   if(T.knife)h+='<li style="color:#ffd23d">🔪 どこかにキルの所有権が落ちている（クルーだけ拾える）</li>';
   if(P.poisonT>0)h+='<li style="color:#c08aff">🤢 気分が悪い…</li>';
-  h+='<li style="opacity:.8">🚂 タスクをこなすと終点が早くなる（インポスターは時間切れで負け）。食べたり飲んだりしても早くなる</li>';
+  h+='<li style="opacity:.8">🚂 列車では通報も緊急ボタンも使えない。タスクをこなすと終点が早くなる（インポスターは時間切れで負け）。食べたり飲んだりしても早くなる</li>';
   if(P.trTasks&&!P.trTasks.length)h+=`<li style="opacity:.8">次のタスクまで ${Math.max(0,Math.ceil((P.trNext||0)-S.t))}秒（食べたり飲んだりしても終点は早くなる）</li>`;
   h+=(P.trTasks||[]).map(t=>`<li class="${t.done?'done':''}">${t.n}${t.t==='air'&&!t.done?`（${Math.floor(t.p||0)}/10秒）`:''}${t.t==='sleep'&&P.sitting?'（休憩中…）':''}${t.done?' ✓':''}</li>`).join('');
   return h;}
@@ -2126,6 +2126,7 @@ function doKill(k,v){if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);
     {const w0=ws.find(w=>w.isBot&&w!==v);if(w0&&Math.random()<.7)botSay(w0,pick([`${k.name}が撃った…シェリフだ！ ${v.name}は人外だったんだ`,`今のはシェリフの射撃だね。${k.name}は生きてるから${v.name}は村じゃない`,`${k.name}、シェリフだったのか！`]));}
     if(k.isBot)replyLater(k,()=>`${v.name}を撃った。自分は死んでないから、${v.name}は村陣営じゃなかった！`,.8);}
   else{const face=faceOf(k);for(const w of ws){if(w.isBot&&w!==face){w.susp[face.id]=100;w.ai.witnessKill=face.id;w.ai.urgent=true;}}
+    if(S.tr&&ws.some(w=>w.alive&&!w.isImp)){for(const o of S.ents)if(o.alive&&o.isBot&&o.sheriff&&!o.isImp&&o!==face){o.susp[face.id]=100;o.ai.target=face.id;}}   // 列車: 見た人の知らせがヴァルティに届く
     const w0=ws.find(w=>w.isBot&&w!==face);if(w0)botSay(w0,`${face.name}がキルしていました！現行犯です！！`,{k:'kill',x:face.id,w:50});}
   if(k.irole==='viper'){const b=S.bodies.find(b=>b.id===v.id);if(b)b.rot=15;}
   if(v===P){snd('kill');showKilled(k);}
@@ -2607,7 +2608,7 @@ function enterVent(e,vi){if(NET.client){rpc('enterVent',[e,vi]);return;}
   if(e===me()||canSee(me(),v.x,v.y))snd('vent');
 }
 function exitVent(e){if(NET.client){rpc('exitVent',[e]);return;}
-  const v=VENTS[e.inVent];e.inVent=null;e.x=v.x;e.y=v.y;e.tpc=(e.tpc||0)+1;
+  const v=VENTS[e.inVent];e.inVent=null;if(!v)return;e.x=v.x;e.y=v.y;e.tpc=(e.tpc||0)+1;
   for(const w of crewWitnesses(e.x,e.y,[e.id]))if(w.isBot){w.susp[e.id]=100;w.ai.sawVent=e.id;w.ai.urgent=true;}
   if(e===me()||canSee(me(),v.x,v.y))snd('vent');
 }
@@ -2684,11 +2685,12 @@ function crewThink(e){
   }
   // ノイズメーカーの悲鳴の方へ
   if(ai.investigate&&!ai.body){if(S.t>ai.investigate.until||dist(e,ai.investigate)<60)ai.investigate=null;else{setGoal(e,ai.investigate.x,ai.investigate.y,'noise');return;}}
-  if(ai.body&&S.bodies.includes(ai.body)){setGoal(e,ai.body.x,ai.body.y,'body');if(dist(e,ai.body)<130){callMeeting(e,ai.body);}return;}
+  if(!S.tr&&ai.body&&S.bodies.includes(ai.body)){setGoal(e,ai.body.x,ai.body.y,'body');if(dist(e,ai.body)<130){callMeeting(e,ai.body);}return;}
   ai.body=null;
-  if(ai.urgent&&e.buttonUses>0&&S.meetingCd<=0&&!(S.sab&&S.sab.type==='reactor')){setGoal(e,BTN.x,BTN.y+75,'btn');if(dist(e,BTN)<110)callMeeting(e,null);return;}
+  if(!S.tr&&ai.urgent&&e.buttonUses>0&&S.meetingCd<=0&&!(S.sab&&S.sab.type==='reactor')){setGoal(e,BTN.x,BTN.y+75,'btn');if(dist(e,BTN)<110)callMeeting(e,null);return;}
   if(S.sab&&e.nrole!=='god'){const p=SABP[S.sab.type];if(S.sab.type==='reactor'||S.sab.fixers.includes(e.id)){setGoal(e,p.x,p.y+30,'fix');return;}}
   if(roleThink(e)||orderThink(e)||followThink(e))return;
+  if(S.tr&&ai.witnessKill!=null){const k=S.ents[ai.witnessKill];if(k&&k.alive&&dist(e,k)<520){if(!(ai.goalKey||'').startsWith('trflee')||atGoal(e)){let best=null,bv=-1;for(let i=0;i<6;i++){const q=randomRoomPoint();const v=dist(q,k)-dist(q,e)*.3;if(v>bv){bv=v;best=q;}}setGoal(e,best.x,best.y,'trflee'+Math.random());}return;}}
   if(S.tr&&trBotTask(e))return;
   const t=e.tasks.find(t=>!t.done);
   if(t){const st=STATIONS[t.s];setGoal(e,st.x,st.y+8,'task'+t.s);return;}
@@ -2787,6 +2789,7 @@ function roleThink(e){
     const threat=S.ents.some(o=>o!==e&&o.alive&&!hid(o)&&e.susp[o.id]>=80&&dist(e,o)<350&&canSee(e,o.x,o.y));
     if(threat||Math.random()<.004)useSci(e);
   }
+  if(S.tr&&e.sheriff&&e.ai.target!=null&&S.ents[e.ai.target]&&S.ents[e.ai.target].alive){const t=S.ents[e.ai.target];setGoal(e,t.x,t.y,'vhunt'+Math.floor(S.t*2));if(e.killCd<=0&&dist(e,t)<KILLR)doKill(e,t);return true;}   // 列車: 知らせを受けたヴァルティは犯人を追う
   if(e.sheriff&&e.killCd<=0){
     let best=null,bv=69;
     for(const o of S.ents){if(o===e||!o.alive||hid(o)||!canSee(e,o.x,o.y))continue;if(e.susp[o.id]>bv){bv=e.susp[o.id];best=o;}}
@@ -2932,6 +2935,7 @@ function botUpdate(e,dt){
   if(e.ctrlBy!=null||e.carriedBy!=null||e.climb){if(!e.climb)e.path=null;e.moving=false;return;}
   if(e.drill)return;
   if(e.inVent!=null){e.ventT-=dt;if(e.ventT<=0){
+    if(!VENTS[e.inVent]){e.inVent=null;return;}
     const net=VENTS[e.inVent].net,opts=VENTS.map((v,i)=>i).filter(i=>VENTS[i].net===net&&i!==e.inVent);
     e.inVent=pick(opts);exitVent(e);e.ai.flee=rand(2,4);wander(e);}return;}
   if(!e.alive){
@@ -3026,10 +3030,10 @@ function useTarget(){
   if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85)return{k:'sab'};}
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks){if(!t.done&&dist(P,STATIONS[t.s])<75)return{k:'task',t};}
   if(P.alive){const l=nearLadder(P);if(l)return{k:'ladder',L:l.L,to:l.to};}
-  if(P.alive&&dist(P,BTN)<115)return{k:'btn'};
+  if(P.alive&&!S.tr&&dist(P,BTN)<115)return{k:'btn'};
   return null;
 }
-function reportTarget(){const P=me();if(S.br)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
+function reportTarget(){const P=me();if(S.br||S.tr)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
 function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
@@ -3135,7 +3139,8 @@ function doAbility(){
 }
 
 // ================= meetings =================
-function callMeeting(caller,body){if(S&&S.br)return;if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
+function callMeeting(caller,body){if(S&&(S.br||S.tr))return;   // バックルームと列車では会議なし
+if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
   if(NET.client){rpc('callMeeting',[caller,body?{B:body.id}:null]);return;}
   if(S.phase!=='play')return;
   const P=me();
@@ -3489,6 +3494,8 @@ function checkWin(){
   if(!S||S.phase==='end'||S.phase==='review')return true;
   if(S.phase==='intro')return false;
   if(S.br){if(!S.ents.some(e=>e.alive)){endGame('draw','全員が黒い針金の化物にやられてしまった…');return true;}return false;}
+  // 列車: 会議がないので、インポスターはクルーを全員倒すまで勝てない。インポスターが全員いなくなればクルーの勝ち
+  if(S.tr){const al=S.ents.filter(e=>e.alive);if(!al.some(e=>e.isImp)){endGame('crew','インポスターを全員倒した');return true;}if(!al.some(e=>!e.isImp)){endGame('imp','クルーが全員いなくなった');return true;}return false;}
   const alive=S.ents.filter(e=>e.alive),imps=alive.filter(e=>e.isImp).length,neu=alive.filter(e=>e.isNeu&&e.nrole==='killer').length;
   const arson=alive.some(e=>e.nrole==='arson');
   if(!alive.length){endGame('draw','全員が死んでしまった');return true;}
@@ -4190,7 +4197,7 @@ function setupHud(){
   $('btnPause').hidden=!!NET.mode;$('btnVoice').hidden=!NET.mode;if(NET.mode&&VOICE.stream)setTimeout(voiceCallAll,800);$('pauseBar').hidden=!S.hold;$('btnPause').textContent=S.hold?'▶':'⏸';
   $('taskbox').classList.toggle('min',isTouch());
   document.querySelectorAll('.chan').forEach(b=>{b.hidden=!P.isImp||!!S.br;b.classList.remove('on');});if(S.br)S.chan='all';
-  $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;
+  $('btnVent').hidden=$('btnSab').hidden=!P.isImp||!!S.br;$('btnReport').hidden=!!S.tr;   // 列車では通報できない
   if(!$('btnSab').dataset.orig)$('btnSab').dataset.orig=$('btnSab').innerHTML;
   if(S.br&&S.br.lv===3&&P.spider){$('btnSab').hidden=false;$('btnSab').innerHTML='<kbd>Z</kbd><span class="ic">🕸</span>巣を吐く';}else $('btnSab').innerHTML=$('btnSab').dataset.orig;$('btnKill').hidden=!isKiller(P);$('btnIgnite').hidden=P.nrole!=='arson';
   const ab=P.isImp?{ventist:['🕳','ベント移動'],esci:['👻','透明化'],shift:['🎭','変身'],remote:['🎮','マーク/操る'],rocket:['🚀','打ち上げ'],gimlet:['🔩','ドリル'],bubble:['🫧','バブル'],mine:['💣','設置'],pusher:['🪜','突き落とす'],sniper:['🎯','狙撃'],snake:['🐍','飲む'],crab:['🦀','カニ歩き'],berserk:['😡','バーサーク'],kunekune:['🌀','正常化'],poison:['☠','毒を入れる'],fraud:['🪪','身分証'],cannon:['🔫','波動砲'],bomb:['💣','自爆'],tele:['🌀','テレポート']}[P.irole]:P.isNeu?{cupid:['💘','キューピッド'],arson:['🛢','オイル'],vulture:['🦅','食べる'],verity:['🦵','変身'],papa:['📸','撮影']}[P.nrole]:P.team==='crew'?{labtech:['🧪','検査'],mayor:['🎖','任命'],sci:['👻','透明化'],sage:['🛡','賢者ガード'],doppel:['👥','ドッペル'],heir:['🧬','継承'],qed:['⚰','死体を運ぶ']}[P.role]:null;
