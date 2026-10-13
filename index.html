@@ -1285,7 +1285,17 @@ try{tabCh&&tabCh.postMessage({type:'open',tab:TAB_ID});}catch(e){}
 // 試合開始時に（設定の確率で）、または会議の後に 0.05% でノークリップしてバックルーム Lv.0 へ。
 // 全員が仲間。黒い針金の化物から逃げながら、人数×5枚のクーポンを集めて非常口から出れば全員勝利。
 const BR_PER=5,BR_MEET=0.05;
+// ゴール: 生きている全員がゴールしたらクリア（先に着いた人は非常口で待つ。化物には襲われない）
+function brEscape(e,where){
+  if(e.escaped||!e.alive)return;e.escaped=true;e.path=null;e.moving=false;if(e.ai)e.ai.goalKey='escaped';
+  const left=S.ents.filter(o=>o.alive&&!o.escaped&&!o.spider&&!(o.bitten3>0)).length;
+  if(e===me()){snd('task');toast(`🚪 ゴール！ ${left?`あと${left}人を待っている`:'全員そろった！'}`);}else toast(`🚪 ${e.name}が${where||'非常口'}にたどり着いた（あと${left}人）`);
+  if(e.isBot&&left&&Math.random()<.6)botSay(e,pick(['ここだよ！ みんな早く！','先に着いた！ 待ってるよ','こっちこっち！']));
+}
+function brAllEscaped(){const al=S.ents.filter(e=>e.alive&&!e.spider&&!(e.bitten3>0));return al.length>0&&al.every(e=>e.escaped);}
+function brEscCount(){const al=S.ents.filter(e=>e.alive&&!e.spider&&!(e.bitten3>0));return `${al.filter(e=>e.escaped).length}/${al.length}`;}
 function setupBackrooms(){
+  for(const e of S.ents)e.escaped=false;
   for(const e of S.ents)e.tasks=[];
   const alive=S.ents.filter(e=>e.alive);
   S.br={need:alive.length*BR_PER,got:0,coupons:[],open:false,exit:null};
@@ -1314,9 +1324,9 @@ function brIntro(){
   S.splashT=4;
 }
 function brHud(){const B=S.br;if(B.lv===3)return l3Hud();if(B.lv===1){const P=me(),pr=Math.round(pathS(B.path,P.x,P.y)/B.path.len*100);let near=null;if(B.path)for(const tr of B.trains){const a=(pathS(B.path,P.x,P.y)-tr.s)*tr.dir;if(a>0&&(near==null||a<near))near=a;}
-  return `<li style="color:#ff9a7a">🚂 バックルーム Lv.1 — 全員が仲間</li><li style="color:#ffe680">進み具合 ${clamp(pr,0,100)}%（一番奥に非常口）</li>`+(near!=null?`<li style="color:#ff5a5a">⚠ 列車の化物が接近中！ あと約${Math.max(0,Math.ceil(near/TRAIN_SPEED))}秒 — 穴に隠れて！</li>`:`<li>次の列車まで油断しないで（10〜20秒ごと）</li>`)+'<li>黄色い点線の「穴」の中にいれば捕まらない</li>'+(P.role==='sage'?'<li style="color:#9be7ff">賢者: ガード中なら列車の化物を跳ね返せる</li>':'');}
+  return `<li style="color:#ff9a7a">🚂 バックルーム Lv.1 — 全員が仲間</li><li style="color:#ffe680">進み具合 ${clamp(pr,0,100)}%（一番奥に非常口・生きている全員がたどり着いたらクリア　ゴール ${brEscCount()}）</li>`+(near!=null?`<li style="color:#ff5a5a">⚠ 列車の化物が接近中！ あと約${Math.max(0,Math.ceil(near/TRAIN_SPEED))}秒 — 穴に隠れて！</li>`:`<li>次の列車まで油断しないで（10〜20秒ごと）</li>`)+'<li>黄色い点線の「穴」の中にいれば捕まらない</li>'+(P.role==='sage'?'<li style="color:#9be7ff">賢者: ガード中なら列車の化物を跳ね返せる</li>':'');}
   return `<li style="color:#ffe680">🟨 バックルーム Lv.0 — 全員が仲間</li><li style="color:#ffe680">🎟 クーポン ${B.got} / ${B.need}</li>`
-  +(B.open?`<li style="color:#4cff7a">🚪 非常口が開いた！（${B.exit.room}）だれか1人がたどり着けば全員脱出</li>`:'<li>クーポンは黄色い部屋のあちこちに落ちている。上を歩けば拾える</li>')
+  +(B.open?`<li style="color:#4cff7a">🚪 非常口が開いた！（${B.exit.room}）生きている全員がたどり着いたらクリア（ゴール ${brEscCount()}）</li>`:'<li>クーポンは黄色い部屋のあちこちに落ちている。上を歩けば拾える</li>')
   +(S.mon&&S.mon.stun>0?`<li style="color:#9be7ff">化物は動けない（あと${Math.ceil(S.mon.stun)}秒）</li>`:'<li style="color:#ff8a8a">⚠ 黒い針金の化物に見つかったら逃げろ。キルはできない</li>')
   +(me().role==='sage'?'<li style="color:#9be7ff">賢者: F のガード中に化物に触られると、化物を20秒止められる</li>':'')
   +(me().isImp&&BR_IMP_AB.includes(me().irole)?`<li style="color:#ff9a9a">${me().irole==='viper'?'バイパー: F で見えている化物の動きを12秒遅くする（25秒ごと）':'F で化物に当てると15秒動けなくなる'}</li>`:'')
@@ -1331,13 +1341,13 @@ function brUpdate(dt){
     if(e===me()){snd('task');toast(`🎟 クーポンを拾った！（${B.got}/${B.need}）`);}else if(canSee(me(),c.x,c.y))snd('click');
     if(e.isBot&&Math.random()<.35)botSay(e,pick(['クーポンあった！','1枚ゲット！',`あと${Math.max(0,B.need-B.got)}枚！`]));
     if(B.got>=B.need&&!B.open){B.open=true;snd('alarm');toast(`🚪 クーポンが全部そろった！ 非常口（${B.exit.room}）が開いた！`);}}}
-  if(B.open)for(const e of S.ents)if(e.alive&&dist(e,B.exit)<80){goLv1(e);return;}
+  if(B.open){for(const e of S.ents)if(e.alive&&!e.escaped&&dist(e,B.exit)<80)brEscape(e);if(brAllEscaped()){goLv1(S.ents.find(e=>e.escaped));return;}}
   // 化物
   B.t=(B.t||0)+dt;
   if(!M)return;M.walk+=dt*6;if(M.roar>0)M.roar-=dt;if(M.slowT>0)M.slowT=Math.max(0,M.slowT-dt);
   if(M.dead){M.respawn-=dt;if(M.respawn<=0){M.dead=false;const q=ROOMS.slice().sort((a,b)=>{const pa=S.ents.filter(e=>e.alive);const da=Math.min(...pa.map(e=>dist(e,{x:a.x+a.w/2,y:a.y+a.h/2}))),db=Math.min(...pa.map(e=>dist(e,{x:b.x+b.w/2,y:b.y+b.h/2})));return db-da;})[0];M.x=q.x+q.w/2;M.y=q.y+q.h/2;M.tgt=null;M.path=null;snd('alarm');toast('😱 化物が復活した…！');netBc({t:'tell',text:'😱 化物が復活した…！'});}return;}
   if(M.stun>0){M.stun=Math.max(0,M.stun-dt);return;}
-  let tg=null,bd=560;for(const e of S.ents){if(!e.alive||e.climb)continue;const d=dist(M,e);if(d<bd&&los(M.x,M.y-40,e.x,e.y-30)){bd=d;tg=e;}}
+  let tg=null,bd=560;for(const e of S.ents){if(!e.alive||e.climb||e.escaped)continue;const d=dist(M,e);if(d<bd&&los(M.x,M.y-40,e.x,e.y-30)){bd=d;tg=e;}}
   if(tg&&(!M.tgt||M.tgt!==tg.id)){M.tgt=tg.id;M.repath=0;if(M.roar<=0){M.roar=6;if(canSee(me(),M.x,M.y)||tg===me())snd('alarm');if(tg.isBot)botSay(tg,pick(['うわっ！ 来た！','化物だ！ 逃げて！！','ヤバいヤバい！']));}}
   if(!tg&&M.tgt!=null){const t=S.ents[M.tgt];if(!t.alive||dist(M,t)>900)M.tgt=null;}
   const T=M.tgt!=null?S.ents[M.tgt]:null;
@@ -1347,7 +1357,7 @@ function brUpdate(dt){
   const sp=(T?222:150)*(M.slowT>0?.45:1);let mv=sp*dt;   // 追いかける時もプレイヤー（231）より少し遅い
   while(mv>0&&M.path&&M.path.length){const n=M.path[0],dx=n.x-M.x,dy=n.y-M.y,d=Math.hypot(dx,dy);if(d<=mv){M.x=n.x;M.y=n.y;M.path.shift();mv-=d;}else{M.x+=dx/d*mv;M.y+=dy/d*mv;if(Math.abs(dx)>2)M.face=dx>0?1:-1;mv=0;}}
   // 触れたら…
-  for(const e of S.ents){if(!e.alive||e.climb||dist(M,e)>48)continue;
+  for(const e of S.ents){if(!e.alive||e.climb||e.escaped||dist(M,e)>48)continue;
     if(e.vform>0){if(verityKillMon(e))return;continue;}   // 変身中のVerityは死なない
     if(e.guardT>0){M.stun=20;e.guardT=0;M.tgt=null;M.path=null;toast(`🛡 ${e.name}（賢者）のガードで化物が20秒間動けなくなった！`);snd('task');if(e.isBot)botSay(e,'今のうちに逃げて！');break;}
     die(e,null);const P=me();if(e===P){S.killedT=2.6;splash('つかまった…','黒い針金の化物にやられた。幽霊になってもみんなを見守れる','#000000',{body:{id:e.id}},null);}else if(canSee(P,e.x,e.y))toast(`😱 ${e.name}が化物につかまった…`);
@@ -1382,6 +1392,7 @@ function pathAt(P,s){s=clamp(s,0,P.len);for(let i=1;i<P.pts.length;i++)if(s<=P.c
 function pathS(P,x,y){let best=0,bd=1e18;for(let i=1;i<P.pts.length;i++){const a=P.pts[i-1],b=P.pts[i],vx=b.x-a.x,vy=b.y-a.y,L2=vx*vx+vy*vy||1;const t=clamp(((x-a.x)*vx+(y-a.y)*vy)/L2,0,1),px=a.x+vx*t,py=a.y+vy*t,d=(x-px)**2+(y-py)**2;if(d<bd){bd=d;best=P.cum[i-1]+t*Math.sqrt(L2);}}return best;}
 function inHole(e){return ROOMS.some(r=>r.n==='穴'&&e.x>r.x-4&&e.x<r.x+r.w+4&&e.y>r.y-4&&e.y<r.y+r.h+4);}
 function setupBackrooms1(){
+  for(const e of S.ents)e.escaped=false;
   for(const e of S.ents)e.tasks=[];
   const P=lv1Path(),st=P.pts[0],ex=P.pts[P.pts.length-1];
   S.br={lv:1,need:0,got:0,coupons:[],open:true,exit:{x:ex.x,y:ex.y,room:'線路の一番奥'},path:P,trains:[],nextTrain:rand(10,20),t:0};
@@ -1392,7 +1403,7 @@ function setupBackrooms1(){
 }
 // バックルームは1つのレベルをクリアするごとに全員が復活する
 function brReviveAll(){
-  let n=0;for(const e of S.ents){if(e.alive)continue;e.alive=true;e.inVent=null;e.climb=null;e.path=null;e.bitten=null;e.swallow=null;n++;if(e===me()){S.killedT=0;hideSplash();}}
+  let n=0;for(const e of S.ents){e.escaped=false;if(e.alive)continue;e.alive=true;e.inVent=null;e.climb=null;e.path=null;e.bitten=null;e.swallow=null;n++;if(e===me()){S.killedT=0;hideSplash();}}
   S.bodies=[];return n;
 }
 function goLv1(by){
@@ -1409,14 +1420,15 @@ function brUpdate1(dt){
     if(tg){const st=pathS(B.path,tg.x,tg.y),fwd=st<300?true:st>B.path.len-300?false:Math.random()<.55,d=TRAIN_SPEED*rand(3,4.5);
       B.trains.push({s:fwd?Math.max(-200,st-d):Math.min(B.path.len+200,st+d),dir:fwd?1:-1,x:0,y:0,legs:0,warned:{}});}}
   for(const tr of B.trains){tr.s+=tr.dir*TRAIN_SPEED*dt;tr.legs+=dt*20;const q=pathAt(B.path,tr.s);tr.x=q.x;tr.y=q.y+30;
-    for(const e of S.ents){if(!e.alive)continue;const se=pathS(B.path,e.x,e.y),ahead=(se-tr.s)*tr.dir;
+    for(const e of S.ents){if(!e.alive||e.escaped)continue;const se=pathS(B.path,e.x,e.y),ahead=(se-tr.s)*tr.dir;
       if(ahead>0&&ahead<TRAIN_SPEED*4.6&&!tr.warned[e.id]){tr.warned[e.id]=1;if(e===P){snd('alarm');toast('🚂 何かが来る…！ 穴に隠れて！');}else if(e.isBot&&Math.random()<.5)botSay(e,pick(['何か来る！！ 穴に隠れて！','線路から離れて！','あの音…来るぞ！']));}
       if(Math.hypot(tr.x-e.x,tr.y-30-e.y)<95&&!inHole(e)){
         if(e.guardT>0){tr.dir*=-1;tr.s+=tr.dir*200;tr.warned={};snd('task');toast(`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`);netBc({t:'tell',text:`🛡 ${e.name}（賢者）が列車の化物を跳ね返した！`});continue;}
         die(e,null);snd('kill');if(e===P){S.killedT=2.6;splash('ひかれた…','赤い列車の化物につかまった。幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:e.id}},null);}else if(!P.alive||canSee(P,e.x,e.y))toast(`😱 ${e.name}が列車の化物にさらわれた…`);
         if(checkWin())return;}}}
   B.trains=B.trains.filter(tr=>tr.dir>0?tr.s<B.path.len+600:tr.s>-600);
-  for(const e of S.ents)if(e.alive&&dist(e,B.exit)<90){goLv3(e);return;}
+  for(const e of S.ents)if(e.alive&&!e.escaped&&dist(e,B.exit)<90)brEscape(e);
+  if(brAllEscaped()){goLv3(S.ents.find(e=>e.escaped));return;}
 }
 function brThink1(e){
   const B=S.br,ai=e.ai,se=pathS(B.path,e.x,e.y);
@@ -1465,6 +1477,7 @@ const L3_STEPS=[
   {n:'ピンクの鍵でボートを動かして逃げる',room:'湖',fx:.45,fy:.5,need:['pink'],ic:'🚤'}];
 function l3Spot(room,fx,fy){const r=ROOMS.find(q=>q.n===room);return{x:Math.round(r.x+r.w*fx),y:Math.round(r.y+r.h*fy)};}
 function setupBackrooms3(){
+  for(const e of S.ents)e.escaped=false;
   for(const e of S.ents)e.tasks=[];
   const house=['玄関','居間','台所','寝室','倉庫','地下室1','地下室2'];
   const items=L3_ITEMS.map(([id,n,c])=>{for(let t=0;t<60;t++){const hn=pick(house),r=ROOMS.find(q=>q.n===hn),x=rand(r.x+50,r.x+r.w-50),y=rand(r.y+50,r.y+r.h-40);if(circleOK(x,y))return{id,n,c,x:Math.round(x),y:Math.round(y),got:false};}return{id,n,c,x:BTN.x,y:BTN.y+120,got:false};});
@@ -1499,12 +1512,12 @@ function l3Done(by){
   const B=S.br,st=B.steps[B.si];B.inv=B.inv.filter(id=>!st.need.includes(id));if(st.give)B.inv.push(st.give);
   B.si++;snd('task');toast(`✅ ${st.n}`);netBc({t:'tell',text:`✅ ${st.n}`});
   if(by&&by.isBot&&Math.random()<.6)botSay(by,pick(['できた！ 次に行こう！','よし、開いた！','あと少し…！']));
-  if(B.si>=B.steps.length){const w=l3Survivors();endGame('br3',`ボートで逃げ切った！ 生き残った${w.map(e=>e.name).join('・')}の脱出成功`);}
+  if(B.si>=B.steps.length){B.boat=true;toast('🚤 ボートが動いた！ 生きている全員でボートに乗ろう！');netBc({t:'tell',text:'🚤 ボートが動いた！ 生きている全員でボートに乗ろう！'});}
 }
 function spGrab(e){
   const B=S.br;if(NET.client){rpc('spGrab',[e]);return;}
   if(!e.spider||e.grab||(e.spCd||0)>0||(e.stunS||0)>0)return;
-  let t=null,bd=200;for(const o of l3Survivors()){if(o.bitten3>0)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}if(!t)return;
+  let t=null,bd=200;for(const o of l3Survivors()){if(o.bitten3>0||o.escaped)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}if(!t)return;
   e.grab={tgt:t.id,t:t.grabLeft||2};snd('vent');if(t===me())toast('🕸 糸で引き寄せられる…！');
 }
 function spWeb(e){const B=S.br;if(NET.client){rpc('spWeb',[e]);return;}if(!e.spider||(e.stunS||0)>0)return;
@@ -1521,6 +1534,7 @@ function l3Hud(){const B=S.br,P=me();
   let h=B.runT<8?'<li style="color:#ff5a5a">⚠ 逃げないといけない！ 小屋の中へ！</li>':'';
   h+='<li style="color:#ffe680">🎒 持ち物: '+(B.inv.length?B.inv.map(id=>(L3_ITEMS.find(i=>i[0]===id)||[0,L3_GOT[id]])[1]).join('、'):'なし')+'</li>';
   h+=B.steps.map((st,i)=>`<li style="${i<B.si?'opacity:.5;text-decoration:line-through':i===B.si?'color:#4cff7a':'opacity:.75'}">${i<B.si?'✅':i===B.si?'▶':'・'} ${st.n}${i===B.si&&B.work?`（あと${Math.ceil(B.work.t)}秒）`:''}</li>`).join('');
+  if(B.boat)h='<li style="color:#4cff7a">🚤 ボートが動いた！ 湖の桟橋へ！ 生きている全員が乗ったら脱出（'+brEscCount()+'）</li>'+h;
   return h+'<li style="opacity:.75">鍵やピッケルは小屋のどこかに落ちている（上を歩けば拾う）。順番どおりにしかできない</li>';}
 function brUpdate3(dt){
   const B=S.br,P=me();B.t+=dt;
@@ -1550,11 +1564,13 @@ function brUpdate3(dt){
     B.shots=B.shots.filter(sh=>sh.t>0);
     // 蜘蛛の捕食
     for(const sp of S.ents){if(!sp.spider||!sp.alive||!sp.grab)continue;const t=S.ents[sp.grab.tgt];
-      if(!t.alive||t.spider||dist(sp,t)>280){if(t.alive)t.grabLeft=Math.max(.05,sp.grab.t);sp.grab=null;continue;}
+      if(!t.alive||t.spider||t.escaped||dist(sp,t)>280){if(t.alive)t.grabLeft=Math.max(.05,sp.grab.t);sp.grab=null;continue;}
       const sage=S.ents.find(o=>o.alive&&!o.spider&&o.guardT>0&&(o===t||dist(o,t)<220));
       if(sage){l3Interrupt(sp,`${sage.name}（賢者）のガード`);continue;}
       const d=dist(sp,t)||1;moveEnt(t,(sp.x-t.x)/d*120*dt,(sp.y-t.y)/d*120*dt);t.moving=true;
       sp.grab.t-=dt;if(sp.grab.t<=0){sp.grab=null;sp.spCd=10;t.grabLeft=2;die(t,sp);snd('kill');if(t===P){S.killedT=2.6;splash('蜘蛛に食べられた…','幽霊になってもみんなを見守れる','#ff3b3b',{body:{id:t.id}},null);}else toast(`😱 ${t.name}が蜘蛛につかまった…`);}}
+    if(B.boat){for(const e of l3Survivors())if(e.bitten3<=0&&!e.escaped&&dist(e,B.exit)<110)brEscape(e,'ボート');
+      if(brAllEscaped()){const w=l3Survivors().filter(e=>e.escaped);endGame('br3',`全員ボートに乗って逃げ切った！ 生き残った${w.map(e=>e.name).join('・')}の脱出成功`);return;}}
     if(B.runT>2&&!l3Survivors().some(e=>e.bitten3<=0)&&S.ents.some(e=>e.alive&&e.spider)){endGame('br3s','全員が蜘蛛につかまってしまった…');return;}
     if(!S.ents.some(e=>e.alive)){endGame('draw','全員いなくなってしまった…');return;}
   }
@@ -1563,7 +1579,7 @@ function brThink3(e){
   const B=S.br,ai=e.ai;
   if(B.stage!=='run'||e.bitten3>0){e.path=null;e.moving=false;return;}
   if(e.spider){if(e.stunS>0||e.grab){e.path=null;return;}
-    let t=null,bd=1e9;for(const o of l3Survivors()){if(o.bitten3>0)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
+    let t=null,bd=1e9;for(const o of l3Survivors()){if(o.bitten3>0||o.escaped)continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
     if(!t){e.path=null;return;}
     e.path=[{x:t.x,y:t.y}];ai.goalKey='hunt';ai.gx=t.x;ai.gy=t.y;
     if(bd<190&&e.spCd<=0)spGrab(e);
@@ -1576,6 +1592,7 @@ function brThink3(e){
     if(!(ai.goalKey||'').startsWith('l3flee')||atGoal(e)){let best=null,bv=-1;for(let k=0;k<6;k++){const q=randomRoomPoint();const v=dist(q,sp)-dist(q,e)*.3;if(v>bv){bv=v;best=q;}}setGoal(e,best.x,best.y,'l3flee'+Math.random());}
     return;}
   if(B.runT<6&&!ai.l3in){const r=ROOMS.find(q=>q.n==='居間');setGoal(e,r.x+r.w/2+rand(-120,120),r.y+r.h/2+rand(-100,100),'l3in');if(atGoal(e))ai.l3in=true;return;}
+  if(B.boat){if(ai.goalKey!=='l3boat')setGoal(e,B.exit.x,B.exit.y,'l3boat');return;}
   const st=B.steps[B.si];if(!st)return;
   const miss=st.need.filter(id=>!B.inv.includes(id));
   if(miss.length){const it=B.items.find(i=>!i.got&&miss.includes(i.id));if(it){const k='l3i'+it.id;if(ai.goalKey!==k)setGoal(e,it.x,it.y,k);return;}}
@@ -1583,6 +1600,7 @@ function brThink3(e){
   if(dist(e,st)<85)l3Use(e);
 }
 function brThink(e){
+  if(e.escaped){e.path=null;e.moving=false;return;}
   if(S.br&&S.br.lv===3)return brThink3(e);
   if(S.br&&S.br.lv===1)return brThink1(e);
   const ai=e.ai,B=S.br,M=S.mon;
@@ -2810,6 +2828,7 @@ function botUpdate(e,dt){
 // ================= player =================
 function playerUpdate(dt){
   const P=me();
+  if(S.br&&P.escaped){P.moving=false;return;}   // ゴールしたら、みんなを待つ
   if(S.br&&S.br.lv===3&&(S.br.stage!=='run'||P.bitten3>0||P.stunS>0||(P.spider&&P.grab))){P.moving=false;return;}   // 会議中・噛まれて苦しんでいる間・蜘蛛の捕食中は動けない
   if(P.drillAim){P.moving=false;let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);if(joy.id!=null){ix+=joy.dx;iy+=joy.dy;}const m=Math.hypot(ix,iy);if(m>.1){P.aim={x:ix/m,y:iy/m};if(Math.abs(ix)>.1)P.face=ix>0?1:-1;}return;}
   if(P.crazed&&P.alive){S.scope=null;return;}   // くねくね中は自分では動けない
@@ -3532,7 +3551,7 @@ function render(dt){
     if(B.trains)for(const tr of B.trains){if(dist(P,tr)<2600||!P.alive)drawTrainSpider(ctx,tr,tm);}
     if(B.lv===3)drawL3(P,tm,see);}
   for(const e of vis)if(e.berserk&&e.alive){ctx.save();const g=ctx.createRadialGradient(e.x,e.y-30,8,e.x,e.y-30,70);g.addColorStop(0,'rgba(255,40,20,.55)');g.addColorStop(1,'rgba(255,40,20,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y-30,70,0,TAU);ctx.fill();ctx.restore();}
-  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);if((e.crazed||e.bitten3>0)&&e.alive){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(tm*9+e.id)*.45);ctx.scale(1+Math.sin(tm*13+e.id)*.12,1-Math.sin(tm*13+e.id)*.08);ctx.translate(-e.x,-e.y);}drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:0});if((e.crazed||e.bitten3>0)&&e.alive)ctx.restore();
+  for(const e of vis){const look=P.isImp&&e.isImp?e:faceOf(e);if((e.crazed||e.bitten3>0)&&e.alive){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(tm*9+e.id)*.45);ctx.scale(1+Math.sin(tm*13+e.id)*.12,1-Math.sin(tm*13+e.id)*.08);ctx.translate(-e.x,-e.y);}drawCrew(ctx,e.x,e.y,look.color,e.face,e.walk,{long:e.vform>0&&e.alive,costume:S.mushT>0&&e.alive&&!(P.isImp&&e.isImp)?'mush':e.berserk&&e.alive?'berserk':look.costume,moving:e.moving,ghost:!e.alive,fade:e.alive&&e.invisT>0?.35:e.alive&&e.escaped?.55:0});if((e.crazed||e.bitten3>0)&&e.alive)ctx.restore();
     if(e.drillAim){const m=Math.hypot(e.aim.x,e.aim.y)||1,dx=e.aim.x/m,dy=e.aim.y/m,L=330,a=Math.atan2(dy,dx);ctx.save();ctx.translate(e.x,e.y-26);ctx.rotate(a);ctx.globalAlpha=.55+.4*Math.sin(tm*14);
       ctx.strokeStyle='#ff3b3b';ctx.lineWidth=10;ctx.setLineDash([22,12]);ctx.beginPath();ctx.moveTo(30,0);ctx.lineTo(L-30,0);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#ff3b3b';ctx.beginPath();ctx.moveTo(L,0);ctx.lineTo(L-44,-26);ctx.lineTo(L-44,26);ctx.closePath();ctx.fill();
       ctx.globalAlpha=1;ctx.fillStyle='#aab3c0';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(62,0);ctx.lineTo(22,-18);ctx.lineTo(22,18);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
@@ -3540,6 +3559,20 @@ function render(dt){
     if(e.ctrlBy!=null&&(P.isImp||!P.alive)){ctx.font='20px system-ui';ctx.textAlign='center';ctx.fillText('🎮',e.x,e.y-70);}}
   ctx.globalAlpha=1;
   ctx.restore();
+  // キルのモーション: 新しく死体ができた所に、ナイフの一閃と血しぶき（見えている人にだけ）
+  {ctx.save();ctx.translate(VW/2,VH/2);ctx.scale(sc,sc);ctx.translate(-cam.x,-cam.y);S.killFxSeen=S.killFxSeen||new Set();S.killFx=S.killFx||[];
+   for(const b of S.bodies){const key=b.id+'@'+(b.t!=null?Math.round(b.t*10):'c');if(S.killFxSeen.has(key))continue;S.killFxSeen.add(key);if(b.t==null||S.t-b.t<1.2)S.killFx.push({x:b.x,y:b.y,st:tm,c:b.color,dir:Math.random()<.5?1:-1});}
+   S.killFx=S.killFx.filter(f=>tm-f.st<.9);
+   for(const f of S.killFx){if(P.alive&&!canSee(P,f.x,f.y))continue;const p=(tm-f.st)/.9,q=1-p;ctx.save();
+     // 倒れていく体（最初の0.35秒）
+     if(p<.4){ctx.save();ctx.globalAlpha=1-p/.4;ctx.translate(f.x,f.y);ctx.rotate(f.dir*Math.min(1,p/.35)*1.4);ctx.translate(-f.x,-f.y);drawCrew(ctx,f.x,f.y,f.c,f.dir,0,{});ctx.restore();}
+     // ナイフの一閃
+     ctx.translate(f.x,f.y-42);ctx.globalAlpha=Math.max(0,q*1.3);ctx.strokeStyle='#fff';ctx.lineCap='round';ctx.lineWidth=16*q+3;ctx.shadowColor='#ff3b3b';ctx.shadowBlur=18;
+     const a0=-2.3*f.dir,a1=a0+f.dir*Math.min(1,p*2.4)*2.6;ctx.beginPath();ctx.arc(0,0,78,Math.min(a0,a1),Math.max(a0,a1));ctx.stroke();ctx.shadowBlur=0;
+     ctx.font='34px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='44px system-ui';ctx.fillText('🔪',Math.cos(a1)*78,Math.sin(a1)*78);
+     // 血しぶき
+     ctx.fillStyle='#c4141c';for(let i=0;i<12;i++){const a=i/12*TAU+f.st,sp=40+((i*37)%30);ctx.beginPath();ctx.arc(Math.cos(a)*sp*p*1.6,Math.sin(a)*sp*p*.9+p*p*50+20,Math.max(0,7*q),0,TAU);ctx.fill();}
+     ctx.restore();}ctx.restore();}
   // fog of war
   if(P.alive&&S.phase!=='review'){
     const r=visionR(P);
@@ -3602,7 +3635,7 @@ function render(dt){
   if(P.nrole==='vulture'&&P.alive)for(const b of S.bodies)targets.push({x:b.x,y:b.y,c:'#c8a060',label:'🦅'});
   if(P.carryBody!=null){const b=S.bodies.find(b=>b.id===P.carryBody);if(b&&b.goal)targets.push({x:b.goal.x,y:b.goal.y,c:'#9be7ff',label:'⚰'+b.goal.room});}
   if(P.isImp)for(const e of S.ents)if(e.isImp&&e!==P&&e.alive&&e.inVent==null)targets.push({x:e.x,y:e.y-10,c:'#ff4747',label:'🔴'+e.name});
-  if(S.br){targets.length=0;if(S.br.open)targets.push({x:S.br.exit.x,y:S.br.exit.y,c:'#4cff7a',label:'🚪非常口'});}
+  if(S.br){targets.length=0;if(S.br.lv===3&&S.br.boat&&!P.escaped)targets.push({x:S.br.exit.x,y:S.br.exit.y,c:'#4cff7a',label:'🚤ボート'});if(S.br.open&&!P.escaped)targets.push({x:S.br.exit.x,y:S.br.exit.y,c:'#4cff7a',label:'🚪非常口'});}
   for(const t of targets){
     const sx=VW/2+(t.x-cam.x)*sc,sy=VH/2+(t.y-20-cam.y)*sc;
     if(sx>30&&sx<VW-30&&sy>30&&sy<VH-30)continue;
@@ -4293,7 +4326,7 @@ function netTick(dt){
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
-      bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
+      bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,esc:S.ents.map(e=>e.escaped?1:0),boat:!!S.br.boat,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
@@ -4405,8 +4438,8 @@ function applySnap(d){
   S.bodies=d.bodies.map(([id,x,y,color,room])=>({id,x,y,color,room}));
   S.sab=d.sab;S.taskDone=d.td;S.taskTotal=d.tt;S.impKnow=d.ik||{};S.cupid=d.cu;S.flash=d.flash||0;
   S.beams=d.beams.map(([x,y,dx,dy,L,t,thin])=>({x,y,dx,dy,L,t,thin}));
-  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);if(x.sp){const was=e.spider;e.spider=x.sp[i]===1;e.bitten3=x.sp[i]===2?1:0;if(e===me()&&e.spider&&!was)setupHud();}e.crazed=!!(x.cz&&x.cz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br&&x.br.lv===3){if(MAPI!==BR3I){loadMap(BR3I);setupBackrooms3();setupHud();}const l=x.br.l3,B=S.br;B.stage=l.st;B.t=l.t;B.runT=l.rt;B.si=l.si;B.inv=l.inv;B.items.forEach((it,i)=>{const q=l.it[i];if(q){it.x=q[0];it.y=q[1];it.got=!!q[2];}});B.webs=l.w;B.work=l.wk?{t:l.wk,n:''}:null;B.big=l.big?{x:l.big[0],y:l.big[1]}:null;S.ents.forEach((e,i)=>{e.grab=l.gr[i]?{tgt:l.gr[i][0],t:l.gr[i][1]}:null;});}
-  else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
+  if(d.x2&&d.x2.cl){const x=d.x2;S.ents.forEach((e,i)=>{e.climb=x.cl[i]?{}:null;e.berserk=!!(x.bz&&x.bz[i]);if(x.sp){const was=e.spider;e.spider=x.sp[i]===1;e.bitten3=x.sp[i]===2?1:0;if(e===me()&&e.spider&&!was)setupHud();}e.crazed=!!(x.cz&&x.cz[i]);e.vform=x.vf?x.vf[i]:0;});S.lockT=x.lk||0;if(x.br&&x.br.lv===3){if(MAPI!==BR3I){loadMap(BR3I);setupBackrooms3();setupHud();}const l=x.br.l3,B=S.br;B.stage=l.st;B.t=l.t;B.runT=l.rt;B.si=l.si;B.inv=l.inv;B.items.forEach((it,i)=>{const q=l.it[i];if(q){it.x=q[0];it.y=q[1];it.got=!!q[2];}});B.webs=l.w;B.work=l.wk?{t:l.wk,n:''}:null;B.big=l.big?{x:l.big[0],y:l.big[1]}:null;if(x.br.esc)S.ents.forEach((e,i)=>e.escaped=!!x.br.esc[i]);B.boat=!!x.br.boat;S.ents.forEach((e,i)=>{e.grab=l.gr[i]?{tgt:l.gr[i][0],t:l.gr[i][1]}:null;});}
+  else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(b.esc)S.ents.forEach((e,i)=>e.escaped=!!b.esc[i]);if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
