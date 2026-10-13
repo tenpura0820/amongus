@@ -244,6 +244,7 @@ button{touch-action:manipulation}
 #adminDlg{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:16px}
 #editor{position:fixed;inset:0;z-index:130;background:#0b0e14;display:flex;flex-direction:column;color:#fff;font-weight:800}
 #editor button{border:2px solid #000;border-radius:9px;background:#e8edf5;color:#111;font-weight:800;padding:4px 8px;font-size:13px;cursor:pointer}
+@media (max-width:640px){#editor button{font-size:11px;padding:3px 6px}#editor .edProps,#editor .edProps select,#editor .edProps input{font-size:11px}#edMsg{font-size:11px}#edName{width:120px;font-size:12px}}
 #editor button.on{background:#ffd23d}
 .edTop,.edProps,.edBottom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;background:#1c2230;border-bottom:2px solid #000}
 .edBottom{border-top:2px solid #000;border-bottom:0}
@@ -394,7 +395,7 @@ button{touch-action:manipulation}
   <div class="edTop"><input id="edName" maxlength="16" placeholder="ステージの名前"><span id="edTools"></span><span class="edZoom"><button id="edZin">＋</button><button id="edZout">－</button></span></div>
   <div class="edProps" id="edProps"></div>
   <canvas id="edCv"></canvas>
-  <div class="edBottom"><span id="edMsg"></span><span class="edBtns"><button id="edCheck">✅ チェック</button><button id="edPlay">▶ 遊んでみる</button><button id="edExport">📤 コードを出す</button><button id="edImport">📥 コードを読み込む</button><button id="edReset">🗑 最初から</button><button id="edClose">✖ 閉じる</button></span></div>
+  <div class="edBottom"><span id="edMsg"></span><span class="edBtns"><button id="edCheck">✅ チェック</button><button id="edPlay">▶ 遊んでみる</button><button id="edExport">📤 コードを出す</button><button id="edImport">📥 コードを読み込む</button><button id="edReset">🗑 全部消す</button><button id="edClose">✖ 閉じる</button></span></div>
   <div id="edCodeBox" hidden><div class="mpanel"><h3 id="edCodeTitle">コード</h3><textarea id="edCode" spellcheck="false"></textarea><div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button id="edCodeOk">読み込む</button><button id="edCodeCopy">コピー</button><button id="edCodeCancel">閉じる</button></div></div></div>
 </div>
 <div id="quitDlg" hidden><div class="mpanel" style="text-align:center"><h3 style="justify-content:center">試合をやめる？</h3><p style="margin:0 0 14px;font-weight:800;color:var(--muted)">設定画面に戻ります（ゲームは一時停止中・下の欄で全員と話せる）</p><div style="display:flex;gap:10px;justify-content:center"><button class="big" id="qYes" style="background:#ff5a5a">やめる</button><button class="big alt" id="qNo">続ける</button></div><form id="qChat" autocomplete="off" style="display:flex;gap:6px;margin-top:14px"><input id="qChatIn" placeholder="一時停止中は全員と話せる（Enterで送信）" style="flex:1;min-width:0;border:2px solid #000;border-radius:8px;padding:7px 9px;font-weight:800"><button style="border:2px solid #000;border-radius:8px;background:var(--crew);padding:0 12px">送信</button></form><div id="qLog" style="margin-top:8px;max-height:26vh;overflow:auto;text-align:left;font-size:13.5px;font-weight:800"></div></div></div>
@@ -4356,7 +4357,7 @@ function mgWires(box,done,m){
     g.lineCap='round';g.lineWidth=14;
     for(let i=0;i<4;i++)if(con[i]>=0){g.strokeStyle=cols[i];g.beginPath();g.moveTo(40,ly(i));g.lineTo(320,ly(con[i]));g.stroke();}
     if(drag!=null){g.strokeStyle=cols[drag];g.beginPath();g.moveTo(40,ly(drag));g.lineTo(mx,my);g.stroke();}}
-  c.onpointerdown=e=>{const p=cvPos(c,e);if(p.x<90)for(let i=0;i<4;i++)if(Math.abs(p.y-ly(i))<25&&con[i]<0){drag=i;mx=p.x;my=p.y;c.setPointerCapture(e.pointerId);}draw();};
+  c.onpointerdown=e=>{const p=cvPos(c,e);if(p.x<90)for(let i=0;i<4;i++)if(Math.abs(p.y-ly(i))<25&&con[i]<0){drag=i;mx=p.x;my=p.y;try{c.setPointerCapture(e.pointerId);}catch(_){}}draw();};
   c.onpointermove=e=>{if(drag==null)return;const p=cvPos(c,e);mx=p.x;my=p.y;draw();};
   c.onpointerup=e=>{if(drag==null)return;const p=cvPos(c,e);
     if(p.x>270)for(let j=0;j<4;j++)if(Math.abs(p.y-ly(j))<28&&R[j]===drag){con[drag]=j;snd('click');}
@@ -4390,7 +4391,7 @@ function mgSwipe(box,done,m){
   const card=document.createElement('div');card.className='card';card.textContent='ID';tr.appendChild(card);box.appendChild(tr);
   const msg=document.createElement('div');msg.className='msg';msg.textContent='カードを右までスワイプ（ゆっくりめ）';box.appendChild(msg);
   let t0=0,sx=0,drag=false;
-  card.onpointerdown=e=>{drag=true;t0=performance.now();sx=e.clientX;card.setPointerCapture(e.pointerId);};
+  card.onpointerdown=e=>{drag=true;t0=performance.now();sx=e.clientX;try{card.setPointerCapture(e.pointerId);}catch(_){}};
   card.onpointermove=e=>{if(!drag)return;const max=tr.clientWidth-112;const x=clamp(e.clientX-sx,0,max);card.style.left=8+x+'px';
     if(x>=max){drag=false;const dt=(performance.now()-t0)/1000;
       if(dt<.45){msg.textContent='速すぎる！もう一度';snd('bad');card.style.left='8px';}
@@ -4888,7 +4889,7 @@ $('btnPause').onclick=togglePause;
   function ensureOption(){let o=[...$('inMap').options].find(o=>+o.value===CUSTOMI);if(!o){o=document.createElement('option');o.value=CUSTOMI;$('inMap').appendChild(o);}o.textContent=MAPS[CUSTOMI].name;}
   function msg(t){$('edMsg').textContent=t;}
   function tools(){const w=$('edTools');w.innerHTML='';for(const[k,n]of TOOLS){const b=document.createElement('button');b.textContent=n;b.className=ED.tool===k?'on':'';b.onclick=()=>{ED.tool=k;ED.pend=null;tools();props();draw();msg(HINT[k]);};w.appendChild(b);}}
-  const HINT={move:'物をドラッグで動かす。何もない所をドラッグで画面を動かす',room:'ドラッグで部屋を作る（歩ける床）。部屋どうしは「通路」でつなぐ',hall:'ドラッグで通路を作る（部屋と重ねるとつながる）',high:'ドラッグで高い所を作る。普通の床とつなげず、梯子かロープで行けるようにする',
+  const HINT={move:'物をドラッグで動かす。何もない所をドラッグで画面を動かす（2本指でも動かせる・ピンチで拡大縮小）',room:'ドラッグで部屋を作る（歩ける床）。部屋どうしは「通路」でつなぐ',hall:'ドラッグで通路を作る（部屋と重ねるとつながる）',high:'ドラッグで高い所を作る。普通の床とつなげず、梯子かロープで行けるようにする',
     task:'クリックでタスクを置く（床の上に）',vent:'クリックでベントを置く。同じグループ（A/B/C）どうしで移動できる',lights:'クリックで停電を直す場所を置く',reactor:'クリックでリアクターを直す場所を置く',btn:'クリックで緊急ボタンを置く',ladder:'下の点 → 上の点 の順にクリック（2つの床をつなぐ）',rope:'出発点 → 到着点 の順にクリック（ロープで一気に移動）',erase:'クリックした物を消す'};
   function sel(id,list,val,on){const x=document.createElement('select');x.id=id;for(const[v,n]of list){const o=document.createElement('option');o.value=v;o.textContent=n;x.appendChild(o);}x.value=val;x.onchange=()=>on(x.value);return x;}
   function lab(t,el){const l=document.createElement('label');l.style.display='flex';l.style.gap='4px';l.style.alignItems='center';l.append(t,el);return l;}
@@ -4905,11 +4906,11 @@ $('btnPause').onclick=togglePause;
     c.strokeStyle='rgba(255,255,255,.06)';c.lineWidth=1/s;c.beginPath();const vw=cv.width/dp/s,vh=cv.height/dp/s;for(let x=Math.floor(ED.ox/100)*100;x<ED.ox+vw;x+=100){c.moveTo(x,ED.oy);c.lineTo(x,ED.oy+vh);}for(let y=Math.floor(ED.oy/100)*100;y<ED.oy+vh;y+=100){c.moveTo(ED.ox,y);c.lineTo(ED.ox+vw,y);}c.stroke();
     for(const r of d.rooms.filter(r=>r.hall).concat(d.rooms.filter(r=>!r.hall))){if(!r.hall){c.fillStyle=r.wc||'#4a5262';c.fillRect(r.x,r.y-40,r.w,40);}c.fillStyle=r.f;c.fillRect(r.x,r.y,r.w,r.h);c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();floorPattern(c,r);c.restore();
       if(r.high){c.save();c.strokeStyle='#ffe680';c.lineWidth=6;c.setLineDash([18,10]);c.strokeRect(r.x+3,r.y+3,r.w-6,r.h-6);c.restore();}
-      if(!r.hall){c.fillStyle='rgba(255,255,255,.75)';c.font='bold 30px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText((r.high?'⛰ ':'')+r.n,r.x+r.w/2,r.y+r.h/2);}}
-    c.font='28px system-ui';c.textAlign='center';c.textBaseline='middle';
-    for(const t of d.tasks){c.fillStyle='#2f3a4c';c.fillRect(t.x-22,t.y-36,44,30);c.fillStyle='#57d0ff';c.fillRect(t.x-16,t.y-31,32,16);c.fillStyle='#fff';c.font='bold 16px sans-serif';c.fillText((CUSTOM_TYPES.find(q=>q[0]===t.t)||[0,'?'])[1],t.x,t.y+12);}
-    for(const v of d.vents){c.fillStyle='#2d3340';c.fillRect(v.x-24,v.y-15,48,30);c.strokeStyle='#000';c.lineWidth=3;c.strokeRect(v.x-24,v.y-15,48,30);c.fillStyle='#ffd23d';c.font='bold 20px sans-serif';c.fillText('ABC'[v.net|0],v.x,v.y);}
-    c.font='34px system-ui';if(d.lights)c.fillText('💡',d.lights.x,d.lights.y-16);if(d.reactor)c.fillText('☢',d.reactor.x,d.reactor.y-16);
+      if(!r.hall){const fs=13/s;c.font=`bold ${fs}px sans-serif`;c.textAlign='left';c.textBaseline='top';c.lineWidth=3/s;c.strokeStyle='rgba(0,0,0,.7)';const tx=(r.high?'⛰ ':'')+r.n;c.strokeText(tx,r.x+6/s,r.y+6/s);c.fillStyle='#fff';c.fillText(tx,r.x+6/s,r.y+6/s);}}
+    c.textAlign='center';c.textBaseline='middle';const fs=11/s;
+    for(const t of d.tasks){c.fillStyle='#2f3a4c';c.fillRect(t.x-22,t.y-36,44,30);c.fillStyle='#57d0ff';c.fillRect(t.x-16,t.y-31,32,16);c.font=`bold ${fs}px sans-serif`;c.lineWidth=3/s;c.strokeStyle='rgba(0,0,0,.7)';const tl=(CUSTOM_TYPES.find(q=>q[0]===t.t)||[0,'?'])[1];c.strokeText(tl,t.x,t.y+4+fs*.6);c.fillStyle='#fff';c.fillText(tl,t.x,t.y+4+fs*.6);}
+    for(const v of d.vents){c.fillStyle='#2d3340';c.fillRect(v.x-24,v.y-15,48,30);c.strokeStyle='#000';c.lineWidth=3;c.strokeRect(v.x-24,v.y-15,48,30);c.fillStyle='#ffd23d';c.font=`bold ${Math.min(20,12/s)}px sans-serif`;c.fillText('ABC'[v.net|0],v.x,v.y);}
+    c.font=`${Math.min(34,18/s)}px system-ui`;if(d.lights)c.fillText('💡',d.lights.x,d.lights.y-16);if(d.reactor)c.fillText('☢',d.reactor.x,d.reactor.y-16);
     if(d.btn){c.fillStyle='#c51111';c.strokeStyle='#000';c.lineWidth=4;c.beginPath();c.arc(d.btn.x,d.btn.y,22,0,TAU);c.fill();c.stroke();}
     for(const l of d.ladders){c.save();if(l.g){c.strokeStyle='#d8b07a';c.lineWidth=8;c.setLineDash([18,10]);c.beginPath();c.moveTo(l.a.x,l.a.y);c.lineTo(l.b.x,l.b.y);c.stroke();}
       else{const dx=l.b.x-l.a.x,dy=l.b.y-l.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*16,ny=dx/L*16;c.strokeStyle='#c8a46a';c.lineWidth=6;c.beginPath();c.moveTo(l.a.x+nx,l.a.y+ny);c.lineTo(l.b.x+nx,l.b.y+ny);c.moveTo(l.a.x-nx,l.a.y-ny);c.lineTo(l.b.x-nx,l.b.y-ny);for(let k=0;k<=L;k+=24){const x=l.a.x+dx*k/L,y=l.a.y+dy*k/L;c.moveTo(x+nx,y+ny);c.lineTo(x-nx,y-ny);}c.stroke();}
@@ -4918,7 +4919,7 @@ $('btnPause').onclick=togglePause;
     if(ED.drag&&ED.drag.kind==='rect'){const g=ED.drag,x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1);c.strokeStyle='#ffd23d';c.lineWidth=4/s;c.setLineDash([12,8]);c.strokeRect(x,y,Math.abs(g.x1-g.x0),Math.abs(g.y1-g.y0));}
     c.restore();
   }
-  function hit(p){const d=ED.data,R2=(30/ED.s)**2,near=(o)=>o&&(o.x-p.x)**2+(o.y-p.y)**2<Math.max(R2,1600);
+  function hit(p){const d=ED.data,R2=(44/ED.s)**2,near=(o)=>o&&(o.x-p.x)**2+(o.y-p.y)**2<Math.max(R2,1600);
     for(let i=d.tasks.length-1;i>=0;i--)if(near(d.tasks[i]))return{list:'tasks',i};
     for(let i=d.vents.length-1;i>=0;i--)if(near(d.vents[i]))return{list:'vents',i};
     for(const k of['btn','lights','reactor'])if(near(d[k]))return{key:k};
@@ -4926,21 +4927,33 @@ $('btnPause').onclick=togglePause;
     for(let i=d.rooms.length-1;i>=0;i--){const r=d.rooms[i];if(p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h)return{list:'rooms',i};}
     return null;}
   function objOf(h){const d=ED.data;return h.list?d[h.list][h.i]:h.key?d[h.key]:d.ladders[h.lad][h.end];}
-  cv.addEventListener('pointerdown',e=>{if(!ED.data)return;cv.setPointerCapture(e.pointerId);const p=W(e),sp={x:snap(p.x),y:snap(p.y)},d=ED.data,t=ED.tool,o=ED.opts;
+  // 画面を動かす: 2本指（ピンチで拡大・縮小）／右クリック・真ん中ボタン・スペースを押しながらドラッグ
+  const PT=new Map();let pinch=null,pinchUsed=false,spaceDown=false;addEventListener('keydown',e=>{if(e.code==='Space'&&!$('editor').hidden&&e.target.tagName!=='INPUT'){spaceDown=true;e.preventDefault();}});addEventListener('keyup',e=>{if(e.code==='Space')spaceDown=false;});
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  cv.addEventListener('pointerdown',e=>{PT.set(e.pointerId,{x:e.clientX,y:e.clientY});if(PT.size===1)pinchUsed=false;if(PT.size===2){pinchUsed=true;ED.tap=null;ED.drag=null;ED.pend=ED.pend;const[a,b]=[...PT.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,s:ED.s,ox:ED.ox,oy:ED.oy};draw();return;}if(PT.size>2)return;
+    if(e.button===1||e.button===2||spaceDown){try{cv.setPointerCapture(e.pointerId);}catch(err){}ED.drag={kind:'pan',sx:e.clientX,sy:e.clientY,ox:ED.ox,oy:ED.oy};return;}},true);
+  cv.addEventListener('pointermove',e=>{if(!PT.has(e.pointerId))return;PT.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&PT.size>=2){const[a,b]=[...PT.values()],r=cv.getBoundingClientRect(),d=Math.hypot(a.x-b.x,a.y-b.y)||1,mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    const wx=pinch.ox+(pinch.mx-r.left)/pinch.s,wy=pinch.oy+(pinch.my-r.top)/pinch.s;ED.s=clamp(pinch.s*d/pinch.d,.06,1.5);ED.ox=wx-(mx-r.left)/ED.s;ED.oy=wy-(my-r.top)/ED.s;draw();e.stopImmediatePropagation();}},true);
+  const ptEnd=e=>{PT.delete(e.pointerId);if(PT.size<2&&pinch){pinch=null;ED.drag=null;}};cv.addEventListener('pointerup',ptEnd,true);cv.addEventListener('pointercancel',ptEnd,true);
+  cv.addEventListener('pointerdown',e=>{if(!ED.data||PT.size>=2||(ED.drag&&ED.drag.kind==='pan'))return;try{cv.setPointerCapture(e.pointerId);}catch(err){}const p=W(e),sp={x:snap(p.x),y:snap(p.y)},d=ED.data,t=ED.tool,o=ED.opts;
     if(t==='room'||t==='hall'||t==='high'){ED.drag={kind:'rect',x0:sp.x,y0:sp.y,x1:sp.x,y1:sp.y};return;}
     if(t==='move'){const h=hit(p);if(h){const ob=objOf(h);ED.drag={kind:'obj',ob,dx:p.x-ob.x,dy:p.y-ob.y};}else ED.drag={kind:'pan',sx:e.clientX,sy:e.clientY,ox:ED.ox,oy:ED.oy};return;}
-    if(t==='erase'){const h=hit(p);if(!h)return;if(h.list)d[h.list].splice(h.i,1);else if(h.key)d[h.key]=null;else d.ladders.splice(h.lad,1);save();draw();return;}
+    ED.tap={p,sp,cx:e.clientX,cy:e.clientY,t};});   // 置く・消すは指を離したときに（2本指の操作とまちがえないように）
+  function doTap(p,sp,t){const d=ED.data,o=ED.opts;
+    if(t==='erase'){const h=hit(p);if(!h){msg('そこには何もないよ（消したい物の上を押してね）');return;}if(h.list)d[h.list].splice(h.i,1);else if(h.key)d[h.key]=null;else d.ladders.splice(h.lad,1);save();draw();msg('消しました');return;}
     if(t==='task')d.tasks.push({x:sp.x,y:sp.y,t:o.task});
     else if(t==='vent')d.vents.push({x:sp.x,y:sp.y,net:o.net});
     else if(t==='lights'||t==='reactor'||t==='btn')d[t]={x:sp.x,y:sp.y};
     else if(t==='ladder'||t==='rope'){if(!ED.pend){ED.pend=sp;msg(t==='ladder'?'次は上の点をクリック':'次は到着点をクリック');draw();return;}d.ladders.push({a:ED.pend,b:sp,g:t==='rope'});ED.pend=null;msg(HINT[t]);}
-    save();draw();});
+    save();draw();}
+
   cv.addEventListener('pointermove',e=>{const g=ED.drag;if(!g)return;const p=W(e);
     if(g.kind==='rect'){g.x1=snap(p.x);g.y1=snap(p.y);}
     else if(g.kind==='obj'){g.ob.x=snap(p.x-g.dx);g.ob.y=snap(p.y-g.dy);}
     else if(g.kind==='pan'){ED.ox=g.ox-(e.clientX-g.sx)/ED.s;ED.oy=g.oy-(e.clientY-g.sy)/ED.s;}
     draw();});
-  const up=()=>{const g=ED.drag;ED.drag=null;if(!g)return;
+  const up=e=>{const tp=ED.tap;ED.tap=null;if(tp&&!pinchUsed&&e&&Math.hypot(e.clientX-tp.cx,e.clientY-tp.cy)<14)doTap(tp.p,tp.sp,tp.t);
+    const g=ED.drag;ED.drag=null;if(!g)return;
     if(g.kind==='rect'){const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
       if(w>=60&&h>=60){const o=ED.opts;ED.data.rooms.push({x,y,w,h,n:ED.tool==='hall'?'':(o.n||'部屋'),f:o.f,wc:o.wc,pat:o.pat,hall:ED.tool==='hall'?1:0,high:ED.tool==='high'?1:0});save();}else msg('もう少し大きくドラッグしてね');}
     else if(g.kind==='obj')save();
@@ -4974,7 +4987,9 @@ $('btnPause').onclick=togglePause;
   $('edCodeOk').onclick=()=>{try{const d=dec($('edCode').value);if(!d||!Array.isArray(d.rooms))throw 0;d.tasks=d.tasks||[];d.vents=d.vents||[];d.ladders=d.ladders||[];ED.data=d;$('edName').value=d.name||'';save();$('edCodeBox').hidden=true;draw();msg('読み込みました');}catch(e){msg('コードが読めませんでした');}};
   $('edCodeCancel').onclick=()=>$('edCodeBox').hidden=true;
   $('edCode').addEventListener('focus',()=>{if($('edCode').readOnly)setTimeout(()=>{try{$('edCode').select();$('edCode').setSelectionRange(0,1e6);}catch(e){}},0);});
-  $('edReset').onclick=()=>{if(!confirm('最初の見本に戻しますか？（いまのステージは消えます）'))return;ED.data=defaultStage();$('edName').value=ED.data.name;save();draw();};
+  let resetAsk=-1e9;
+  $('edReset').onclick=()=>{const now=performance.now();if(now-resetAsk>3000){resetAsk=now;snd('click');msg('⚠ もう一度「全部消す」を押すと、作ったものが全部消えます');return;}resetAsk=-1e9;
+    ED.data={v:1,name:$('edName').value||'わたしのステージ',rooms:[],tasks:[],vents:[],ladders:[],btn:null,lights:null,reactor:null};save();draw();msg('全部消しました。「部屋」から作り直してね');};
   $('edClose').onclick=()=>{ED.data.name=$('edName').value||'わたしのステージ';save();$('editor').hidden=true;};
   $('edName').oninput=()=>{ED.data.name=$('edName').value;save();};
   // 管理者コード（コードそのものは書かず、SHA-256のハッシュだけで照合する）
