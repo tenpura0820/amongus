@@ -1356,7 +1356,7 @@ const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'
 NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと。命令中はだれも通報・緊急ボタン・キルができない）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
 NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできず、リアクターのサボタージュも使えない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 NROLES.scp173={n:'SCP-173',d:'SCP-173がいる試合は、ずっと緊張状態（最初の10秒はキルしない）（SCP-173以外だれも通報・緊急ボタン・キルができない）。だれかに見られている間は動けない（見ているかどうかは、その人が向いている方向で決まる。上下にいる時は最後に動いた方向で決まる）。全員がそっぽを向いている時は、近くに入った人のところに自動でワープしてキルする（キルの待ち時間0秒）。F: 停電（40秒ごと）／煙幕（25秒ごと・10秒間、自分のまわりを真っ暗にして、中も外も見えなくする）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
-NROLES.scp096={n:'SCP-096',d:'試合は最初から真っ暗（停電状態）。最初の15秒と、会議が終わってからの3秒間は、顔を見ても大丈夫。だれかが顔を見るまでは、ずっと全員の目が停電状態（真っ暗）。だれかがSCP-096の顔を見る（視界に入る・望遠鏡で見る）と緊急状態になり、少しだけ見えるようになる。緊急状態の間は、SCP-096以外だれも通報・キルができない。顔を見た人だけをキルできる（キルの待ち時間0秒・移動速度1.5倍・キルされない）。生き残りが最後の1人になったら、その人と一緒に勝利'};
+NROLES.scp096={n:'SCP-096',d:'試合は最初から本物の停電（直せない）。最初の15秒と、会議が終わってからの3秒間は、顔を見ても大丈夫。だれかが顔を見るまでは、ずっと全員の目が停電状態（真っ暗）。だれかがSCP-096の顔を見る（視界に入る・望遠鏡で見る）と緊急状態になり、少しだけ見えるようになる。緊急状態の間は、SCP-096以外だれも通報・キルができない。顔を見た人だけをキルできる（キルの待ち時間0秒・移動速度1.5倍・キルされない）。生き残りが最後の1人になったら、その人と一緒に勝利'};
 NROLES.happy={n:'ハッピーボーイ',d:'F: 今いる場所に風船を置く（最大3個・10秒ごと）。風船は置いてから30秒たつと、ハッピーボーイ以外には見えなくなる。だれかが風船に触れると割れて、ハッピーボーイの緊張状態になる（割った人が仲間になるか死ぬまで、ハッピーボーイ以外だれも通報・キルができない）。風船を割った人の名前が分かり、割った人だけをキルできる（キルの待ち時間0秒）。風船を割れるのは1人1個まで。キルされた人は死なずにハッピーボーイの仲間になる。ハッピーボーイ以外の生き残りが1人以下になったら、ハッピーボーイ全員で勝利'};
 const FOUR_ROLES=['verity','horse','bbg','scp173','scp096','happy'],BALLOON_MAX=3,BALLOON_HIDE=30,FOUR_PCT=10,BBG_WAIT=20,SMOKE_R=330;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
@@ -1984,7 +1984,7 @@ function placeAtTable(){
 
 // ================= visibility =================
 function visionR(e){if(!e.alive)return 99999;if(S&&S.smoke&&e.nrole!=='scp173'&&Math.hypot(e.x-S.smoke.x,e.y-S.smoke.y)<SMOKE_R)return 80;   // 煙幕の中は真っ暗
-  const dk=S&&S.s096&&e.nrole!=='scp096'?(S.s096.rage?.6:.38):1;   // 096の試合はずっと停電。緊急状態になると少し見える
+  const dk=S&&S.s096&&S.s096.rage&&e.nrole!=='scp096'?.6:1;   // 096の試合は本物の停電。緊急状態の間だけ停電が消えて、少しだけ見える
   return visionR0(e)*dk;}
 function visionR0(e){let r=(e.isImp?780:e.isNeu?680:620)*(e.comet?1.3:1)*(bbgGiant(e)?1.5:1);/* マップを1.3倍にしたので視界も広く */if(S.sab&&S.sab.type==='lights'&&!e.isImp&&e.role!=='noct'&&e.nrole!=='owl')r*=.38;return r;}
 // 梯子・ロープの上（または梯子の上り口・下り口のそば）からは、壁や崖ごしに周りが見渡せる
@@ -2435,13 +2435,15 @@ function scpUpdate(dt){
       if(e.alive&&!e.observed&&S.phase==='play'&&isKiller(e)){let t=null,bd=SCP173_R;for(const o of S.ents){if(o===e||!o.alive||noKill(o)||hid(o)||o.inVent!=null||o.climb||o.carriedBy!=null)continue;const d=dist(e,o);if(d<bd&&canSee(e,o.x,o.y)){bd=d;t=o;}}if(t){e.killCd=0;doKill(e,t);if(S.phase!=='play')return;}}}   // 見られていない時は、範囲内の人に自動でワープしてキル
   }
   const B=S.s096;if(!B)return;const g=S.ents[B.id];
+  if(!B.rage&&!(S.sab&&S.sab.type==='lights')){if(S.sab&&S.sab.type==='reactor'){}else{S.sab={type:'lights',t:0,prog:0,fixers:[],perm:true};}}   // 本物の停電（直せない）
+  if(B.rage&&S.sab&&S.sab.perm)S.sab=null;
   if(B.grace>0){B.grace-=dt;if(B.grace<=0&&!B.woke){B.woke=true;const msg='😶 SCP-096が目を覚ました… 顔を見ないように！';toast(msg);netBc({t:'tell',text:msg});}return;}   // 最初の15秒は、みんなが散らばる時間
   if(g.alive)for(const o of S.ents){if(o===g||!o.alive||noKill(o)||o.inVent!=null||B.marks.includes(o.id))continue;if(canSee(o,g.x,g.y))mark096(o);}
   if(S.scope&&P.alive&&!seen096(P)&&Math.hypot(g.x-S.scope.x,g.y-S.scope.y)<SCOPE_R*.9)mark096(P,true);   // 望遠鏡で見てもダメ
   if(B.rage&&!B.marks.some(i=>S.ents[i].alive)){B.rage=false;const msg='😮‍💨 SCP-096がおとなしくなった…（緊急状態が終わった）';toast(msg);netBc({t:'tell',text:msg});}
 }
 function mark096(o,scope){
-  const B=S.s096;if(!B||B.marks.includes(o.id))return;B.marks.push(o.id);const first=!B.rage;B.rage=true;
+  const B=S.s096;if(!B||B.marks.includes(o.id))return;B.marks.push(o.id);const first=!B.rage;B.rage=true;if(S.sab&&S.sab.perm)S.sab=null;
   const msg=`😱 ${o.name}がSCP-096の顔を${scope?'望遠鏡で':''}見てしまった！ 緊急状態`;toast(msg);netBc({t:'tell',text:msg});
   if(o===me()){snd('alarm');S.flash=.5;}tell(o.remote?o:null,'😱 SCP-096の顔を見てしまった！ 逃げろ！');if(first)S.ents[B.id].killCd=0;
 }
@@ -3031,7 +3033,7 @@ function startSab(type){if(S&&S.br)return;if(S&&S.bbg&&type==='reactor')return;/
   }
   snd('sab');
 }
-function fixSab(){if(NET.client){rpc('fixSab',[]);return;}if(!S.sab)return;S.sab=null;S.sabCd=30;snd('task');if(S.modal&&S.modal.sab)closeModal();}
+function fixSab(){if(NET.client){rpc('fixSab',[]);return;}if(!S.sab)return;if(S.sab.perm){if(S.modal&&S.modal.sab)closeModal();toast('🌑 SCP-096の停電は直せない…');return;}S.sab=null;S.sabCd=30;snd('task');if(S.modal&&S.modal.sab)closeModal();}
 function completeTask(e,t){if(t.done)return;
   if(NET.client){t.done=true;const st=STATIONS[t.s];S.fx.push({x:st.x,y:st.y-40,t:1.2});snd('task');rpc('completeTask',[e,{T:e.tasks.indexOf(t)}]);return;}
   t.done=true;
@@ -3452,7 +3454,7 @@ function useTarget(){
     let ci=-1,cd=70;S.tr.chairs.forEach((c,i)=>{const d=dist(P,c);if(d<cd&&!S.ents.some(o=>o.sitting&&o.sitting.i===i)){cd=d;ci=i;}});if(ci>=0)return{k:'chair',i:ci};}
   if(S.br&&S.br.lv===3){if(S.br.stage==='run'&&P.alive&&!P.spider&&S.br.steps.some(x=>dist(P,x)<90))return{k:'l3'};return null;}
   {const sc=scopeAt();if(sc&&P.alive&&dist(P,sc)<100)return{k:'scope'};}
-  if(S.sab&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85||(S.sab.type==='reactor'&&SABP.reactor2&&dist(P,SABP.reactor2)<85))return{k:'sab'};}
+  if(S.sab&&!S.sab.perm&&P.alive&&!(P.isImp)&&P.nrole!=='god'){const p=SABP[S.sab.type];if(dist(P,p)<85||(S.sab.type==='reactor'&&SABP.reactor2&&dist(P,SABP.reactor2)<85))return{k:'sab'};}
   if(S.sab&&P.alive&&P.isImp){const p=SABP[S.sab.type];if(dist(P,p)<85||(S.sab.type==='reactor'&&SABP.reactor2&&dist(P,SABP.reactor2)<85))return{k:'sab'};}
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks){if(!t.done&&dist(P,STATIONS[t.s])<75)return{k:'task',t};}
   if(P.alive){const l=nearLadder(P);if(l)return{k:'ladder',L:l.L,to:l.to};}
@@ -4247,7 +4249,7 @@ ctx.restore();}
   // arrows to objectives
   const targets=[];
   if(P.team==='crew'||((P.isImp||P.isNeu)&&P.alive))for(const t of P.tasks)if(!t.done)targets.push({...STATIONS[t.s],c:'#ffd53d'});
-  if(S.sab)targets.push({...SABP[S.sab.type],c:'#ff3b3b'});if(S.sab&&S.sab.type==='reactor'&&SABP.reactor2)targets.push({...SABP.reactor2,c:'#ff3b3b'});
+  if(S.sab&&!S.sab.perm)targets.push({...SABP[S.sab.type],c:'#ff3b3b'});if(S.sab&&S.sab.type==='reactor'&&SABP.reactor2)targets.push({...SABP.reactor2,c:'#ff3b3b'});
   if(S.noise)targets.push({x:S.noise.x,y:S.noise.y,c:'#ff7b2e',label:'📢'+S.noise.name});
   // ヴァルチャー: どこにある死体でも方向が分かる
   if(P.nrole==='vulture'&&P.alive)for(const b of S.bodies)targets.push({x:b.x,y:b.y,c:'#c8a060',label:'🦅'});
@@ -4696,7 +4698,7 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   else if(tense173())h+=`<li class="sab" style="color:#c9b48a">🗿 ${S.g173>0?`あと${Math.ceil(S.g173)}秒でSCP-173が動き出す。今のうちに離れよう`:'緊張状態… SCP-173から目をそらさないで'}（通報・キルはできない）</li>`;
   if(S.bbg){const B=S.bbg;h+=B.giant?`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?'キルして、生き残りを最後の1人にしよう':'ブラックバスゴジラが暴れている！ 最後の1人まで生き残れ'}（通報・緊急ボタンは使えない・タスクを終わらせても勝てない）</li>`:`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?`あと${Math.ceil(B.t)}秒で巨大化（それまで動けない）`:`あと${Math.ceil(B.t)}秒でブラックバスゴジラが巨大化！ 今のうちに逃げろ！`}</li>`;}
   if(S.horse){const H=S.horse,hh=S.ents[H.by],mv=(S.veg||[]).find(v=>v.by===P.id);h+=`<li class="sab" style="color:#f0b25a">🐴 ${VEGS[H.k][0]}${VEGS[H.k][1]}を${hh.name}に持ってこい！（${Math.max(0,Math.ceil(H.t))}秒・渡した人 ${H.done.length}・命令中は通報もキルもできない）${H.done&&H.done.includes(P.id)?' ✅ 渡した':''}${mv?` 持っている: ${VEGS[mv.k][0]}`:''}</li>`;}
-  if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
+  if(S.sab&&!S.sab.perm)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
   else if(P.isNeu){h+=`<li style="color:#c58bff">${NROLES[P.nrole].n}: ${NROLES[P.nrole].d}</li>${P.nrole==='god'?`<li style="color:#ffe08a">${godReady(P)?'✨ タスク完了！ 生きていれば横取りできる':`✨ 横取りまで タスク ${P.tasks.filter(t=>t.done).length}/${P.tasks.length}`}</li>`:''}${P.nrole==='papa'?`<li style="color:#ffd23d">${papaCam?'📷 構え中: マウスで四角を動かして F で撮影 ／ ':''}📸 未公開の写真 ${(P.photos||[]).length}枚 ／ 公開 ${P.shows||0}/${PAPA_SHOWS}回 ／ 写した人 ${(P.shot||[]).length}/${PAPA_NEED}人${P.papaPend?'（今回の写真は会議を生き残れば数に入る）':''}</li>`:''}${P.nrole==='verity'?`<li style="color:#e0c0ff">${P.vform>0?`🦵 変身中 あと${Math.ceil(P.vform)}秒`:P.vUsed?'変身は使用済み':verityReady(P)?'🦵 F で変身できる！':`変身まで あと会議${3-(P.verTurns||0)}回`}${P.vKilledImp?'（インポスターをキル済み）':''}</li>`:''}${P.nrole==='arson'?`<li style="color:#ff8a24">オイル: ${P.oil.size} / ${S.ents.filter(o=>o.alive&&o!==P).length}人</li>`:''}${P.nrole==='teru'?`<li style="color:#ffb3d9">タスク: ${P.tasks.filter(t=>t.done).length} / 3 ${teruReady(P)?'✓ あとは追放されるだけ！':''}</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''):''}${P.nrole==='tuna'&&P.alive?`<li style="color:#5aa0ff">止まっていい残り時間: ${Math.max(0,3-P.stillT).toFixed(1)}秒</li>`:''}${P.lover!=null?`<li style="color:#ff7ab8">${LOVERS_DESC}</li>`:''}`+P.labLog.map(l=>`<li style="color:#ffd53d">${l}</li>`).join('')+(P.nrole==='teru'?'':`<li style="opacity:.75">偽タスク（できるけどゲージは増えない）:</li>`+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join(''));}
@@ -4711,7 +4713,7 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   else if(me().crazed&&me().alive){al.hidden=false;al.textContent='😵 くねくねを見てしまった… 体が勝手に動く';}
   else if(!S.sab&&S.mushT>0){al.hidden=false;al.textContent=`🍄 キノコの混乱！ 誰が誰だかわからない（${Math.ceil(S.mushT)}秒）`;}
   else if(!S.sab&&S.crabT>0){al.hidden=false;al.textContent=`🦀 カニ発動中！ 横にしか歩けない（${Math.ceil(S.crabT)}秒）`;}
-  else if(S.sab){al.hidden=false;al.textContent=S.sab.type==='lights'?`⚠ 停電発生！ ${SABP.lights.n}で修理せよ`:`☢ リアクター崩壊まで ${Math.ceil(S.sab.t)} 秒`;}else al.hidden=true;
+  else if(S.sab){al.hidden=false;al.textContent=S.sab.perm?'🌑 停電中… SCP-096がどこかにいる':S.sab.type==='lights'?`⚠ 停電発生！ ${SABP.lights.n}で修理せよ`:`☢ リアクター崩壊まで ${Math.ceil(S.sab.t)} 秒`;}else al.hidden=true;
   $('roomName').textContent=P.inVent!=null?'ベントの中':roomOf(P.x,P.y);
   const play=S.phase==='play'&&!S.modal&&S.killedT<=0;
   $('btnUse').disabled=!(play&&useTarget());
@@ -4971,7 +4973,7 @@ function netTick(dt){
     ents:S.ents.map(e=>[Math.round(e.x),Math.round(e.y),e.face,e.moving?1:0,e.alive?1:0,e.inVent==null?-1:e.inVent,e.invisT>0?1:0,e.tpc||0,e.sheriff?1:0,e.lover==null?-1:e.lover,
       e.cannon?[+e.cannon.dx.toFixed(2),+e.cannon.dy.toFixed(2),+e.cannon.t.toFixed(2)]:0,e.doing>0?1:0]),
     bodies:S.bodies.map(b=>[b.id,Math.round(b.x),Math.round(b.y),b.color,b.room]),
-    sab:S.sab?{type:S.sab.type,t:S.sab.t,fixers:[]}:null,td:S.taskDone,tt:S.taskTotal,ik:S.impKnow,cu:S.cupid,
+    sab:S.sab?{type:S.sab.type,t:S.sab.t,fixers:[],perm:!!S.sab.perm}:null,td:S.taskDone,tt:S.taskTotal,ik:S.impKnow,cu:S.cupid,
     M:S.M?{stage:S.M.stage,t:S.M.t,vt:S.M.vt||0,votes:S.M.votes,flashId:S.M.flashId,flashUntil:S.M.flashUntil||0}:null,
     E:S.phase==='eject'&&S.E?{text:S.E.text,ej:S.E.ej?S.E.ej.id:-1}:null,
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
