@@ -104,7 +104,7 @@ input,select{font-family:var(--body)}
 @keyframes died{50%{background:#ff6b6b;box-shadow:0 0 0 4px #ff3b3b,0 0 20px #ff3b3b}}
 .pcard.speak{box-shadow:0 0 0 4px #7fd6ff,0 0 18px #7fd6ff}
 .pcard.talk{box-shadow:0 0 0 4px #ffd53d,0 0 18px #ffd53d}
-#plog{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 40px);width:min(340px,38vw);display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:800;pointer-events:none}
+#plog{max-height:34vh;overflow:hidden;justify-content:flex-end;position:absolute;left:max(12px,env(safe-area-inset-left));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 40px);width:min(340px,38vw);display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:800;pointer-events:none}
 #plog div{background:rgba(6,8,18,.82);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:3px 9px;text-shadow:1px 1px 0 #000;line-height:1.35}
 #plog div b{text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
 #plog div.ghost{color:#c9d6ff;font-style:italic}
@@ -188,7 +188,7 @@ button{touch-action:manipulation}
 .mhead{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#7d8aa1;border-bottom:4px solid #000;gap:10px}
 .mhead h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(17px,3vw,26px);color:#fff;text-shadow:2px 2px 0 #000}
 #mTimer{font-family:var(--display);font-size:16px;color:#111;background:#fff;border:3px solid #000;border-radius:10px;padding:4px 10px;white-space:nowrap}
-.mbody{display:grid;grid-template-columns:1fr 340px;min-height:0}
+.mbody{display:grid;grid-template-columns:1fr 340px;grid-template-rows:minmax(0,1fr);min-height:0}
 #mGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;padding:12px;overflow:auto;align-content:start}
 .pcard{display:grid;grid-template-columns:44px 1fr;align-items:center;gap:8px;background:#e6ecf5;border:3px solid #000;border-radius:12px;padding:5px 8px;text-align:left;color:#111;font-family:var(--body);font-weight:800;font-size:14px;min-height:64px;position:relative}
 .pcard canvas{width:44px;height:52px}
@@ -199,8 +199,8 @@ button{touch-action:manipulation}
 .pcard .voted{position:absolute;right:6px;top:4px;font-size:10px;background:var(--task);color:#06210b;border:2px solid #000;border-radius:6px;padding:0 5px;transform:rotate(8deg)}
 .chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
 .chip{width:14px;height:14px;border-radius:50%;border:2px solid #000}
-.chat{display:grid;grid-template-rows:1fr auto auto;border-left:4px solid #000;background:#e6ecf5;min-height:0;color:#111}
-#chatLog{overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px;font-size:15px;line-height:1.4}
+.chat{display:grid;grid-template-rows:minmax(0,1fr) auto auto;border-left:4px solid #000;background:#e6ecf5;min-height:0;color:#111}
+#chatLog{overflow:auto;min-height:0;padding:8px 10px;display:flex;flex-direction:column;gap:7px;font-size:15px;line-height:1.4}
 .msg{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:start}
 .msg .dot{width:20px;height:20px;border-radius:50%;border:2px solid #000;margin-top:1px}
 .msg b{font-size:12.5px;display:block;color:#2a3246}
@@ -1986,9 +1986,11 @@ const atGoal=e=>!e.path||!e.path.length;
 
 // ================= core actions =================
 function crewWitnesses(x,y,exclude){return S.ents.filter(o=>o.alive&&!o.isImp&&o.inVent==null&&!exclude.includes(o.id)&&canSee(o,x,y));}
+const NEAR_WIT=420;
 function noWitness(k,v){
   for(const o of S.ents){if(!o.alive||o===k||o===v||o.inVent!=null||(k.isImp&&o.isImp))continue;
-    if(canSee(o,v.x,v.y)||canSee(o,k.x,k.y))return false;}
+    if(canSee(o,v.x,v.y)||canSee(o,k.x,k.y))return false;
+    if(!(o.isImp&&k.isImp)&&(dist(o,v)<NEAR_WIT||dist(o,k)<NEAR_WIT))return false;}   // 見えていなくても、すぐ近くに人がいる所ではキルしない
   return true;
 }
 // 役職が見えるか（幽霊は見える。ただしナイス赤ずきんは死んでいても見えない）
