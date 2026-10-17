@@ -1342,7 +1342,7 @@ NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角�
 NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
 NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップに野菜（にんじん・玉ねぎ・キャベツ・なす・にんじん）が置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
-NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルされない）。この試合は通報も緊急ボタンも使えない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
+NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合は通報も緊急ボタンも使えない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 const FOUR_ROLES=['verity','horse','bbg'],FOUR_PCT=10,BBG_WAIT=20;
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg';   // キルされない役職
 const bbgOn=()=>!!(S&&S.bbg);
@@ -1368,7 +1368,7 @@ function afterKillHooks(k){
   if(k.irole==='double'&&!k.doubleUsed){k.doubleUsed=true;k.killCd=0;tell(k,'🔪 ダブルキル！ もう1回すぐキルできる');}
   if(k.berserk){k.bKills=(k.bKills||0)+1;if(k.bKills>=2&&!k.frenzy){k.frenzy=true;tell(k,'😡 理性を失った…もう仲間の区別がつかない！');}}
 }
-function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'?S.cfg.kcd*.5:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
+function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
 function isLoverPair(a,b){return a.lover!=null&&a.lover===b.id;}
 
 // 前の試合の残り（読み上げ・チャット・画面・遅れて届くAIの返事）を全部消す
@@ -2175,6 +2175,7 @@ function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
   snd('kill');endGame('arson',`アーソニストの${e.name}が全員を燃やした`,e.id);
 }
 // 戻り値: キルが成立したら true
+function landOff(e){const c=e.climb;if(!c)return;e.climb=null;if(c.from&&c.to){const a=dist(e,c.from)<=dist(e,c.to)?[c.from,c.to]:[c.to,c.from];const q=circleOK(a[0].x,a[0].y)?a[0]:a[1];e.x=q.x;e.y=q.y;}e.tpc=(e.tpc||0)+1;e.path=null;if(e.ai)e.ai.climbTo=null;}
 function doKill(k,v){if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
   if(k.ai)k.ai.lastVictim=v;
   if(k.irole==='rocket'&&k.isImp){rocketGrab(k,v);if(k.isBot)k.ai.launchAt=S.t+rand(2,4);return false;}
@@ -2210,9 +2211,10 @@ function doKill(k,v){if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);
     if(k===P){snd('vent');toast(`🦇 ${v.name}を噛んだ。5秒後に倒れる`);}
     return true;
   }
+  landOff(v);landOff(k);   // ハシゴ・ロープの途中なら、近い方の端に降ろす（壁の中で動けなくならないように）
   die(v,k);(k.ai.kills=k.ai.kills||[]).push(v.name);
   if(k.isImp&&k.isBot&&S.ents.some(o=>o.isImp&&o!==k&&o.alive))impSay(k,pick([`${v.name}をキルした。アリバイよろしく`,`${v.name}やった。${roleOf(v)}`]));
-  k.x=v.x;k.y=v.y;k.tpc=(k.tpc||0)+1;k.killCd=cooldownOf(k);afterKillHooks(k);if(k.isNeu)(k.ai.ignore=k.ai.ignore||new Set()).add(v.id);k.path=null;k.ai.goalKey=null;
+  if(circleOK(v.x,v.y)){k.x=v.x;k.y=v.y;}k.tpc=(k.tpc||0)+1;k.killCd=cooldownOf(k);afterKillHooks(k);if(k.isNeu)(k.ai.ignore=k.ai.ignore||new Set()).add(v.id);k.path=null;k.ai.goalKey=null;
   if(k.sheriff&&!k.isImp&&!k.isNeu){(k.ai.sheriffKills=k.ai.sheriffKills||[]).push(v.id);
     // シェリフはキルできる村陣営。撃って生きているなら、撃たれたのは人外 → 疑わない（むしろ信用する）
     for(const w of ws)if(w.isBot&&w!==v){w.susp[k.id]=Math.max(0,w.susp[k.id]-40);(w.ai.sawSheriff=w.ai.sawSheriff||[]).push({k:k.id,v:v.id});}
@@ -2383,9 +2385,9 @@ function bbgScale(e){if(!S||!S.bbg)return 1;return e.nrole==='bbg'&&S.bbg.giant&
 // AI: 巨大なゴジラが見えたら、遠くへ逃げる
 function bbgFlee(e){
   if(!S.bbg||!S.bbg.giant||e.nrole==='bbg'||!e.alive)return false;const g=S.ents[S.bbg.id];
-  if(!(dist(e,g)<650&&canSee(e,g.x,g.y))&&!(e.ai.bbgT>S.t))return false;
-  if(dist(e,g)<650)e.ai.bbgT=S.t+3;
-  if(!e.ai.goalKey||!e.ai.goalKey.startsWith('bbgFlee')||atGoal(e)){let best=null,bd=-1;for(let i=0;i<8;i++){const p=randomRoomPoint();const d=dist(p,g);if(d>bd){bd=d;best=p;}}setGoal(e,best.x,best.y,'bbgFlee'+Math.random());}
+  if(dist(e,g)>1100&&!(e.ai.bbgT>S.t))return false;   // ゴジラの場所はみんな分かる。近いうちは逃げ続ける
+  if(dist(e,g)<1100)e.ai.bbgT=S.t+2;
+  if(!e.ai.goalKey||!e.ai.goalKey.startsWith('bbgFlee')||atGoal(e)||Math.hypot(e.ai.gx-g.x,e.ai.gy-g.y)<550){let best=null,bd=-1;for(let i=0;i<8;i++){const p=randomRoomPoint();const d=dist(p,g);if(d>bd){bd=d;best=p;}}setGoal(e,best.x,best.y,'bbgFlee'+Math.random());}
   return true;
 }
 function bbgThink(e){
