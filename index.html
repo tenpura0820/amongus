@@ -1355,13 +1355,19 @@ NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
 NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと。命令中はだれも通報・緊急ボタン・キルができない）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
 NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできず、リアクターのサボタージュも使えない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
-NROLES.scp173={n:'SCP-173',d:'だれかに見られている間は動けない。見られていない時はものすごい速さで動いて、キルできる。F: 停電（40秒ごと）／煙幕（25秒ごと・10秒間、自分のまわりを真っ暗にして、中も外も見えなくする）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
+NROLES.scp173={n:'SCP-173',d:'SCP-173がいる試合は、ずっと緊張状態（最初の10秒はキルしない）（SCP-173以外だれも通報・緊急ボタン・キルができない）。だれかに見られている間は動けない（見ているかどうかは、その人が向いている方向で決まる。上下にいる時は最後に動いた方向で決まる）。全員がそっぽを向いている時は、近くに入った人のところに自動でワープしてキルする（キルの待ち時間0秒）。F: 停電（40秒ごと）／煙幕（25秒ごと・10秒間、自分のまわりを真っ暗にして、中も外も見えなくする）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.scp096={n:'SCP-096',d:'試合は最初から真っ暗（停電状態）。最初の15秒と、会議が終わってからの3秒間は、顔を見ても大丈夫。だれかが顔を見るまでは、ずっと全員の目が停電状態（真っ暗）。だれかがSCP-096の顔を見る（視界に入る・望遠鏡で見る）と緊急状態になり、少しだけ見えるようになる。緊急状態の間は、SCP-096以外だれも通報・キルができない。顔を見た人だけをキルできる（キルの待ち時間0秒・移動速度1.5倍・キルされない）。生き残りが最後の1人になったら、その人と一緒に勝利'};
-NROLES.happy={n:'ハッピーボーイ',d:'F: 今いる場所に風船を置く（最大3個・10秒ごと）。風船は置いてから30秒たつと、ハッピーボーイ以外には見えなくなる。だれかが風船に触れると割れる。風船を割った人だけをキルできて、キルされた人は死なずにハッピーボーイの仲間になる。生き残りが全員ハッピーボーイになったら勝利'};
+NROLES.happy={n:'ハッピーボーイ',d:'F: 今いる場所に風船を置く（最大3個・10秒ごと）。風船は置いてから30秒たつと、ハッピーボーイ以外には見えなくなる。だれかが風船に触れると割れて、ハッピーボーイの緊張状態になる（割った人が仲間になるか死ぬまで、ハッピーボーイ以外だれも通報・キルができない）。風船を割った人の名前が分かり、割った人だけをキルできる（キルの待ち時間0秒）。風船を割れるのは1人1個まで。キルされた人は死なずにハッピーボーイの仲間になる。ハッピーボーイ以外の生き残りが1人以下になったら、ハッピーボーイ全員で勝利'};
 const FOUR_ROLES=['verity','horse','bbg','scp173','scp096','happy'],BALLOON_MAX=3,BALLOON_HIDE=30,FOUR_PCT=10,BBG_WAIT=20,SMOKE_R=330;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg'||o.nrole==='scp096';
 const rage096=()=>!!(S&&S.s096&&S.s096.rage);
+const tense173=()=>!!(S&&S.ents&&S.ents.some(e=>e.nrole==='scp173'&&e.alive));   // 173がいると、ずっと緊張状態
+const tenseHappy=()=>!!(S&&S.ents&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='happy')&&S.ents.some(o=>o.alive&&o.nrole==='happy'));   // 風船が割れると、ハッピーボーイの緊張状態
+const tenseRole=()=>tense173()?'scp173':tenseHappy()?'happy':null;   // 緊張状態の時、キルできるのはこの役職だけ
+const meetLocked=()=>!!(S&&(S.br||S.tr||bbgOn()||S.horse||rage096()||tenseRole()));   // 通報・緊急ボタンが使えない時
+const TENSE_N={scp173:'🗿 SCP-173',happy:'🎈 ハッピーボーイ'};
+const SCP173_R=330;
 const seen096=o=>!!(S&&S.s096&&S.s096.marks.includes(o.id));   // キルされない役職
 const bbgOn=()=>!!(S&&S.bbg);
 const bbgGiant=e=>!!(S&&S.bbg&&S.bbg.giant&&e.nrole==='bbg');
@@ -1375,8 +1381,8 @@ function roleName(e){return (e.isImp?(e.irole?IROLES[e.irole].n:'インポスタ
 // 神・マグロ・キューピッド・アーソニスト・ラバーズは、AIが絶対に正体を明かさない
 const mustHide=e=>['god','tuna','cupid','arson'].includes(e.nrole)||e.lover!=null;
 function publicRole(e){return e.team==='crew'?ROLES[roleKey(e)].n+(e.sheriff&&e.role!=='sheriff'?'+シェリフ':''):'村人';}
-const isKiller=e=>!(S&&S.br)&&!(S&&S.bbg&&e.nrole!=='bbg')&&!(S&&S.horse)&&!(rage096()&&e.nrole!=='scp096')&&isKiller0(e);   // ゴジラの試合はゴジラ以外、クリスピーホースの命令中はだれもキルできない   // ゴジラの試合は、ゴジラ以外キルできない
-const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||(e.isNeu&&e.nrole==='owl'&&!!S&&!!S.sab&&S.sab.type==='lights')||e.sheriff||(e.nrole==='verity'&&e.vform>0)||bbgGiant(e)||(e.nrole==='happy'&&!!S&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='happy'))||(e.nrole==='scp173'&&!e.observed)||(e.nrole==='scp096'&&!!S&&!!S.s096&&S.s096.marks.some(i=>S.ents[i].alive));
+const isKiller=e=>!(S&&S.br)&&!(S&&S.bbg&&e.nrole!=='bbg')&&!(S&&S.horse)&&!(rage096()&&e.nrole!=='scp096')&&!(tenseRole()&&e.nrole!==tenseRole())&&isKiller0(e);   // ゴジラの試合はゴジラ以外、クリスピーホースの命令中はだれもキルできない   // ゴジラの試合は、ゴジラ以外キルできない
+const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||(e.isNeu&&e.nrole==='owl'&&!!S&&!!S.sab&&S.sab.type==='lights')||e.sheriff||(e.nrole==='verity'&&e.vform>0)||bbgGiant(e)||(e.nrole==='happy'&&!!S&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='happy'))||(e.nrole==='scp173'&&!e.observed&&!(S&&S.g173>0))||(e.nrole==='scp096'&&!!S&&!!S.s096&&S.s096.marks.some(i=>S.ents[i].alive));
 const hid=o=>o.inVent!=null||o.invisT>0;
 function afterKillHooks(k){
   if(k.role==='avenger'&&k.avAwake&&k.ai&&k.ai.lastVictim&&k.ai.lastVictim.id===k.avTarget){const t=k.ai.lastVictim;
@@ -1386,7 +1392,7 @@ function afterKillHooks(k){
   if(k.irole==='double'&&!k.doubleUsed){k.doubleUsed=true;k.killCd=0;tell(k,'🔪 ダブルキル！ もう1回すぐキルできる');}
   if(k.berserk){k.bKills=(k.bKills||0)+1;if(k.bKills>=2&&!k.frenzy){k.frenzy=true;tell(k,'😡 理性を失った…もう仲間の区別がつかない！');}}
 }
-function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'||k.nrole==='scp096'?0:k.nrole==='scp173'?S.cfg.kcd*.4:k.nrole==='happy'?S.cfg.kcd:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
+function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'||k.nrole==='scp096'?0:k.nrole==='scp173'?0:k.nrole==='happy'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
 function isLoverPair(a,b){return a.lover!=null&&a.lover===b.id;}
 
 // 前の試合の残り（読み上げ・チャット・画面・遅れて届くAIの返事）を全部消す
@@ -1959,7 +1965,7 @@ function startGame(cfg){
   placeAtTable();
   S.balloons=[];for(const e of ents)e.popped=false;
   S.smoke=null;S.s096=null;{const g=ents.find(e=>e.nrole==='scp096');if(g)S.s096={id:g.id,rage:false,marks:[],grace:15};}
-  for(const e of ents)if(e.nrole==='scp173'){e.observed=false;e.smokeCd=0;e.abCd=15;}
+  S.g173=10;for(const e of ents)if(e.nrole==='scp173'){e.observed=false;e.smokeCd=0;e.abCd=15;}   // 最初の10秒はキルしない
   S.bbg=null;{const g=ents.find(e=>e.nrole==='bbg');if(g){S.bbg={id:g.id,t:BBG_WAIT,giant:false};g.killCd=0;}}
   S.veg=[];S.horse=null;if(ents.some(e=>e.nrole==='horse')){const per=Math.max(1,ents.length-1);S.veg=[];for(let k=0;k<VEGS.length;k++)for(let j=0;j<per;j++){const p=randomRoomPoint();S.veg.push({x:p.x,y:p.y,k,by:-1});}}   // 全員が持ってこられるように、(人数-1)個ずつ置く
   if(MAPS[MAPI].train)setupTrain();
@@ -1988,7 +1994,7 @@ function canSee(e,x,y){if(!e.alive)return true;if(S&&S.smoke&&e.nrole!=='scp173'
 function visibleTo(viewer,o){if(o.inVent!=null)return false;if(!o.alive)return !viewer.alive;return canSee(viewer,o.x,o.y);}
 
 // ================= movement =================
-function spdMul(e){return e.nrole==='scp096'?1.5:e.nrole==='scp173'&&!e.observed?3.2:1;}   // 096は1.5倍、173は見られていない時ものすごく速い
+function spdMul(e){return e.nrole==='scp096'?1.5:1;}   // 096は1.5倍、173は見られていない時ものすごく速い
 function moveEnt(e,dx,dy){
   if(!e.alive){e.x=clamp(e.x+dx,20,MAPW-20);e.y=clamp(e.y+dy,60,MAPH-10);return;}
   if(e.spider){e.x=clamp(e.x+dx,30,MAPW-30);e.y=clamp(e.y+dy,70,MAPH-20);return;}   // 蜘蛛は壁を登れる
@@ -2017,7 +2023,7 @@ function followPath(e,dt){
   const p=e.path[0],dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy),step=e.speed*spdMul(e)*dt*(e.alive?1:1.15);
   if(d<=step){if(!e.alive||circleOK(p.x,p.y)){e.x=p.x;e.y=p.y;}else moveEnt(e,dx,dy);e.path.shift();}
   else moveEnt(e,dx/d*step,dy/d*step);
-  e.moving=true;if(Math.abs(dx)>2)e.face=dx>0?1:-1;
+  e.moving=true;if(Math.abs(dx)>2)e.face=dx>0?1:-1;if(d>1)e.aim={x:dx/d,y:dy/d};
   e.walk+=dt*11;
   // stuck detection
   e.ai.stuck+=dt;
@@ -2075,7 +2081,8 @@ function avAwake(a,k,why){
 function die(v,killer){
   if(S&&S.bbg&&killer&&killer.nrole!=='bbg')return;
   if(S&&S.horse&&killer&&killer.nrole!=='horse')return;
-  if(rage096()&&killer&&killer.nrole!=='scp096')return;   // 096の緊急状態中は、096以外のキルは効かない   // 命令中のキルは効かない（首が伸びるのは別）   // ゴジラの試合は、ゴジラ以外のキルは効かない
+  if(rage096()&&killer&&killer.nrole!=='scp096')return;
+  if(tenseRole()&&killer&&killer.nrole!==tenseRole())return;   // 緊張状態中は、その役職以外のキルは効かない   // 096の緊急状態中は、096以外のキルは効かない   // 命令中のキルは効かない（首が伸びるのは別）   // ゴジラの試合は、ゴジラ以外のキルは効かない
   if(noKill(v))return;   // クリスピーホース・ブラックバスゴジラは死なない
   if(S&&S.tr&&killer&&killer.isImp&&v.alive)S.tr.time+=30;   // 列車: 人を殺すと30秒回復
   if(killer&&v.vform>0)return;   // Verityの変身中は、どんな攻撃でも死なない
@@ -2198,14 +2205,14 @@ function douseTarget(e){let best=null,bd=KILLR;for(const o of S.ents){if(o===e||
 function douse(e,t){if(NET.client){rpc('douse',[e,t]);return;}if(!t||e.abCd>0)return;e.oil.add(t.id);e.abCd=15;if(e===me()){snd('click');toast(`🛢 ${t.name}にオイルをかけた（${e.oil.size}人）`);}}
 function allDoused(e){return S.ents.every(o=>o===e||!o.alive||noKill(o)||e.oil.has(o.id));}
 function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
-  if(e.nrole!=='arson'||!e.alive||!allDoused(e)||S.bbg||S.horse||rage096())return;
+  if(e.nrole!=='arson'||!e.alive||!allDoused(e)||S.bbg||S.horse||rage096()||tenseRole())return;
   const vs=S.ents.filter(o=>o!==e&&o.alive&&!noKill(o));   // クリスピーホース・ブラックバスゴジラは燃えない
   for(const o of vs){S.booms.push({x:o.x,y:o.y-20,t:.9,R:120});o.alive=false;o.inVent=null;S.bodies.push({id:o.id,x:o.x,y:o.y,color:o.color,room:roomOf(o.x,o.y),t:S.t});}
   snd('kill');endGame('arson',`アーソニストの${e.name}が全員を燃やした`,e.id);
 }
 // 戻り値: キルが成立したら true
 function landOff(e){const c=e.climb;if(!c)return;e.climb=null;if(c.from&&c.to){const a=dist(e,c.from)<=dist(e,c.to)?[c.from,c.to]:[c.to,c.from];const q=circleOK(a[0].x,a[0].y)?a[0]:a[1];e.x=q.x;e.y=q.y;}e.tpc=(e.tpc||0)+1;e.path=null;if(e.ai)e.ai.climbTo=null;}
-function doKill(k,v){if(rage096()&&k.nrole!=='scp096'){if(k===me())toast('😱 SCP-096の緊急状態中は、キルできない');return false;}if(k.nrole==='scp096'&&!seen096(v))return false;if(S&&S.horse){if(k===me())toast('🐴 クリスピーホースの命令中はキルできない');return false;}if(S&&S.bbg&&k.nrole!=='bbg'){if(k===me())toast('🦖 ブラックバスゴジラの試合では、ゴジラ以外はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
+function doKill(k,v){if(tenseRole()&&k.nrole!==tenseRole()){if(k===me())toast(`${TENSE_N[tenseRole()]}の緊張状態中は、キルできない`);return false;}if(rage096()&&k.nrole!=='scp096'){if(k===me())toast('😱 SCP-096の緊急状態中は、キルできない');return false;}if(k.nrole==='scp096'&&!seen096(v))return false;if(S&&S.horse){if(k===me())toast('🐴 クリスピーホースの命令中はキルできない');return false;}if(S&&S.bbg&&k.nrole!=='bbg'){if(k===me())toast('🦖 ブラックバスゴジラの試合では、ゴジラ以外はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
   if(k.nrole==='happy'){if(!v.popped||v.nrole==='happy'||!v.alive||!k.alive||S.phase!=='play')return false;happyConvert(v,k);k.killCd=cooldownOf(k);return true;}   // ハッピーボーイのキルは、仲間にする
   if(k.ai)k.ai.lastVictim=v;
   if(k.irole==='rocket'&&k.isImp){rocketGrab(k,v);if(k.isBot)k.ai.launchAt=S.t+rand(2,4);return false;}
@@ -2244,6 +2251,7 @@ function doKill(k,v){if(rage096()&&k.nrole!=='scp096'){if(k===me())toast('😱 S
   landOff(v);landOff(k);   // ハシゴ・ロープの途中なら、近い方の端に降ろす（壁の中で動けなくならないように）
   die(v,k);(k.ai.kills=k.ai.kills||[]).push(v.name);
   if(k.isImp&&k.isBot&&S.ents.some(o=>o.isImp&&o!==k&&o.alive))impSay(k,pick([`${v.name}をキルした。アリバイよろしく`,`${v.name}やった。${roleOf(v)}`]));
+  if(k.nrole==='scp173'){S.fx.push({x:k.x,y:k.y-40,t:.5});S.flash=Math.max(S.flash||0,.15);}   // ワープ
   if(circleOK(v.x,v.y)){k.x=v.x;k.y=v.y;}k.tpc=(k.tpc||0)+1;k.killCd=cooldownOf(k);afterKillHooks(k);if(k.isNeu)(k.ai.ignore=k.ai.ignore||new Set()).add(v.id);k.path=null;k.ai.goalKey=null;
   if(k.sheriff&&!k.isImp&&!k.isNeu){(k.ai.sheriffKills=k.ai.sheriffKills||[]).push(v.id);
     // シェリフはキルできる村陣営。撃って生きているなら、撃たれたのは人外 → 疑わない（むしろ信用する）
@@ -2410,13 +2418,21 @@ function qedBody(e){let best=null,bd=80;for(const b of S.bodies){const d=dist(e,
 // クリスピーホース: 野菜を拾う・渡す・時間切れで首が伸びる（ホストだけ）
 // ブラックバスゴジラ: 20秒たったら巨大化（ホストだけ）
 // SCP: 173は見られているか、096は顔を見られたか（ホストだけ）
+// その人が e の方を向いて見ているか（左右は向き、上下は最後に動いた方向で決まる）
+function looksAt(o,e){
+  if(!canSee(o,e.x,e.y))return false;const dx=e.x-o.x,dy=e.y-o.y;
+  if(Math.abs(dy)>Math.abs(dx)*1.2){const ay=o.aim?o.aim.y:0;return Math.abs(ay)>.3&&Math.sign(ay)===Math.sign(dy);}
+  return Math.sign(dx||1)===Math.sign(o.face||1);
+}
 function scpUpdate(dt){
   const P=me();
   if(S.smoke){S.smoke.t-=dt;if(S.smoke.t<=0)S.smoke=null;}
+  if(S.g173>0){S.g173-=dt;if(S.g173<=0&&S.ents.some(e=>e.nrole==='scp173')){const msg='🗿 SCP-173が動き出した… 目をそらさないで！';toast(msg);netBc({t:'tell',text:msg});}}
   for(const e of S.ents){
     if(e.nrole==='scp173'){if((e.smokeCd||0)>0)e.smokeCd-=dt;
-      const was=e.observed;e.observed=e.alive&&S.ents.some(o=>o!==e&&o.alive&&o.inVent==null&&canSee(o,e.x,e.y));
-      if(was&&!e.observed&&e===P)snd('click');}
+      const was=e.observed;e.observed=e.alive&&S.ents.some(o=>o!==e&&o.alive&&o.inVent==null&&looksAt(o,e));
+      if(was&&!e.observed&&e===P)snd('click');
+      if(e.alive&&!e.observed&&S.phase==='play'&&isKiller(e)){let t=null,bd=SCP173_R;for(const o of S.ents){if(o===e||!o.alive||noKill(o)||hid(o)||o.inVent!=null||o.climb||o.carriedBy!=null)continue;const d=dist(e,o);if(d<bd&&canSee(e,o.x,o.y)){bd=d;t=o;}}if(t){e.killCd=0;doKill(e,t);if(S.phase!=='play')return;}}}   // 見られていない時は、範囲内の人に自動でワープしてキル
   }
   const B=S.s096;if(!B)return;const g=S.ents[B.id];
   if(B.grace>0){B.grace-=dt;if(B.grace<=0&&!B.woke){B.woke=true;const msg='😶 SCP-096が目を覚ました… 顔を見ないように！';toast(msg);netBc({t:'tell',text:msg});}return;}   // 最初の15秒は、みんなが散らばる時間
@@ -2433,8 +2449,9 @@ function mark096(o,scope){
 function happyUpdate(dt){
   if(!S.balloons||!S.balloons.length)return;const P=me();
   for(const b of S.balloons)b.age+=dt;
-  for(const b of S.balloons.slice()){for(const o of S.ents){if(!o.alive||o.nrole==='happy'||o.inVent!=null||o.climb||Math.hypot(o.x-b.x,o.y-b.y)>36)continue;
-    S.balloons.splice(S.balloons.indexOf(b),1);o.popped=true;
+  for(const b of S.balloons.slice()){for(const o of S.ents){if(!o.alive||o.nrole==='happy'||o.inVent!=null||o.climb||o.popOnce||Math.hypot(o.x-b.x,o.y-b.y)>36)continue;   // 割れるのは1人1個まで
+
+    S.balloons.splice(S.balloons.indexOf(b),1);const was=tenseHappy();o.popped=true;o.popOnce=true;if(!was){const msg='🎈 パン！ 風船が割れた… ハッピーボーイの緊張状態';netBc({t:'tell',text:msg});if(o!==P&&P.nrole!=='happy')toast(msg);}
     tell(o,'🎈 パン！ 風船を割ってしまった… ハッピーボーイに狙われる！');if(o===P)snd('bad');
     for(const h of S.ents)if(h.nrole==='happy'&&h.alive&&h!==o){tell(h,`🎈 ${o.name}が風船を割った！ ${o.name}をキルできる`);}
     if(P!==o&&P.nrole!=='happy'&&canSee(P,b.x,b.y))toast('🎈 パン！ どこかで風船が割れた');break;}}
@@ -2475,7 +2492,7 @@ function happyThink(e){
 function scp173Think(e){
   if(e.observed){const near=S.ents.some(o=>o!==e&&o.alive&&dist(o,e)<450&&canSee(o,e.x,e.y));if(near&&(e.smokeCd||0)<=0)crewAbility(e,'smoke');else if(e.abCd<=0&&!S.sab&&Math.random()<.2)crewAbility(e,'dark');e.path=null;e.moving=false;return;}
   let t=null,bd=1e9;for(const o of S.ents){if(o===e||!o.alive||noKill(o)||hid(o)||o.inVent!=null||!canSee(e,o.x,o.y))continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
-  if(t){setGoal(e,t.x,t.y,'173hunt'+Math.floor(S.t*2));if(isKiller(e)&&e.killCd<=0&&dist(e,t)<KILLR)doKill(e,t);return;}
+  if(t){if(isKiller(e)&&e.killCd<=0&&dist(e,t)<SCP173_R){doKill(e,t);return;}setGoal(e,t.x,t.y,'173hunt'+Math.floor(S.t*2));return;}   // 範囲内ならワープしてキル
   wander(e);
 }
 function scp096Think(e){
@@ -2559,6 +2576,7 @@ function crewAbility(e,arg){
   if(NET.client){rpc('crewAbility',[e,arg,e.aim]);return;}
   if(!e||!e.alive||S.phase!=='play')return;
   if(e.role==='sage'&&e.team==='crew'){if(e.abCd>0)return;if(S.br){e.guardT=12;e.abCd=18;tell(e,'🛡 賢者ガード（12秒・化物を跳ね返せる）');return;}e.guardT=8;e.abCd=25;tell(e,'🛡 賢者ガード（8秒）');return;}
+  if(e.role==='comet'&&e.team==='crew'&&tenseRole()&&!e.comet){tell(e,'緊張状態中は、コメットになれない');return;}
   if(e.role==='comet'&&e.team==='crew'&&S.horse&&!e.comet){tell(e,'🐴 クリスピーホースの命令中は、コメットになれない');return;}
   if(e.role==='comet'&&e.team==='crew'&&S.bbg){tell(e,'🦖 ブラックバスゴジラの試合では、コメットは使えない');return;}
   if(e.role==='comet'&&e.team==='crew'){if(e.comet){if(e.cgUsed)return;e.cgUsed=true;e.comet.guard=15;tell(e,'🛡 コメットガード！ 15秒間は壁に当たっても死なない。ぶつかった相手だけが死ぬ');if(e===me())snd('task');return;}if(e.abUses<=0)return;const a=e.aim||{x:e.face||1,y:0},m=Math.hypot(a.x,a.y)||1;
@@ -2678,6 +2696,7 @@ function silentKill(k,v,o){
 function impAbility(e,arg){
   if(NET.client){rpc('impAbility',[e,arg!=null?arg:e.aim]);return;}
   if(!e||!e.alive||!e.isImp||S.phase!=='play')return;
+  if(tenseRole()&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast(`${TENSE_N[tenseRole()]}の緊張状態中は、キルする能力は使えない`);return;}
   if(rage096()&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast('😱 SCP-096の緊急状態中は、キルする能力は使えない');return;}
   if(S.horse&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast('🐴 クリスピーホースの命令中は、キルする能力は使えない');return;}
   if(S.bbg&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast('🦖 ブラックバスゴジラの試合では、キルする能力は使えない');return;}
@@ -3036,7 +3055,7 @@ function perceive(e){
       if(!last||S.t-last.t>=1){tr.push({x:o.x,y:o.y,t:S.t,room:roomOf(o.x,o.y)});if(tr.length>45)tr.shift();}
       e.seen[o.id]={t:S.t,room:roomOf(o.x,o.y)};const ob=(e.obs[o.id]=e.obs[o.id]||{seen:0,done:0});ob.seen+=.25;}
   }
-  if(!e.isImp&&!e.ai.body&&!bbgOn()&&!S.horse&&!rage096()){
+  if(!e.isImp&&!e.ai.body&&!bbgOn()&&!S.horse&&!rage096()&&!tenseRole()){
     if(e.nrole==='vulture'||e.nrole==='owl')return;
     for(const b of S.bodies)if(!bodyLocked(b)&&!(e.ai.ignore&&e.ai.ignore.has(b.id))&&canSee(e,b.x,b.y)){
       e.ai.body=b;e.ai.nearBody=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&dist(o,b)<220&&canSee(e,o.x,o.y)).map(o=>o.id);break;}
@@ -3064,7 +3083,7 @@ function crewThink(e){
   if(ai.investigate&&!ai.body){if(S.t>ai.investigate.until||dist(e,ai.investigate)<60)ai.investigate=null;else{setGoal(e,ai.investigate.x,ai.investigate.y,'noise');return;}}
   if(!S.tr&&ai.body&&S.bodies.includes(ai.body)){setGoal(e,ai.body.x,ai.body.y,'body');if(dist(e,ai.body)<130){callMeeting(e,ai.body);}return;}
   ai.body=null;
-  if(!S.tr&&ai.urgent&&e.buttonUses>0&&S.meetingCd<=0&&!(S.sab&&S.sab.type==='reactor')){setGoal(e,BTN.x,BTN.y+75,'btn');if(dist(e,BTN)<110)callMeeting(e,null);return;}
+  if(!S.tr&&ai.urgent&&e.buttonUses>0&&S.meetingCd<=0&&!(S.sab&&S.sab.type==='reactor')&&!meetLocked()){setGoal(e,BTN.x,BTN.y+75,'btn');if(dist(e,BTN)<110)callMeeting(e,null);return;}
   if(S.sab&&e.nrole!=='god'){let p=SABP[S.sab.type];if(S.sab.type==='reactor'&&SABP.reactor2){const P=me(),hp=P.alive&&!P.isImp&&dist(P,SABP.reactor)<90?0:P.alive&&!P.isImp&&dist(P,SABP.reactor2)<90?1:-1;e.ai.rpanel=hp>=0?1-hp:(e.id%2);p=e.ai.rpanel?SABP.reactor2:SABP.reactor;}
     if(S.sab.type==='reactor'||S.sab.fixers.includes(e.id)){setGoal(e,p.x,p.y+30,'fix'+(S.sab.type==='reactor'?e.ai.rpanel:''));return;}}
   if(roleThink(e)||orderThink(e)||followThink(e))return;
@@ -3334,6 +3353,7 @@ function afterKill(e){
   ai.flee=rand(3,6);const p=randomRoomPoint();setGoal(e,p.x,p.y,'flee'+Math.random());
 }
 function botUpdate(e,dt){
+  if(!e.moving&&e.alive&&e.nrole!=='scp173'){const g=S.ents.find(o=>o.nrole==='scp173'&&o.alive);if(g&&dist(e,g)<600&&canSee(e,g.x,g.y)){e.face=g.x>e.x?1:-1;const d=dist(e,g)||1;e.aim={x:(g.x-e.x)/d,y:(g.y-e.y)/d};}}   // 止まっている時は173を見張る
   if(e.nrole==='scp173'&&e.alive&&e.observed){e.moving=false;return;}   // 見られている間は動けない
   if(S.horse&&S.horse.by===e.id){e.path=null;e.moving=false;return;}
   if(e.comet&&e.alive){cometStep(e,dt);return;}
@@ -3439,8 +3459,8 @@ function useTarget(){
   if(P.alive&&!S.tr&&dist(P,BTN)<115)return{k:'btn'};
   return null;
 }
-function reportTarget(){const P=me();if(S.br||S.tr||bbgOn()||S.horse||rage096())return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(bodyLocked(b))continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
-function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;if(bbgGiant(P0))ex+=KILLR*.9;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||noKill(o)||(P0.nrole==='scp096'&&!seen096(o))||(P0.nrole==='happy'&&(!o.popped||o.nrole==='happy'))||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
+function reportTarget(){const P=me();if(S.br||S.tr||bbgOn()||S.horse||rage096()||tenseRole())return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(bodyLocked(b))continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
+function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;if(P0.nrole==='scp173')ex+=SCP173_R-KILLR;/* 173は範囲内ならワープしてキル */if(bbgGiant(P0))ex+=KILLR*.9;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||noKill(o)||(P0.nrole==='scp096'&&!seen096(o))||(P0.nrole==='happy'&&(!o.popped||o.nrole==='happy'))||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
 function doUse(){
@@ -3467,7 +3487,7 @@ const P=me();if(P.killCd>0&&P.irole!=='rocket')return;if(P.irole==='rocket'&&P.k
 function doVent(){if(!canAct())return;const P=me();
   if(P.ctrl){const pup=S.ents[P.ctrl.id];if(pup.inVent!=null)exitVent(pup);else{let bi=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(pup,v);if(d<bd){bd=d;bi=i;}});if(bi!=null)enterVent(pup,bi);}return;}const v=ventTarget();if(v==null)return;if(P.inVent!=null){exitVent(P);}else enterVent(P,v);refreshVentNav();}
 function canAct(){return S&&S.phase==='play'&&!S.modal&&S.killedT<=0;}
-function abilityReady(){const P=me();if(!P.alive)return false;if(rage096()&&P.isImp&&BBG_NOKILL_AB.includes(P.irole))return false;if(P.nrole==='scp173')return P.abCd<=0||(P.smokeCd||0)<=0;if(S.horse&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew'&&!P.comet)))return false;if(S.bbg&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew')))return false;
+function abilityReady(){const P=me();if(!P.alive)return false;if((rage096()||tenseRole())&&P.isImp&&BBG_NOKILL_AB.includes(P.irole))return false;if(tenseRole()&&P.role==='comet'&&P.team==='crew'&&!P.comet)return false;if(P.nrole==='scp173')return P.abCd<=0||(P.smokeCd||0)<=0;if(S.horse&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew'&&!P.comet)))return false;if(S.bbg&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew')))return false;
   if(S.br&&S.br.lv===3){if(S.br.stage!=='run'||P.bitten3>0)return false;if(P.spider)return !P.grab&&(P.spCd||0)<=0&&!(P.stunS>0)&&l3Survivors().some(o=>o.bitten3<=0&&dist(o,P)<200);if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&P.irole==='bubble')return P.abCd<=0;return false;}
   if(S.br){if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&BR_IMP_AB.includes(P.irole))return P.abCd<=0&&!P.cannon&&!P.drill;
     if(P.nrole==='verity')return verityReady(P)||(P.vform>0&&!P.vMonKill&&!!S.mon&&!S.mon.dead&&dist(P,S.mon)<KILLR+60);return false;}
@@ -3547,7 +3567,7 @@ function doAbility(){
 }
 
 // ================= meetings =================
-function callMeeting(caller,body){if(S&&(S.br||S.tr))return;if(bbgOn()){if(caller===me())toast('🦖 ブラックバスゴジラがいる試合は、通報も緊急ボタンも使えない');return;}if(rage096()){if(caller===me())toast('😱 SCP-096の緊急状態中は、通報も緊急ボタンも使えない');if(caller.isBot&&caller.ai)caller.ai.body=null;return;}if(S&&S.horse){if(caller===me())toast('🐴 クリスピーホースの命令中は、通報も緊急ボタンも使えない');if(caller.isBot&&caller.ai)caller.ai.body=null;return;}   // バックルームと列車では会議なし
+function callMeeting(caller,body){if(S&&(S.br||S.tr))return;if(bbgOn()){if(caller===me())toast('🦖 ブラックバスゴジラがいる試合は、通報も緊急ボタンも使えない');return;}if(tenseRole()){if(caller===me())toast(`${TENSE_N[tenseRole()]}の緊張状態中は、通報も緊急ボタンも使えない`);if(caller.isBot&&caller.ai)caller.ai.body=null;return;}if(rage096()){if(caller===me())toast('😱 SCP-096の緊急状態中は、通報も緊急ボタンも使えない');if(caller.isBot&&caller.ai)caller.ai.body=null;return;}if(S&&S.horse){if(caller===me())toast('🐴 クリスピーホースの命令中は、通報も緊急ボタンも使えない');if(caller.isBot&&caller.ai)caller.ai.body=null;return;}   // バックルームと列車では会議なし
 if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
   if(NET.client){rpc('callMeeting',[caller,body?{B:body.id}:null]);return;}
   if(S.phase!=='play')return;
@@ -3910,7 +3930,7 @@ function checkWin(){
   if(S.br){if(!S.ents.some(e=>e.alive)){endGame('draw','全員が黒い針金の化物にやられてしまった…');return true;}return false;}
   // 列車: 会議がないので、インポスターはクルーを全員倒すまで勝てない。インポスターが全員いなくなればクルーの勝ち
   if(S.tr){const al=S.ents.filter(e=>e.alive);if(!al.some(e=>e.isImp)){endGame('crew','インポスターを全員倒した');return true;}if(!al.some(e=>!e.isImp)){endGame('imp','クルーが全員いなくなった');return true;}return false;}
-  {const hb=S.ents.filter(e=>e.alive&&e.nrole==='happy');if(hb.length&&S.ents.every(e=>!e.alive||e.nrole==='happy'||noKill(e))){endGame('happy',`生き残りが全員ハッピーボーイになった（${hb.map(e=>e.name).join('・')}）`,hb[0].id);return true;}}
+  {const hb=S.ents.filter(e=>e.alive&&e.nrole==='happy'),rest=S.ents.filter(e=>e.alive&&e.nrole!=='happy'&&!noKill(e));if(hb.length&&rest.length<=1){endGame('happy',`ハッピーボーイ以外の生き残りが${rest.length?'1人':'いなく'}なった（${hb.map(e=>e.name).join('・')}）`,hb[0].id);return true;}}
   if(S.s096){const al=S.ents.filter(e=>e.alive&&!noKill(e));if(al.length<=1){const g=S.ents[S.s096.id];endGame('scp096',al.length?`最後の1人${al[0].name}がSCP-096の${g.name}と生き残った`:`SCP-096の${g.name}だけが残った`,g.id);return true;}}
   if(S.bbg){const al=S.ents.filter(e=>e.alive&&!noKill(e));if(al.length<=1){const g=S.ents[S.bbg.id];endGame('bbg',al.length?`最後の1人${al[0].name}がブラックバスゴジラの${g.name}と生き残った`:`ブラックバスゴジラの${g.name}だけが残った`,g.id);return true;}return false;}   // ゴジラの試合は最後の1人まで続く
   const alive=S.ents.filter(e=>e.alive&&!noKill(e)),imps=alive.filter(e=>e.isImp).length,neu=alive.filter(e=>e.isNeu&&(e.nrole==='killer'||e.nrole==='scp173'||e.nrole==='happy')).length;   // クリスピーホースは死なないので人数に数えない
@@ -4671,7 +4691,9 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   if(S.s096){const B=S.s096;h+=B.rage?`<li class="sab" style="color:#e8e8f0">😱 緊急状態！ ${P.nrole==='scp096'?'顔を見た人をキルしよう':seen096(P)?'あなたは顔を見てしまった。逃げろ！':'SCP-096の顔を見ないで！'}（通報・キルはできない）</li>`:`<li style="color:#e8e8f0">🌑 ${B.grace>0?`あと${Math.ceil(B.grace)}秒は顔を見ても大丈夫。今のうちに離れよう`:P.nrole==='scp096'?'だれかに顔を見られるのを待とう':'真っ暗… SCP-096の顔を見ないように'}</li>`;}
   if(P.nrole==='happy'){const n=(S.balloons||[]).filter(b=>b.by===P.id).length,tg=S.ents.filter(o=>o.alive&&o.popped&&o.nrole!=='happy');h+=`<li style="color:#ff8fd0">🎈 風船 ${n}/${BALLOON_MAX}${tg.length?`　割った人: ${tg.map(o=>o.name).join('・')}（キルすると仲間になる）`:''}</li>`;}
   else if(P.popped&&P.alive)h+=`<li class="sab" style="color:#ff8fd0">🎈 風船を割ってしまった！ ハッピーボーイに狙われている</li>`;
-  if(P.nrole==='scp173')h+=`<li style="color:#c9b48a">🗿 ${P.observed?'見られている…動けない':'だれも見ていない！ 今のうちに動ける'}</li>`;
+  if(tenseHappy()&&P.nrole!=='happy'&&!tense173())h+=`<li class="sab" style="color:#ff8fd0">🎈 ハッピーボーイの緊張状態（通報・キルはできない）</li>`;
+  if(P.nrole==='scp173')h+=`<li style="color:#c9b48a">🗿 ${P.observed?'見られている…動けない':'だれも見ていない！ 近くに入った人に自動でワープしてキルする'}</li>`;
+  else if(tense173())h+=`<li class="sab" style="color:#c9b48a">🗿 ${S.g173>0?`あと${Math.ceil(S.g173)}秒でSCP-173が動き出す。今のうちに離れよう`:'緊張状態… SCP-173から目をそらさないで'}（通報・キルはできない）</li>`;
   if(S.bbg){const B=S.bbg;h+=B.giant?`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?'キルして、生き残りを最後の1人にしよう':'ブラックバスゴジラが暴れている！ 最後の1人まで生き残れ'}（通報・緊急ボタンは使えない・タスクを終わらせても勝てない）</li>`:`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?`あと${Math.ceil(B.t)}秒で巨大化（それまで動けない）`:`あと${Math.ceil(B.t)}秒でブラックバスゴジラが巨大化！ 今のうちに逃げろ！`}</li>`;}
   if(S.horse){const H=S.horse,hh=S.ents[H.by],mv=(S.veg||[]).find(v=>v.by===P.id);h+=`<li class="sab" style="color:#f0b25a">🐴 ${VEGS[H.k][0]}${VEGS[H.k][1]}を${hh.name}に持ってこい！（${Math.max(0,Math.ceil(H.t))}秒・渡した人 ${H.done.length}・命令中は通報もキルもできない）${H.done&&H.done.includes(P.id)?' ✅ 渡した':''}${mv?` 持っている: ${VEGS[mv.k][0]}`:''}</li>`;}
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
@@ -4869,7 +4891,7 @@ const RPC={
   verityMon:(e)=>{if(S.br&&e.vform>0&&S.mon&&dist(e,S.mon)<KILLR+80)verityKillMon(e);},
   papaShoot:(e,a)=>papaShoot(e,Array.isArray(a[1])?a[1].filter(n=>Number.isInteger(n)):null,a[2]&&typeof a[2]==='object'?{x:+a[2].x||0,y:+a[2].y||0,w:+a[2].w||560,h:+a[2].h||250}:null),
   papaShow:(e)=>papaShow(e),
-  doKill:(e,a)=>{const v=a[1];if(!v||!e.alive||!isKiller(e)||(e.role==='avenger'&&e.avAwake&&!e.sheriff&&v.id!==e.avTarget)||e.killCd>0||dist(e,v)>KILLR*(bbgGiant(e)?1.9:1)+40)return;doKill(e,v);},
+  doKill:(e,a)=>{const v=a[1];if(!v||!e.alive||!isKiller(e)||(e.role==='avenger'&&e.avAwake&&!e.sheriff&&v.id!==e.avTarget)||e.killCd>0||dist(e,v)>(e.nrole==='scp173'?SCP173_R:KILLR*(bbgGiant(e)?1.9:1))+40)return;doKill(e,v);},
   enterVent:(e,a)=>{if(e.isImp&&e.alive&&e.inVent==null)enterVent(e,a[1]);},
   exitVent:e=>{if(e.inVent!=null)exitVent(e);},
   ventTo:(e,a)=>ventTo(e,a[1]),
@@ -4953,7 +4975,7 @@ function netTick(dt){
     M:S.M?{stage:S.M.stage,t:S.M.t,vt:S.M.vt||0,votes:S.M.votes,flashId:S.M.flashId,flashUntil:S.M.flashUntil||0}:null,
     E:S.phase==='eject'&&S.E?{text:S.E.text,ej:S.E.ej?S.E.ej.id:-1}:null,
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
-    x2:{hb:(S.balloons||[]).map(b=>[Math.round(b.x),Math.round(b.y),Math.round(b.age),b.by,b.c]),pp:S.ents.map(e=>(e.popped?1:0)|(e.nrole==='happy'?2:0)),sm:S.smoke?[Math.round(S.smoke.x),Math.round(S.smoke.y),+S.smoke.t.toFixed(1)]:null,s9:S.s096?[S.s096.id,S.s096.rage?1:0,S.s096.marks,+(S.s096.grace||0).toFixed(1)]:null,ob:S.ents.map(e=>e.observed?1:0),nk:(S.necks||[]).map(n=>[n.h,Math.round(n.x),Math.round(n.y),+n.t.toFixed(2)]),bg:S.bbg?[S.bbg.id,+S.bbg.t.toFixed(1),S.bbg.giant?1:0]:null,hv:(S.veg||[]).map(v=>[Math.round(v.x),Math.round(v.y),v.k,v.by]),ho:S.horse?[S.horse.by,S.horse.k,+S.horse.t.toFixed(1),S.horse.done]:null,dlv:S.ents.map(e=>e.deliv||0),dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
+    x2:{hb:(S.balloons||[]).map(b=>[Math.round(b.x),Math.round(b.y),Math.round(b.age),b.by,b.c]),pp:S.ents.map(e=>(e.popped?1:0)|(e.nrole==='happy'?2:0)),sm:S.smoke?[Math.round(S.smoke.x),Math.round(S.smoke.y),+S.smoke.t.toFixed(1)]:null,s9:S.s096?[S.s096.id,S.s096.rage?1:0,S.s096.marks,+(S.s096.grace||0).toFixed(1)]:null,ob:S.ents.map(e=>e.observed?1:0),g7:+(S.g173||0).toFixed(1),nk:(S.necks||[]).map(n=>[n.h,Math.round(n.x),Math.round(n.y),+n.t.toFixed(2)]),bg:S.bbg?[S.bbg.id,+S.bbg.t.toFixed(1),S.bbg.giant?1:0]:null,hv:(S.veg||[]).map(v=>[Math.round(v.x),Math.round(v.y),v.k,v.by]),ho:S.horse?[S.horse.by,S.horse.k,+S.horse.t.toFixed(1),S.horse.done]:null,dlv:S.ents.map(e=>e.deliv||0),dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:bodyLocked(b)?2:0]),vents:VENTS.map(v=>[v.x,v.y]),
       bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,trn:S.tr?{tm:Math.round(S.tr.time),f:S.tr.food.map(f=>(f.eaten?1:0)|(f.flash>0?2:0)),kn:S.tr.knife,sit:S.ents.map(e=>e.sitting?e.sitting.i:-1)}:null,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,esc:S.ents.map(e=>e.escaped?1:0),boat:!!S.br.boat,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
@@ -5071,7 +5093,7 @@ function applySnap(d){
   else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(b.esc)S.ents.forEach((e,i)=>e.escaped=!!b.esc[i]);if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
-  if(d.x2){const x=d.x2;S.balloons=(x.hb||[]).map(([bx,by,age,o,c])=>({x:bx,y:by,age,by:o,c}));if(x.pp)S.ents.forEach((e,i)=>{e.popped=!!(x.pp[i]&1);if((x.pp[i]&2)&&e.nrole!=='happy'){e.nrole='happy';e.isNeu=true;e.four=true;e.team='four';e.isImp=false;e.role='villager';if(e===me())setupHud();}});S.smoke=x.sm?{x:x.sm[0],y:x.sm[1],t:x.sm[2]}:null;S.s096=x.s9?{id:x.s9[0],rage:!!x.s9[1],marks:x.s9[2]||[],grace:x.s9[3]||0}:null;if(x.ob)S.ents.forEach((e,i)=>e.observed=!!x.ob[i]);S.necks=(x.nk||[]).map(([h,nx,ny,t])=>({h,x:nx,y:ny,t}));S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;if(S.bbg&&S.bbg.giant&&S.ents[S.bbg.id])S.ents[S.bbg.id].speed=210*1.1*1.1;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
+  if(d.x2){const x=d.x2;S.balloons=(x.hb||[]).map(([bx,by,age,o,c])=>({x:bx,y:by,age,by:o,c}));if(x.pp)S.ents.forEach((e,i)=>{e.popped=!!(x.pp[i]&1);if((x.pp[i]&2)&&e.nrole!=='happy'){e.nrole='happy';e.isNeu=true;e.four=true;e.team='four';e.isImp=false;e.role='villager';if(e===me())setupHud();}});S.smoke=x.sm?{x:x.sm[0],y:x.sm[1],t:x.sm[2]}:null;S.s096=x.s9?{id:x.s9[0],rage:!!x.s9[1],marks:x.s9[2]||[],grace:x.s9[3]||0}:null;if(x.ob)S.ents.forEach((e,i)=>e.observed=!!x.ob[i]);S.g173=x.g7||0;S.necks=(x.nk||[]).map(([h,nx,ny,t])=>({h,x:nx,y:ny,t}));S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;if(S.bbg&&S.bbg.giant&&S.ents[S.bbg.id])S.ents[S.bbg.id].speed=210*1.1*1.1;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
     S.mines=x.mines.map(([mx,my])=>({x:mx,y:my}));S.bubbles=x.bub.map(([bx,by])=>({x:bx,y:by}));S.traces=x.tr.map(([tx,ty,tt])=>({x:tx,y:ty,t:tt}));S.snakeFx=x.sf.map(([fx,fy,ft,fc])=>({x:fx,y:fy,t:ft,color:fc}));
     x.rot.forEach(([r,nr],i)=>{if(S.bodies[i]){S.bodies[i].rot=r<0?null:r;S.bodies[i].noReport=nr===1;S.bodies[i].cometLock=nr===2;}});
