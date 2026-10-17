@@ -1353,7 +1353,7 @@ NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。
 NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。自分も四角の中に写っていないと撮れない。写真に何度も写っている人は怪しまれる（自分は毎回写るので、出しすぎると疑われる）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
 NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
-NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと。命令中はだれも通報・緊急ボタン・キルができない）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人には、首がどんどん伸びて（どんどん速くなりながら）追いかけてきて、追いつかれるとキルされる（ベントに逃げこめば助かる）。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
+NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと。命令中はだれも通報・緊急ボタン・キルができない）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人には、1本の首がどんどん伸びて（どんどん速くなりながら）近い人から順番に追いかけてきて、追いつかれるとキルされる（ベントに逃げこめば助かる）。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
 NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできず、リアクターのサボタージュも使えない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 NROLES.scp173={n:'SCP-173',d:'SCP-173がいる試合は、ずっと緊張状態（最初の10秒はキルしない）（SCP-173以外だれも通報・緊急ボタン・キルができない）。だれかに見られている間は動けない（見ているかどうかは、その人が向いている方向で決まる。上下にいる時は最後に動いた方向で決まる）。全員がそっぽを向いている時は、近くに入った人のところに自動でワープしてキルする（キルの待ち時間0秒）。F: 停電（40秒ごと）／煙幕（25秒ごと・10秒間、自分のまわりを真っ暗にして、中も外も見えなくする）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.scp096={n:'SCP-096',d:'試合は最初から本物の停電（直せない）。最初の15秒と、会議が終わってからの3秒間は、顔を見ても大丈夫。だれかが顔を見るまでは、ずっと全員の目が停電状態（真っ暗）。だれかがSCP-096の顔を見る（視界に入る・望遠鏡で見る）と緊急状態になり、少しだけ見えるようになる。緊急状態の間は、SCP-096以外だれも通報・キルができない。顔を見た人だけをキルできる（キルの待ち時間0秒・移動速度1.5倍・キルされない）。生き残りが最後の1人になったら、その人と一緒に勝利'};
@@ -2624,23 +2624,26 @@ function horseUpdate(dt){
   H.t-=dt;if(H.t>0)return;
   S.horse=null;h.abCd=45;
   const P=me();
-  for(const t of need){if(t.vform>0)continue;(S.necks=S.necks||[]).push({h:h.id,tgt:t.id,x:h.x,y:h.y-56,trail:[[h.x,h.y-56]],st:'go',t:0,veg:H.k});
+  {const ids=need.filter(t=>!(t.vform>0)).map(t=>t.id);if(ids.length){const first=ids.slice().sort((a,b)=>dist(S.ents[a],h)-dist(S.ents[b],h))[0];(S.necks=S.necks||[]).push({h:h.id,tgt:first,list:ids.filter(i=>i!==first),x:h.x,y:h.y-56,trail:[[h.x,h.y-56]],st:'go',t:0,veg:H.k});}}   // 首は1本だけ。1人ずつ順番に追いかける
+  for(const t of need){if(t.vform>0)continue;
     if(t===P){snd('alarm');toast(`🐴 ${VEGS[H.k][1]}を持ってこなかった！ クリスピーホースの首が伸びてくる！ 逃げろ！`);}
     tell(t.remote?t:null,`🐴 ${VEGS[H.k][1]}を持ってこなかった！ クリスピーホースの首が伸びてくる！`);}
   const msg=`🐴 時間切れ！ クリスピーホースの首が${need.map(o=>o.name).join('・')}に向かって伸びていく…`;toast(msg);netBc({t:'tell',text:msg});snd('sab');
 }
 // クリスピーホースの首: どんどん伸びて追いかけ、追いついたらキル。終わったら縮んで戻る（ホストだけ）
+function neckNext(n,h){const L=(n.list||[]).filter(i=>{const o=S.ents[i];return o&&o.alive&&o.inVent==null;});if(!L.length)return false;L.sort((a,b)=>Math.hypot(S.ents[a].x-n.x,S.ents[a].y-n.y)-Math.hypot(S.ents[b].x-n.x,S.ents[b].y-n.y));n.tgt=L[0];n.list=L.slice(1);return true;}   // 次の人へ
 const NECK_V0=150,NECK_ACC=22,NECK_MAX=40;   // 首はどんどん加速する（ロープアルの端から端まで約20秒）
 function neckUpdate(dt){
   if(!S.necks||!S.necks.length)return;const P=me();
   for(const n of S.necks){const h=S.ents[n.h];n.t+=dt;
     if(n.st==='go'){const t=S.ents[n.tgt];
-      if(!t||!t.alive||t.inVent!=null||!h.alive||n.t>NECK_MAX||S.phase!=='play'){n.st='back';continue;}   // ベントに逃げこまれたら、あきらめて戻る
+      if(!t||!t.alive||t.inVent!=null){if(!neckNext(n,h))n.st='back';continue;}
+      if(!h.alive||n.t>NECK_MAX||S.phase!=='play'){n.st='back';continue;}   // ベントに逃げこまれたら、あきらめて戻る
       const dx=t.x-n.x,dy=t.y-40-n.y,d=Math.hypot(dx,dy),st=(NECK_V0+NECK_ACC*n.t)*dt;
       if(d<=34){n.st='back';n.bite=.4;
         die(t,h);if(t===P){S.killedT=2.6;splash('首が伸びてきた…',`${VEGS[n.veg][1]}を持ってこなかったので、クリスピーホースの首に追いつかれた`,'#f0b25a',{body:{id:t.id}},null);}
         tell(t.remote?t:null,'🐴 クリスピーホースの首に追いつかれた…');if(canSee(P,t.x,t.y)||t===P)snd('kill');
-        const msg=`🐴 クリスピーホースの首が${t.name}に追いついた！`;if(t!==P)toast(msg);netBc({t:'tell',text:msg});checkWin();if(S.phase!=='play')return;continue;}
+        const msg=`🐴 クリスピーホースの首が${t.name}に追いついた！`;if(t!==P)toast(msg);netBc({t:'tell',text:msg});checkWin();if(S.phase!=='play')return;if(neckNext(n,h)){n.st='go';n.bite=0;}continue;}
       n.x+=dx/d*Math.min(st,d);n.y+=dy/d*Math.min(st,d);const L=n.trail[n.trail.length-1];if(Math.hypot(n.x-L[0],n.y-L[1])>24)n.trail.push([n.x,n.y]);
     }else{if(n.bite>0){n.bite-=dt;continue;}   // かぶりついてから、縮んで戻る
       let left=1400*dt;while(left>0&&n.trail.length){const L=n.trail[n.trail.length-1],d=Math.hypot(L[0]-n.x,L[1]-n.y);if(d<=left){n.x=L[0];n.y=L[1];left-=d;n.trail.pop();}else{n.x+=(L[0]-n.x)/d*left;n.y+=(L[1]-n.y)/d*left;left=0;}}
