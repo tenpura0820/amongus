@@ -1336,7 +1336,7 @@ NROLES.opp={n:'オポチュニスト',d:'キルはできない。試合が終わ
 NROLES.vulture={n:'ヴァルチャー',d:'死体の方向が矢印で分かる。F: 死体を食べる。決めた数（設定・初期2個）を食べた瞬間に単独勝利（横取りされない・優先度+9）'};
 NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。会議を3回生き残ると F「変身」が1回だけ使える（30秒間）。変身中は手足が長くなり、キルの待ち時間0秒・キルされない・全員が緊急ボタンも通報もできない。変身すると役職は見えなくなる。インポスターが全員死んだ時、自分が生きていてインポスターを1人以上キルしていれば単独勝利'};
 NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。自分も四角の中に写っていないと撮れない。写真に何度も写っている人は怪しまれる（自分は毎回写るので、出しすぎると疑われる）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
-NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
+NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','verity','papa','owl'];
 const OWL_NEED=2;
 const PAPA_NEED=5,PAPA_SHOWS=2,PAPA_WINDOW=20;
@@ -2845,8 +2845,7 @@ function owlThink(e){
   if(e.nest==null&&VENTS.length){const vi=owlVent(e);if(vi!=null&&e.abCd<=0){crewAbility(e);return;}
     if(!ai.nestV||!VENTS.includes(ai.nestV))ai.nestV=pick(VENTS);setGoal(e,ai.nestV.x,ai.nestV.y,'owlnest');return;}
   // 見えている死体（だれも運んでいない）を拾う
-  const bk=(ai.owlBk=ai.owlBk||new Set());for(const b of S.bodies)if(canSee(e,b.x,b.y))bk.add(b.id);   // 一度見た死体は覚えておく
-  const b=S.bodies.filter(b=>!S.ents.some(o=>o.carryBody===b.id)&&bk.has(b.id)).sort((x,y)=>dist(e,x)-dist(e,y))[0];
+  const b=S.bodies.filter(b=>!S.ents.some(o=>o.carryBody===b.id))   // 死体の位置が分かる.sort((x,y)=>dist(e,x)-dist(e,y))[0];
   if(b&&(!S.sab||S.sab.type!=='lights'||e.killCd>0)){setGoal(e,b.x,b.y,'owlbody'+b.id);if(dist(e,b)<70)crewAbility(e);return;}
   if(isKiller(e)&&e.killCd<=0){
     let t=null,bd=1e9;for(const o of S.ents){if(o===e||!o.alive||hid(o)||isLoverPair(e,o)||!canSee(e,o.x,o.y))continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
@@ -3891,6 +3890,7 @@ function render(dt){
   if(S.noise)targets.push({x:S.noise.x,y:S.noise.y,c:'#ff7b2e',label:'📢'+S.noise.name});
   // ヴァルチャー: どこにある死体でも方向が分かる
   if(P.nrole==='vulture'&&P.alive)for(const b of S.bodies)targets.push({x:b.x,y:b.y,c:'#c8a060',label:'🦅'});
+  if(P.nrole==='owl'&&P.alive)for(const b of S.bodies)if(b.id!==P.carryBody)targets.push({x:b.x,y:b.y,c:'#b08a5a',label:'💀'});   // ふくろう: 死体の位置が分かる
   if(P.nrole==='owl'&&P.alive&&P.nest!=null&&VENTS[P.nest])targets.push({x:VENTS[P.nest].x,y:VENTS[P.nest].y,c:'#b08a5a',label:`🪺巣 ${P.nestN||0}/${OWL_NEED}`});
   if(P.carryBody!=null){const b=S.bodies.find(b=>b.id===P.carryBody);if(b&&b.goal)targets.push({x:b.goal.x,y:b.goal.y,c:'#9be7ff',label:'⚰'+b.goal.room});}
   if(P.isImp)for(const e of S.ents)if(e.isImp&&e!==P&&e.alive&&e.inVent==null)targets.push({x:e.x,y:e.y-10,c:'#ff4747',label:'🔴'+e.name});
