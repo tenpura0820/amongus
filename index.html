@@ -1303,7 +1303,7 @@ function roleHelpHTML(){
   for(const k in IROLES)h+=card(IROLES[k].n,'#ff8a8a',IROLES[k].d,'インポスターの役職');
   h+=card('第三陣営',TEAM.neu.c,TEAM_DESC.neu);
   for(const k in NROLES)if(!FOUR_ROLES.includes(k))h+=card(NROLES[k].n,'#c58bff',NROLES[k].d,'第三陣営の役職');
-  h+=card('第四陣営',TEAM.four.c,'1試合に最大1人（出る確率は設定で変えられる・初期10%）。第三陣営とも別の、独自の勝利条件で戦う');
+  h+=card('第四陣営',TEAM.four.c,'1試合に最大1人（出る確率は設定で変えられる・初期10%）。自分で第四陣営を選んだ時は、確率に当たればAIも別の第四陣営になる。第三陣営とも別の、独自の勝利条件で戦う');
   for(const k of FOUR_ROLES)h+=card(NROLES[k].n,TEAM.four.c,NROLES[k].d,'第四陣営の役職');
   h+=card('ラバーズ',TEAM.lovers.c,LOVERS_DESC,'キューピッドが作る');
   return h;
@@ -1956,7 +1956,9 @@ function startGame(cfg){
   {const mine=cfg.role.startsWith('four:');
    if(!MAPS[MAPI].train&&!brStart&&(mine||Math.random()*100<(cfg.fourPct??FOUR_PCT))){
      const c=mine?ents[0]:pick(ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role!=='random')));
-     if(c){const r=mine&&FOUR_ROLES.includes(cfg.role.slice(5))?cfg.role.slice(5):pick(FOUR_ROLES);c.team='four';c.isNeu=true;c.four=true;c.nrole=r;c.role='villager';c.sheriff=false;c.killCd=25+Math.random()*6;}}}
+     if(c){const r=mine&&FOUR_ROLES.includes(cfg.role.slice(5))?cfg.role.slice(5):pick(FOUR_ROLES);c.team='four';c.isNeu=true;c.four=true;c.nrole=r;c.role='villager';c.sheriff=false;c.killCd=25+Math.random()*6;
+       // 自分が第四陣営を選んでも、確率に当たればAIも第四陣営になる（100%なら必ず）。役職は自分と別のもの
+       if(mine&&Math.random()*100<(cfg.fourPct??FOUR_PCT)){const ai=pick(ents.filter(e=>e.team==='crew'&&e.id!==0&&!e.remote));if(ai){ai.team='four';ai.isNeu=true;ai.four=true;ai.nrole=pick(FOUR_ROLES.filter(x=>x!==r));ai.role='villager';ai.sheriff=false;ai.killCd=25+Math.random()*6;}}}}}
   // Verityがいる試合には、必ず賢者がいる
   if(ents.some(e=>e.nrole==='verity')&&!ents.some(e=>e.role==='sage')){
     const c=ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role.startsWith('crew:'))).sort((a,b)=>(a.role==='villager'?0:1)-(b.role==='villager'?0:1)||(a.id===0?1:0)-(b.id===0?1:0))[0];
