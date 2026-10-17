@@ -2455,6 +2455,7 @@ function happyUpdate(dt){
 
     S.balloons.splice(S.balloons.indexOf(b),1);const was=tenseHappy();o.popped=true;o.popOnce=true;if(!was){const msg='🎈 パン！ 風船が割れた… ハッピーボーイの緊張状態';netBc({t:'tell',text:msg});if(o!==P&&P.nrole!=='happy')toast(msg);}
     tell(o,'🎈 パン！ 風船を割ってしまった… ハッピーボーイに狙われる！');if(o===P)snd('bad');
+    for(const h of S.ents)if(h.nrole==='happy')h.killCd=0;   // 風船が割れたら、すぐキルできる
     for(const h of S.ents)if(h.nrole==='happy'&&h.alive&&h!==o){tell(h,`🎈 ${o.name}が風船を割った！ ${o.name}をキルできる`);}
     if(P!==o&&P.nrole!=='happy'&&canSee(P,b.x,b.y))toast('🎈 パン！ どこかで風船が割れた');break;}}
 }
@@ -2961,6 +2962,28 @@ function fourSeenThink(e){
   ai.fourCd=S.t+rand(12,28);if(Math.random()<.45)return false;
   const L=FOUR_SEEN[f.nrole];if(!L)return false;
   botSay(e,pick(L).replace(/\{x\}/g,f.name));if(f.nrole==='horse')f.horseShown=true;return true;
+}
+// ===== 役職開示（追放時に正体が表示された時）へのAIの反応 =====
+const REVEAL_LINES={
+  imp:['やった！{x}はインポスターだった！','{x}、やっぱりインポスターだったか','当たった！みんなナイス！','{x}を追放できてよかった…','あと何人インポスターがいるんだろう','{x}の言い訳、怪しかったもんね','信じてたのに…{x}…','よし、この調子でいこう！'],
+  impMine:['{x}がやられた…','くっ、{x}がバレたか','{x}の分まで頑張らないと','まずい、仲間が減った'],
+  crew:['え…{x}、村陣営だったの！？','ごめん{x}…','間違えちゃった…','{x}を疑った人、誰？','インポスターにうまく誘導されたかも','{x}、本当にごめん…','次はもっと慎重にいこう','くそっ、インポスターの思うつぼだ'],
+  crewRole:{sheriff:'シェリフだったのに…もったいない',labtech:'検査の結果、もっと聞いておけばよかった',mayor:'村長を追放しちゃった…',sage:'賢者がいなくなった…',meyer:'メイヤーの票が…',nguesser:'ゲッサーだったんだ…',comet:'コメット、まだ使ってなかったのに',qed:'Q,E,Dがいなくなったら、生き返らせられない…',avenger:'報復者だったのか…',noise:'ノイズメーカーだったんだ'},
+  neu:['{x}は第三陣営だったんだ…','第三陣営か！ 追放できてよかったかも','{x}、ずっと怪しいと思ってた','第三陣営が減ったね','{x}、一人で何を狙ってたんだろう'],
+  four:{verity:['{x}がVerityだったなんて…','変身される前でよかった！'],horse:['{x}がクリスピーホースだった…'],happy:['{x}がハッピーボーイだったの！？','もう風船は増えないね'],scp173:['{x}がSCP-173だったなんて！','これで目をそらしても大丈夫…？']},
+};
+function revealReact(ej){
+  if(!ej||!S.cfg.confirm)return;
+  const bots=shuffle(S.ents.filter(e=>e.isBot&&e.alive&&e!==ej&&!e.crazed)).slice(0,1+(Math.random()*3|0));
+  bots.forEach((b,i)=>{
+    let L,secret=false;
+    if(ej.isImp){L=b.isImp?REVEAL_LINES.impMine:REVEAL_LINES.imp;secret=b.isImp;}
+    else if(ej.four)L=(REVEAL_LINES.four[ej.nrole]||['{x}は第四陣営だった！']).concat(['第四陣営だったのか…']);
+    else if(ej.isNeu)L=REVEAL_LINES.neu;
+    else{L=REVEAL_LINES.crew.slice();const rl=REVEAL_LINES.crewRole[ej.role];if(rl)L.push(rl,rl);if(b.isImp){if(Math.random()<.5){L=['うまくいった。{x}は村陣営だった','{x}を追放させた、ナイス'];secret=true;}else L=['ごめんね{x}…','間違えちゃったね…','{x}、村陣営だったんだ…'];}}
+    const t=pick(L).replace(/\{x\}/g,ej.name);
+    S.chatQ.push({at:S.t+1.2+i*rand(1.2,2.2),fn:()=>{if(!b.alive)return;if(secret)impSay(b,t);else botSay(b,t);}});   // 仲間うちの本音はインポスターだけのチャットで
+  });
 }
 function botSay(e,text,fx){
   if(!S||!e)return;
@@ -3925,6 +3948,7 @@ function resolveVotes(){
   S.M=null;
 }
 function finishEject(){
+  {const ej=S.E&&S.E.ej;if(ej&&!NET.client)revealReact(ej);}   // 役職開示に反応
   S.taskShown=S.taskDone;
   if(S.s096)S.s096.grace=Math.max(S.s096.grace||0,3);   // 会議が終わってから3秒間は、096の顔を見ても大丈夫
   $('hud').hidden=false;
