@@ -1353,7 +1353,7 @@ NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。
 NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。自分も四角の中に写っていないと撮れない。写真に何度も写っている人は怪しまれる（自分は毎回写るので、出しすぎると疑われる）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
 NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
-NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
+NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと。命令中はだれも通報・緊急ボタン・キルができない）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
 NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできず、リアクターのサボタージュも使えない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 const FOUR_ROLES=['verity','horse','bbg'],FOUR_PCT=10,BBG_WAIT=20;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
@@ -1370,7 +1370,7 @@ function roleName(e){return (e.isImp?(e.irole?IROLES[e.irole].n:'インポスタ
 // 神・マグロ・キューピッド・アーソニスト・ラバーズは、AIが絶対に正体を明かさない
 const mustHide=e=>['god','tuna','cupid','arson'].includes(e.nrole)||e.lover!=null;
 function publicRole(e){return e.team==='crew'?ROLES[roleKey(e)].n+(e.sheriff&&e.role!=='sheriff'?'+シェリフ':''):'村人';}
-const isKiller=e=>!(S&&S.br)&&!(S&&S.bbg&&e.nrole!=='bbg')&&isKiller0(e);   // ゴジラの試合は、ゴジラ以外キルできない
+const isKiller=e=>!(S&&S.br)&&!(S&&S.bbg&&e.nrole!=='bbg')&&!(S&&S.horse)&&isKiller0(e);   // ゴジラの試合はゴジラ以外、クリスピーホースの命令中はだれもキルできない   // ゴジラの試合は、ゴジラ以外キルできない
 const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||(e.isNeu&&e.nrole==='owl'&&!!S&&!!S.sab&&S.sab.type==='lights')||e.sheriff||(e.nrole==='verity'&&e.vform>0)||bbgGiant(e);
 const hid=o=>o.inVent!=null||o.invisT>0;
 function afterKillHooks(k){
@@ -2061,7 +2061,8 @@ function avAwake(a,k,why){
   if(a.isBot)a.ai.urgent=false;
 }
 function die(v,killer){
-  if(S&&S.bbg&&killer&&killer.nrole!=='bbg')return;   // ゴジラの試合は、ゴジラ以外のキルは効かない
+  if(S&&S.bbg&&killer&&killer.nrole!=='bbg')return;
+  if(S&&S.horse&&killer&&killer.nrole!=='horse')return;   // 命令中のキルは効かない（首が伸びるのは別）   // ゴジラの試合は、ゴジラ以外のキルは効かない
   if(noKill(v))return;   // クリスピーホース・ブラックバスゴジラは死なない
   if(S&&S.tr&&killer&&killer.isImp&&v.alive)S.tr.time+=30;   // 列車: 人を殺すと30秒回復
   if(killer&&v.vform>0)return;   // Verityの変身中は、どんな攻撃でも死なない
@@ -2184,14 +2185,14 @@ function douseTarget(e){let best=null,bd=KILLR;for(const o of S.ents){if(o===e||
 function douse(e,t){if(NET.client){rpc('douse',[e,t]);return;}if(!t||e.abCd>0)return;e.oil.add(t.id);e.abCd=15;if(e===me()){snd('click');toast(`🛢 ${t.name}にオイルをかけた（${e.oil.size}人）`);}}
 function allDoused(e){return S.ents.every(o=>o===e||!o.alive||noKill(o)||e.oil.has(o.id));}
 function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
-  if(e.nrole!=='arson'||!e.alive||!allDoused(e)||S.bbg)return;
+  if(e.nrole!=='arson'||!e.alive||!allDoused(e)||S.bbg||S.horse)return;
   const vs=S.ents.filter(o=>o!==e&&o.alive&&!noKill(o));   // クリスピーホース・ブラックバスゴジラは燃えない
   for(const o of vs){S.booms.push({x:o.x,y:o.y-20,t:.9,R:120});o.alive=false;o.inVent=null;S.bodies.push({id:o.id,x:o.x,y:o.y,color:o.color,room:roomOf(o.x,o.y),t:S.t});}
   snd('kill');endGame('arson',`アーソニストの${e.name}が全員を燃やした`,e.id);
 }
 // 戻り値: キルが成立したら true
 function landOff(e){const c=e.climb;if(!c)return;e.climb=null;if(c.from&&c.to){const a=dist(e,c.from)<=dist(e,c.to)?[c.from,c.to]:[c.to,c.from];const q=circleOK(a[0].x,a[0].y)?a[0]:a[1];e.x=q.x;e.y=q.y;}e.tpc=(e.tpc||0)+1;e.path=null;if(e.ai)e.ai.climbTo=null;}
-function doKill(k,v){if(S&&S.bbg&&k.nrole!=='bbg'){if(k===me())toast('🦖 ブラックバスゴジラの試合では、ゴジラ以外はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
+function doKill(k,v){if(S&&S.horse){if(k===me())toast('🐴 クリスピーホースの命令中はキルできない');return false;}if(S&&S.bbg&&k.nrole!=='bbg'){if(k===me())toast('🦖 ブラックバスゴジラの試合では、ゴジラ以外はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
   if(k.ai)k.ai.lastVictim=v;
   if(k.irole==='rocket'&&k.isImp){rocketGrab(k,v);if(k.isBot)k.ai.launchAt=S.t+rand(2,4);return false;}
   if(!v.alive||!k.alive||S.phase!=='play')return false;
@@ -2482,6 +2483,7 @@ function crewAbility(e,arg){
   if(NET.client){rpc('crewAbility',[e,arg,e.aim]);return;}
   if(!e||!e.alive||S.phase!=='play')return;
   if(e.role==='sage'&&e.team==='crew'){if(e.abCd>0)return;if(S.br){e.guardT=12;e.abCd=18;tell(e,'🛡 賢者ガード（12秒・化物を跳ね返せる）');return;}e.guardT=8;e.abCd=25;tell(e,'🛡 賢者ガード（8秒）');return;}
+  if(e.role==='comet'&&e.team==='crew'&&S.horse&&!e.comet){tell(e,'🐴 クリスピーホースの命令中は、コメットになれない');return;}
   if(e.role==='comet'&&e.team==='crew'&&S.bbg){tell(e,'🦖 ブラックバスゴジラの試合では、コメットは使えない');return;}
   if(e.role==='comet'&&e.team==='crew'){if(e.comet){if(e.cgUsed)return;e.cgUsed=true;e.comet.guard=15;tell(e,'🛡 コメットガード！ 15秒間は壁に当たっても死なない。ぶつかった相手だけが死ぬ');if(e===me())snd('task');return;}if(e.abUses<=0)return;const a=e.aim||{x:e.face||1,y:0},m=Math.hypot(a.x,a.y)||1;
     e.comet={dx:a.x/m,dy:a.y/m,tgt:arg!=null&&S.ents[arg]?arg:null};e.abUses=0;e.path=null;tell(e,'☄ コメットになった！ もう止まれない（向きだけ変えられる）');if(e===me())snd('vent');return;}
@@ -2594,6 +2596,7 @@ function silentKill(k,v,o){
 function impAbility(e,arg){
   if(NET.client){rpc('impAbility',[e,arg!=null?arg:e.aim]);return;}
   if(!e||!e.alive||!e.isImp||S.phase!=='play')return;
+  if(S.horse&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast('🐴 クリスピーホースの命令中は、キルする能力は使えない');return;}
   if(S.bbg&&BBG_NOKILL_AB.includes(e.irole)){if(e===me())toast('🦖 ブラックバスゴジラの試合では、キルする能力は使えない');return;}
   if(S.br){if(arg&&typeof arg==='object'&&'x' in arg)e.aim=arg;if(BR_IMP_AB.includes(e.irole))brImpAbility(e);return;}
   const r=e.irole,P=me();
@@ -2947,7 +2950,7 @@ function perceive(e){
       if(!last||S.t-last.t>=1){tr.push({x:o.x,y:o.y,t:S.t,room:roomOf(o.x,o.y)});if(tr.length>45)tr.shift();}
       e.seen[o.id]={t:S.t,room:roomOf(o.x,o.y)};const ob=(e.obs[o.id]=e.obs[o.id]||{seen:0,done:0});ob.seen+=.25;}
   }
-  if(!e.isImp&&!e.ai.body&&!bbgOn()){
+  if(!e.isImp&&!e.ai.body&&!bbgOn()&&!S.horse){
     if(e.nrole==='vulture'||e.nrole==='owl')return;
     for(const b of S.bodies)if(!bodyLocked(b)&&!(e.ai.ignore&&e.ai.ignore.has(b.id))&&canSee(e,b.x,b.y)){
       e.ai.body=b;e.ai.nearBody=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&dist(o,b)<220&&canSee(e,o.x,o.y)).map(o=>o.id);break;}
@@ -3346,7 +3349,7 @@ function useTarget(){
   if(P.alive&&!S.tr&&dist(P,BTN)<115)return{k:'btn'};
   return null;
 }
-function reportTarget(){const P=me();if(S.br||S.tr||bbgOn())return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(bodyLocked(b))continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
+function reportTarget(){const P=me();if(S.br||S.tr||bbgOn()||S.horse)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(bodyLocked(b))continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
 function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;if(bbgGiant(P0))ex+=KILLR*.9;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||noKill(o)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
@@ -3374,7 +3377,7 @@ const P=me();if(P.killCd>0&&P.irole!=='rocket')return;if(P.irole==='rocket'&&P.k
 function doVent(){if(!canAct())return;const P=me();
   if(P.ctrl){const pup=S.ents[P.ctrl.id];if(pup.inVent!=null)exitVent(pup);else{let bi=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(pup,v);if(d<bd){bd=d;bi=i;}});if(bi!=null)enterVent(pup,bi);}return;}const v=ventTarget();if(v==null)return;if(P.inVent!=null){exitVent(P);}else enterVent(P,v);refreshVentNav();}
 function canAct(){return S&&S.phase==='play'&&!S.modal&&S.killedT<=0;}
-function abilityReady(){const P=me();if(!P.alive)return false;if(S.bbg&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew')))return false;
+function abilityReady(){const P=me();if(!P.alive)return false;if(S.horse&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew'&&!P.comet)))return false;if(S.bbg&&((P.isImp&&BBG_NOKILL_AB.includes(P.irole))||(P.role==='comet'&&P.team==='crew')))return false;
   if(S.br&&S.br.lv===3){if(S.br.stage!=='run'||P.bitten3>0)return false;if(P.spider)return !P.grab&&(P.spCd||0)<=0&&!(P.stunS>0)&&l3Survivors().some(o=>o.bitten3<=0&&dist(o,P)<200);if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&P.irole==='bubble')return P.abCd<=0;return false;}
   if(S.br){if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&BR_IMP_AB.includes(P.irole))return P.abCd<=0&&!P.cannon&&!P.drill;
     if(P.nrole==='verity')return verityReady(P)||(P.vform>0&&!P.vMonKill&&!!S.mon&&!S.mon.dead&&dist(P,S.mon)<KILLR+60);return false;}
@@ -3453,7 +3456,7 @@ function doAbility(){
 }
 
 // ================= meetings =================
-function callMeeting(caller,body){if(S&&(S.br||S.tr))return;if(bbgOn()){if(caller===me())toast('🦖 ブラックバスゴジラがいる試合は、通報も緊急ボタンも使えない');return;}   // バックルームと列車では会議なし
+function callMeeting(caller,body){if(S&&(S.br||S.tr))return;if(bbgOn()){if(caller===me())toast('🦖 ブラックバスゴジラがいる試合は、通報も緊急ボタンも使えない');return;}if(S&&S.horse){if(caller===me())toast('🐴 クリスピーホースの命令中は、通報も緊急ボタンも使えない');if(caller.isBot&&caller.ai)caller.ai.body=null;return;}   // バックルームと列車では会議なし
 if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
   if(NET.client){rpc('callMeeting',[caller,body?{B:body.id}:null]);return;}
   if(S.phase!=='play')return;
@@ -4566,7 +4569,7 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   if(S.tr)h+=trHud();
   if(S.ents.some(e=>e.four)&&!S.bbg&&!S.horse)h+=`<li style="color:${TEAM.four.c}">⚠ 第四陣営がいるようだ…</li>`;
   if(S.bbg){const B=S.bbg;h+=B.giant?`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?'キルして、生き残りを最後の1人にしよう':'ブラックバスゴジラが暴れている！ 最後の1人まで生き残れ'}（通報・緊急ボタンは使えない・タスクを終わらせても勝てない）</li>`:`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?`あと${Math.ceil(B.t)}秒で巨大化（それまで動けない）`:`あと${Math.ceil(B.t)}秒でブラックバスゴジラが巨大化！ 今のうちに逃げろ！`}</li>`;}
-  if(S.horse){const H=S.horse,hh=S.ents[H.by],mv=(S.veg||[]).find(v=>v.by===P.id);h+=`<li class="sab" style="color:#f0b25a">🐴 ${VEGS[H.k][0]}${VEGS[H.k][1]}を${hh.name}に持ってこい！（${Math.max(0,Math.ceil(H.t))}秒・渡した人 ${H.done.length}）${H.done&&H.done.includes(P.id)?' ✅ 渡した':''}${mv?` 持っている: ${VEGS[mv.k][0]}`:''}</li>`;}
+  if(S.horse){const H=S.horse,hh=S.ents[H.by],mv=(S.veg||[]).find(v=>v.by===P.id);h+=`<li class="sab" style="color:#f0b25a">🐴 ${VEGS[H.k][0]}${VEGS[H.k][1]}を${hh.name}に持ってこい！（${Math.max(0,Math.ceil(H.t))}秒・渡した人 ${H.done.length}・命令中は通報もキルもできない）${H.done&&H.done.includes(P.id)?' ✅ 渡した':''}${mv?` 持っている: ${VEGS[mv.k][0]}`:''}</li>`;}
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
   if(P.isImp){h+=(P.irole==='serial'&&P.alive?`<li style="color:#ff5a5a">🔪 キルしないと死ぬまで ${Math.max(0,Math.ceil(60-(P.serialT||0)))}秒</li>`:'')+(P.irole==='double'?`<li style="color:#ff8a8a">${P.doubleUsed?'ダブルキルは使用済み':'次のキルの直後に、もう1回キルできる'}</li>`:'')+(P.frenzy?'<li style="color:#ff3b3b">😡 理性を失っている（仲間もキルできる）</li>':P.berserk?'<li style="color:#ff8a8a">😡 バーサーカー中（あと'+Math.max(0,2-(P.bKills||0))+'人で理性を失う）</li>':'')+`<li class="sab">${TEAM_DESC.imp}</li>`+(P.irole?`<li style="color:#ff8a8a">${IROLES[P.irole].n}: ${IROLES[P.irole].d}</li>`:'');h+=`<li>仲間: ${S.ents.filter(e=>e.isImp&&e!==P).map(e=>e.name+(e.alive?'':'✝')).join('、')||'なし'}</li>`;
     h+='<li style="opacity:.75">タスク（できるけどゲージは増えない。アリバイ作りに）:</li>'+P.tasks.map(t=>`<li class="${t.done?'done':''}" style="opacity:.75">${STATIONS[t.s].room}: ${STATIONS[t.s].n}${t.done?' ✓':''}</li>`).join('');}
