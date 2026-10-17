@@ -1371,9 +1371,11 @@ const tenseHappy=()=>!!(S&&S.ents&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='
 const happyMate=(a,b)=>!!(a&&b&&a!==b&&a.nrole==='happy'&&b.nrole==='happy');   // ハッピーボーイ同士は仲間
 const tenseWarden=()=>!!(S&&S.ents&&S.ents.some(e=>e.nrole==='warden'&&e.alive));   // ウォーデンがいると、ずっと緊急状態
 const tense782=()=>!!(S&&S.s782&&S.s782.emerg&&S.ents[S.s782.id].alive);
+const tenseRoles=()=>[bbgOn()&&'bbg',rage096()&&'scp096',gagaRage()&&'gagapi',tense173()&&'scp173',tenseWarden()&&'warden',tense782()&&'scp782',tenseHappy()&&'happy'].filter(Boolean);   // 今の緊急状態（第四陣営が2人いると2つ重なることもある）
+const tenseLock=e=>{const t=tenseRoles();return t.length>0&&!t.includes(e.nrole);};   // その人はキルできない状態か
 const tenseRole=()=>gagaRage()?'gagapi':tense173()?'scp173':tenseWarden()?'warden':tense782()?'scp782':tenseHappy()?'happy':null;   // 緊張状態の時、キルできるのはこの役職だけ
 const meetLocked=()=>!!(S&&(S.br||S.tr||bbgOn()||S.horse||rage096()||tenseRole()));   // 通報・緊急ボタンが使えない時
-const TENSE_N={gagapi:'💢 ガガピー',scp782:'🦎 SCP-782',warden:'🔊 ウォーデン',scp173:'🗿 SCP-173',happy:'🎈 ハッピーボーイ'};
+const TENSE_N={bbg:'🦖 ブラックバスゴジラ',scp096:'😱 SCP-096',gagapi:'💢 ガガピー',scp782:'🦎 SCP-782',warden:'🔊 ウォーデン',scp173:'🗿 SCP-173',happy:'🎈 ハッピーボーイ'};
 const SCP173_R=330;
 const seen096=o=>!!(S&&S.s096&&S.s096.marks.includes(o.id));   // キルされない役職
 const bbgOn=()=>!!(S&&S.bbg);
@@ -1388,7 +1390,7 @@ function roleName(e){return (e.isImp?(e.irole?IROLES[e.irole].n:'インポスタ
 // 神・マグロ・キューピッド・アーソニスト・ラバーズは、AIが絶対に正体を明かさない
 const mustHide=e=>['god','tuna','cupid','arson'].includes(e.nrole)||e.lover!=null;
 function publicRole(e){return e.team==='crew'?ROLES[roleKey(e)].n+(e.sheriff&&e.role!=='sheriff'?'+シェリフ':''):'村人';}
-const isKiller=e=>!(S&&S.br)&&!(S&&S.bbg&&e.nrole!=='bbg')&&!(S&&S.horse)&&!(rage096()&&e.nrole!=='scp096')&&!(tenseRole()&&e.nrole!==tenseRole())&&isKiller0(e);   // ゴジラの試合はゴジラ以外、クリスピーホースの命令中はだれもキルできない   // ゴジラの試合は、ゴジラ以外キルできない
+const isKiller=e=>!(S&&S.br)&&!(S&&S.horse)&&!tenseLock(e)&&isKiller0(e);   // ゴジラの試合はゴジラ以外、クリスピーホースの命令中はだれもキルできない   // ゴジラの試合は、ゴジラ以外キルできない
 const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||(e.isNeu&&e.nrole==='owl'&&!!S&&!!S.sab&&S.sab.type==='lights')||e.sheriff||(e.nrole==='verity'&&e.vform>0)||bbgGiant(e)||(e.nrole==='happy'&&!!S&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='happy'))||(e.nrole==='scp173'&&!e.observed&&!(S&&S.g173>0))||(e.nrole==='warden'&&!(S&&S.gWarden>0))||(e.nrole==='scp782'&&tense782())||(e.nrole==='gagapi'&&gagaRage())||(e.nrole==='scp096'&&!!S&&!!S.s096&&S.s096.marks.some(i=>S.ents[i].alive));
 const hid=o=>o.inVent!=null||o.invisT>0;
 function afterKillHooks(k){
@@ -2092,10 +2094,10 @@ function avAwake(a,k,why){
   if(a.isBot)a.ai.urgent=false;
 }
 function die(v,killer){
-  if(S&&S.bbg&&killer&&killer.nrole!=='bbg')return;
+
   if(S&&S.horse&&killer&&killer.nrole!=='horse')return;
-  if(rage096()&&killer&&killer.nrole!=='scp096')return;
-  if(tenseRole()&&killer&&killer.nrole!==tenseRole())return;   // 緊張状態中は、その役職以外のキルは効かない
+
+  if(killer&&tenseLock(killer))return;   // 緊張状態中は、その役職以外のキルは効かない
   if(v.nrole==='gagapi'&&killer&&S.gagapi&&!S.gagapi.rage){gagaAwake(v,killer);return;}   // ガガピーはキルされると逆襲モードで復活   // 096の緊急状態中は、096以外のキルは効かない   // 命令中のキルは効かない（首が伸びるのは別）   // ゴジラの試合は、ゴジラ以外のキルは効かない
   if(noKill(v))return;   // クリスピーホース・ブラックバスゴジラは死なない
   if(S&&S.tr&&killer&&killer.isImp&&v.alive)S.tr.time+=30;   // 列車: 人を殺すと30秒回復
@@ -2226,7 +2228,7 @@ function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
 }
 // 戻り値: キルが成立したら true
 function landOff(e){const c=e.climb;if(!c)return;e.climb=null;if(c.from&&c.to){const a=dist(e,c.from)<=dist(e,c.to)?[c.from,c.to]:[c.to,c.from];const q=circleOK(a[0].x,a[0].y)?a[0]:a[1];e.x=q.x;e.y=q.y;}e.tpc=(e.tpc||0)+1;e.path=null;if(e.ai)e.ai.climbTo=null;}
-function doKill(k,v){if(tenseRole()&&k.nrole!==tenseRole()){if(k===me())toast(`${TENSE_N[tenseRole()]}の緊張状態中は、キルできない`);return false;}if(rage096()&&k.nrole!=='scp096'){if(k===me())toast('😱 SCP-096の緊急状態中は、キルできない');return false;}if(k.nrole==='scp096'&&!seen096(v))return false;if(S&&S.horse){if(k===me())toast('🐴 クリスピーホースの命令中はキルできない');return false;}if(S&&S.bbg&&k.nrole!=='bbg'){if(k===me())toast('🦖 ブラックバスゴジラの試合では、ゴジラ以外はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
+function doKill(k,v){if(tenseLock(k)){if(k===me())toast(`${TENSE_N[tenseRoles()[0]]||'緊急状態'}の緊張状態中は、キルできない`);return false;}if(k.nrole==='scp096'&&!seen096(v))return false;if(S&&S.horse){if(k===me())toast('🐴 クリスピーホースの命令中はキルできない');return false;}if(S&&S.br)return false;if(NET.client){rpc('doKill',[k,v]);return false;}
   if(k.nrole==='happy'){if(!v.popped||v.nrole==='happy'||!v.alive||!k.alive||S.phase!=='play')return false;happyConvert(v,k);k.killCd=cooldownOf(k);return true;}   // ハッピーボーイのキルは、仲間にする
   if(k.ai)k.ai.lastVictim=v;
   if(k.irole==='rocket'&&k.isImp){rocketGrab(k,v);if(k.isBot)k.ai.launchAt=S.t+rand(2,4);return false;}
