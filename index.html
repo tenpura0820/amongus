@@ -1131,7 +1131,7 @@ function drawMapCanvas(){
     const h=inR('キャンプファイヤー');if(h){const fx=h.x+h.w-110,fy=h.y+h.h-90;disc(fx,fy,34,'#5a4030');c.fillStyle='#ff8a24';c.beginPath();c.moveTo(fx-18,fy+6);c.quadraticCurveTo(fx,fy-50,fx+18,fy+6);c.fill();c.fillStyle='#ffd23d';c.beginPath();c.moveTo(fx-9,fy+6);c.quadraticCurveTo(fx,fy-25,fx+9,fy+6);c.fill();}
   }
   if(MAPS[MAPI].skeld){
-  c.save();c.scale(MAP_SCALE,MAP_SCALE);
+  c.save();c.scale(MAP_SCALE*(MAPS[MAPI].xs||1),MAP_SCALE*(MAPS[MAPI].xs||1));
   for(const[x,y]of[[1330,220],[1670,220],[1330,470],[1670,470]])disc(x,y,42,'#c9d2df');
   disc(240,780,58,'#5bb6d8');disc(240,780,30,'#9be6ff');
   box(320,300,90,120,'#a26b4f');box(320,1250,90,120,'#a26b4f');
@@ -1206,6 +1206,17 @@ function scaleMap(m){
   for(const r of [...rooms,...halls]){r.x=f(r.x);r.y=f(r.y);r.w=f(r.w);r.h=f(r.h);}
   for(const o of [...st,...vents,btn,sabp.lights,sabp.reactor,...(m.scope?[m.scope]:[])]){o.x=f(o.x);o.y=f(o.y);}
   m.W=f(m.skeld?3000:m.W);m.H=f(m.skeld?1760:m.H);
+}
+// 今のマップを、もとの大きさの want 倍にする（クリスピーホースの試合だけ1.3倍。次の試合で元に戻す）
+function setMapXs(want){
+  const m=MAPS[MAPI];const cur=m.xs||1;if(Math.abs(cur-want)<1e-6)return false;const k=want/cur;m.xs=want;
+  const rooms=m.skeld?SKELD_ROOMS:m.rooms,halls=m.skeld?SKELD_HALLS:m.halls,st=m.skeld?SKELD_STATIONS:m.stations,vents=m.skeld?SKELD_VENTS:m.vents,btn=m.skeld?SKELD_BTN:m.btn,sabp=m.skeld?SKELD_SABP:m.sabp;
+  for(const r of [...rooms,...halls]){r.x*=k;r.y*=k;r.w*=k;r.h*=k;}
+  for(const o of [...st,...vents,btn,sabp.lights,sabp.reactor,...(m.scope?[m.scope]:[])]){o.x*=k;o.y*=k;if(o.x0!=null){o.x0*=k;o.y0*=k;}}
+  for(const L of m.plats||[]){L.a.x*=k;L.a.y*=k;L.b.x*=k;L.b.y*=k;}
+  m.W*=k;m.H*=k;if(m.H2)m.H2*=k;
+  if(want===1){const rd=o=>{for(const q of ['x','y','w','h','x0','y0'])if(typeof o[q]==='number')o[q]=Math.round(o[q]);};[...rooms,...halls,...st,...vents,btn,sabp.lights,sabp.reactor,...(m.scope?[m.scope]:[])].forEach(rd);for(const L of m.plats||[]){rd(L.a);rd(L.b);}m.W=Math.round(m.W);m.H=Math.round(m.H);if(m.H2)m.H2=Math.round(m.H2);}   // 元の大きさに戻す時は、誤差が残らないように整数にそろえる
+  loadMap(MAPI);return true;
 }
 function loadMap(i){
   MAPI=clamp(i|0,0,MAPS.length-1);const m=MAPS[MAPI];
@@ -1341,7 +1352,7 @@ NROLES.verity={n:'Verity',d:'変身するまでは全員の役職が見える。
 NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角）→ マウス（スマホは画面の右側をなぞる）で四角を動かして、もう一度 F で撮影。四角の中の人・床・壁が写る（15秒ごと）。自分も四角の中に写っていないと撮れない。写真に何度も写っている人は怪しまれる（自分は毎回写るので、出しすぎると疑われる）。会議の最初の20秒以内だけ「📸 写真を出す」で公開できる（1回の会議で1回）。写真を出した会議の終わりに生きていないと、その写真は無効。2回以上写真を出して、写した人が合計5人（重複なし）になったら単独勝利'};
 NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
-NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップに野菜（にんじん・玉ねぎ・キャベツ・なす・にんじん）が置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
+NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
 NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 const FOUR_ROLES=['verity','horse','bbg'],FOUR_PCT=10,BBG_WAIT=20;
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg';   // キルされない役職
@@ -1937,9 +1948,10 @@ function startGame(cfg){
   for(const e of ents){if(e.role==='valty'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='stunt')e.shield=1;if(e.role==='sheriff'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='labtech'||e.role==='mayor')e.abUses=1;}
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
     gen:GEN,taskTotal:ents.filter(e=>e.team==='crew').reduce((a,e)=>a+e.tasks.length,0),taskDone:0,M:null,E:null,modal:null,hudT:0,splashT:0,killedT:0,chatQ:[],plog:[],fx:[],beams:[],booms:[],flash:0,leaks:{},cupid:null,impKnow:{},impVote:null,chan:'all',mines:[],bubbles:[],traces:[],snakeFx:[]};
+  if(!brStart&&!MAPS[MAPI].train)setMapXs(ents.some(e=>e.nrole==='horse')?1.3:1);   // クリスピーホースがいるとマップ1.3倍
   placeAtTable();
   S.bbg=null;{const g=ents.find(e=>e.nrole==='bbg');if(g){S.bbg={id:g.id,t:BBG_WAIT,giant:false};g.killCd=0;}}
-  S.veg=[];S.horse=null;if(ents.some(e=>e.nrole==='horse'))S.veg=VEG_SET.map(k=>{const p=randomRoomPoint();return{x:p.x,y:p.y,k,by:-1};});
+  S.veg=[];S.horse=null;if(ents.some(e=>e.nrole==='horse')){const per=Math.max(1,ents.length-1);S.veg=[];for(let k=0;k<VEGS.length;k++)for(let j=0;j<per;j++){const p=randomRoomPoint();S.veg.push({x:p.x,y:p.y,k,by:-1});}}   // 全員が持ってこられるように、(人数-1)個ずつ置く
   if(MAPS[MAPI].train)setupTrain();
   if(brStart){if(mapI===BR3I)setupBackrooms3();else if(mapI===BR1I)setupBackrooms1();else setupBackrooms();}
   if(NET.host)netStartSend();
@@ -2415,7 +2427,7 @@ function horseUpdate(dt){
   H.t-=dt;if(H.t>0)return;
   S.horse=null;h.abCd=45;
   const P=me();
-  for(const t of need){if(t.vform>0)continue;const L=dist(h,t)||1;S.beams.push({x:h.x,y:h.y-50,dx:(t.x-h.x)/L,dy:(t.y-40-(h.y-50))/L,L,t:.8,thin:false});
+  for(const t of need){if(t.vform>0)continue;(S.necks=S.necks||[]).push({h:h.id,x:t.x,y:t.y-40,t:1.1});
     die(t,h);if(t===P){S.killedT=2.6;splash('首が伸びてきた…',`${VEGS[H.k][1]}を持ってこなかったので、クリスピーホースの首が伸びてきた`,'#f0b25a',{body:{id:t.id}},null);}
     tell(t.remote?t:null,`🐴 ${VEGS[H.k][1]}を持ってこなかったので、クリスピーホースの首が伸びてきた…`);}
   const msg=`🐴 時間切れ！ ${VEGS[H.k][1]}を持ってこなかった${need.map(o=>o.name).join('・')}がクリスピーホースに襲われた`;toast(msg);netBc({t:'tell',text:msg});snd('kill');checkWin();
@@ -4036,7 +4048,21 @@ function render(dt){
      ctx.font='34px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='44px system-ui';ctx.fillText('🔪',Math.cos(a1)*78,Math.sin(a1)*78);
      // 血しぶき
      ctx.fillStyle='#c4141c';for(let i=0;i<12;i++){const a=i/12*TAU+f.st,sp=40+((i*37)%30);ctx.beginPath();ctx.arc(Math.cos(a)*sp*p*1.6,Math.sin(a)*sp*p*.9+p*p*50+20,Math.max(0,7*q),0,TAU);ctx.fill();}
-     ctx.restore();}ctx.restore();}
+     ctx.restore();}
+  // クリスピーホースの首: 伸びて → かぶりつき → 戻る
+  for(const n of S.necks||[]){const h=S.ents[n.h];if(!h)continue;const p=1-n.t/1.1,ext=p<.35?p/.35:p<.7?1:1-(p-.7)/.3;
+    const hx=h.x,hy=h.y-56,tx=hx+(n.x-hx)*ext,ty=hy+(n.y-hy)*ext,wob=Math.sin(p*30)*6*ext;
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.strokeStyle='#000';ctx.lineWidth=26;ctx.beginPath();ctx.moveTo(hx,hy);ctx.quadraticCurveTo((hx+tx)/2+wob,(hy+ty)/2-40*ext,tx,ty);ctx.stroke();
+    ctx.strokeStyle='#c98a4a';ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(hx,hy);ctx.quadraticCurveTo((hx+tx)/2+wob,(hy+ty)/2-40*ext,tx,ty);ctx.stroke();
+    ctx.strokeStyle='#5a3418';ctx.lineWidth=6;ctx.setLineDash([10,8]);ctx.beginPath();ctx.moveTo(hx,hy-8);ctx.quadraticCurveTo((hx+tx)/2+wob,(hy+ty)/2-48*ext,tx,ty-8);ctx.stroke();ctx.setLineDash([]);   // たてがみ
+    ctx.translate(tx,ty);ctx.scale(n.x<hx?1:-1,1);ctx.rotate(Math.atan2(n.y-hy,Math.abs(n.x-hx))*(n.x<hx?-1:1)*.4);   // 馬の頭（大きく口を開けてかぶりつく）
+    ctx.fillStyle='#c98a4a';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(-8,0,34,20,0,0,TAU);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(8,-14);ctx.lineTo(18,-34);ctx.lineTo(24,-12);ctx.closePath();ctx.fill();ctx.stroke();   // 耳
+    const op=ext>.9?10:3;ctx.fillStyle='#5a1a1a';ctx.beginPath();ctx.moveTo(-40,-2);ctx.lineTo(-14,-op);ctx.lineTo(-14,op+4);ctx.closePath();ctx.fill();   // 口
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,-6,6,0,TAU);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-6,3,0,TAU);ctx.fill();   // 目
+    ctx.restore();}
+ctx.restore();}
   // fog of war
   if(P.alive&&S.phase!=='review'){
     const r=visionR(P);
@@ -4794,7 +4820,7 @@ function hostLobby(){const list=lobbyList();renderLobby(list);netBc({t:'lobby',l
 function netStartSend(){
   for(const e of S.ents){
     if(!e.remote)continue;
-    sendTo(e,{t:'start',myId:e.id,map:MAPI,custom:MAPI===CUSTOMI?MAPS[CUSTOMI].src:null,tt:S.taskTotal,
+    sendTo(e,{t:'start',myId:e.id,map:MAPI,custom:MAPI===CUSTOMI?MAPS[CUSTOMI].src:null,xs:MAPS[MAPI].xs||1,tt:S.taskTotal,
       cfg:{imps:S.cfg.imps,neu:S.cfg.neu,disc:S.cfg.disc,vote:S.cfg.vote,kcd:S.cfg.kcd,tasks:S.cfg.tasks,confirm:S.cfg.confirm},
       ents:S.ents.map(o=>({pid:o.id===0?NET.peer&&NET.peer.id:o.remote?o.pid:null,id:o.id,name:o.name,color:o.color,costume:o.costume,isBot:o.isBot,team:o.team,role:o.role,irole:o.irole,nrole:o.nrole,isImp:!!o.isImp,isNeu:!!o.isNeu,four:!!o.four,
         killCd:o.killCd,abCd:o.abCd,abUses:o.abUses,shield:o.shield,sheriff:o.sheriff,tasks:o===e?o.tasks.map(t=>({s:t.s,done:false})):[]}))});
@@ -4811,7 +4837,7 @@ function netTick(dt){
     M:S.M?{stage:S.M.stage,t:S.M.t,vt:S.M.vt||0,votes:S.M.votes,flashId:S.M.flashId,flashUntil:S.M.flashUntil||0}:null,
     E:S.phase==='eject'&&S.E?{text:S.E.text,ej:S.E.ej?S.E.ej.id:-1}:null,
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
-    x2:{bg:S.bbg?[S.bbg.id,+S.bbg.t.toFixed(1),S.bbg.giant?1:0]:null,hv:(S.veg||[]).map(v=>[Math.round(v.x),Math.round(v.y),v.k,v.by]),ho:S.horse?[S.horse.by,S.horse.k,+S.horse.t.toFixed(1),S.horse.done]:null,dlv:S.ents.map(e=>e.deliv||0),dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
+    x2:{nk:(S.necks||[]).map(n=>[n.h,Math.round(n.x),Math.round(n.y),+n.t.toFixed(2)]),bg:S.bbg?[S.bbg.id,+S.bbg.t.toFixed(1),S.bbg.giant?1:0]:null,hv:(S.veg||[]).map(v=>[Math.round(v.x),Math.round(v.y),v.k,v.by]),ho:S.horse?[S.horse.by,S.horse.k,+S.horse.t.toFixed(1),S.horse.done]:null,dlv:S.ents.map(e=>e.deliv||0),dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
       rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:bodyLocked(b)?2:0]),vents:VENTS.map(v=>[v.x,v.y]),
       bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,trn:S.tr?{tm:Math.round(S.tr.time),f:S.tr.food.map(f=>(f.eaten?1:0)|(f.flash>0?2:0)),kn:S.tr.knife,sit:S.ents.map(e=>e.sitting?e.sitting.i:-1)}:null,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,esc:S.ents.map(e=>e.escaped?1:0),boat:!!S.br.boat,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
@@ -4902,7 +4928,7 @@ function clientRecv(d){
 function clientStart(d){
   // 前の試合は静かに片付ける（ホストに「抜けた」と送らない）
   if(S){S=null;}hideSplash();$('reviewBar').hidden=true;
-  resetLeftovers();GEN++;if(d.custom){MAPS[CUSTOMI]=buildCustom(d.custom);MAPI=-1;}loadMap(d.map);
+  resetLeftovers();GEN++;if(d.custom){MAPS[CUSTOMI]=buildCustom(d.custom);MAPI=-1;}loadMap(d.map);setMapXs(d.xs||1);
   const c=readCfg();
   const ents=d.ents.map(o=>({...o,x:BTN.x,y:BTN.y+100,face:1,walk:0,moving:false,alive:true,inVent:null,doing:0,invisT:0,bubble:null,labLog:[],
     speed:231,susp:new Float32Array(d.ents.length),seen:{},track:{},obs:{},ai:{},oil:o.nrole==='arson'?new Set():null,stillT:0,aim:{x:1,y:0},tpc:-1,buttonUses:1,lover:null,cannon:null,bitten:null}));
@@ -4929,7 +4955,7 @@ function applySnap(d){
   else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(b.esc)S.ents.forEach((e,i)=>e.escaped=!!b.esc[i]);if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
-  if(d.x2){const x=d.x2;S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;if(S.bbg&&S.bbg.giant&&S.ents[S.bbg.id])S.ents[S.bbg.id].speed=210*1.1*1.1;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
+  if(d.x2){const x=d.x2;S.necks=(x.nk||[]).map(([h,nx,ny,t])=>({h,x:nx,y:ny,t}));S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;if(S.bbg&&S.bbg.giant&&S.ents[S.bbg.id])S.ents[S.bbg.id].speed=210*1.1*1.1;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
     S.mines=x.mines.map(([mx,my])=>({x:mx,y:my}));S.bubbles=x.bub.map(([bx,by])=>({x:bx,y:by}));S.traces=x.tr.map(([tx,ty,tt])=>({x:tx,y:ty,t:tt}));S.snakeFx=x.sf.map(([fx,fy,ft,fc])=>({x:fx,y:fy,t:ft,color:fc}));
     x.rot.forEach(([r,nr],i)=>{if(S.bodies[i]){S.bodies[i].rot=r<0?null:r;S.bodies[i].noReport=nr===1;S.bodies[i].cometLock=nr===2;}});
@@ -5026,6 +5052,7 @@ function update(dt){
       checkWin();if(S.phase!=='play')return;}}
   }
   for(const b of S.beams)b.t-=dt;S.beams=S.beams.filter(b=>b.t>0);
+  if(S.necks){for(const n of S.necks)n.t-=dt;S.necks=S.necks.filter(n=>n.t>0);}
   for(const b of S.booms)b.t-=dt;S.booms=S.booms.filter(b=>b.t>0);
   if(S.flash>0)S.flash-=dt;
   // マグロ: 3秒以上止まると死ぬ
