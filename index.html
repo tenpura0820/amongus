@@ -4227,6 +4227,8 @@ function finishEject(){
 }
 
 // ================= win / end =================
+// キルできる役職か（インポスター以外）。残っている間はインポスターの人数勝ちにならない
+function hasKillRole(e){return !!(e.sheriff||(e.role==='avenger'&&e.avAwake)||(e.role==='comet'&&e.team==='crew'&&(e.abUses>0||e.comet))||(e.nrole==='verity'&&!e.vUsed)||['killer','owl','arson','scp939','scp173','warden','scp782','happy','gagapi'].includes(e.nrole));}
 function checkWin(){
   if(!S||S.phase==='end'||S.phase==='review')return true;
   if(S.phase==='intro')return false;
@@ -4246,7 +4248,8 @@ function checkWin(){
   const voters=alive.length-imps-neu;
   {const v=alive.find(e=>e.nrole==='verity'&&e.vKilledImp);if(v&&imps===0&&S.ents.some(e=>e.isImp)){endGame('verity',`Verityの${v.name}がインポスターを全員倒した`,v.id);return true;}}
   if(imps===0&&neu===0&&!arson){if(alive.some(e=>e.team==='crew'))endGame('crew','インポスターと第三陣営の敵をすべて倒した');else endGame('draw','キルできる人も村陣営もいなくなった');return true;}
-  if(neu===0&&imps>0&&imps>=voters){endGame('imp','投票できる人の数がインポスターと同じになった');return true;}
+  const otherKillers=alive.filter(e=>!e.isImp&&hasKillRole(e));   // インポスター以外でキルできる役職
+  if(neu===0&&imps>0&&imps>=voters&&!otherKillers.length){endGame('imp','投票できる人の数がインポスターと同じになった（ほかにキルできる人もいない）');return true;}
   if(imps===0&&neu===1&&voters<=1){const w=alive.find(e=>e.isNeu&&(e.nrole==='killer'||e.nrole==='scp939'||e.nrole==='scp173'||e.nrole==='happy'||e.nrole==='warden'||e.nrole==='scp782'));if(w.nrole==='scp939')endGame('scp939',`SCP-939の${w.name}が生き残った`,w.id);else if(w.nrole==='scp782')endGame('scp782',`SCP-782の${w.name}が生き残った`,w.id);else if(w.nrole==='warden')endGame('warden',`ウォーデンの${w.name}が生き残った`,w.id);else if(w.nrole==='happy')endGame('happy',`ハッピーボーイの${w.name}が生き残った`,w.id);else if(w.nrole==='scp173')endGame('scp173',`SCP-173の${w.name}が生き残った`,w.id);else endGame('neu',`第三陣営の${w.name}が生き残った`,w.id);return true;}
   return false;
 }
