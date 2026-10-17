@@ -1353,7 +1353,7 @@ NROLES.papa={n:'パパラッチ',d:'F: カメラを構える（横長の四角�
 NROLES.owl={n:'ふくろう',d:'停電中だけキルできる（暗くても良く見える）。死体の位置が矢印で分かる。F: ベントの近くで自分の巣を作る（作り直しは30秒ごと）／死体の近くで死体を運ぶ・下ろす。死体を巣のベントまで運ぶと巣に入る。巣に死体を2個入れたら単独勝利'};
 const NSPECIAL=['god','tuna','cupid','arson','teru','opp','vulture','papa','owl'];
 NROLES.horse={n:'クリスピーホース',d:'キルされない・追放されない。いるとマップが1.3倍に広がり、野菜（にんじん・玉ねぎ・キャベツ・なす）が（人数-1）個ずつ置かれる。F: 野菜を1つ指定して「持ってこい」と命令（その間は動けない・45秒ごと）。全員が30秒以内に1人1つずつ持ってこないといけない（渡した野菜は別の場所に置き直される）。持ってこなかった人は、首が伸びてきてキルされる。試合が終わった時、どの陣営が勝っても共存勝利。一番たくさん渡した人も一緒に勝利'};
-NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
+NROLES.bbg={n:'ブラックバスゴジラ',d:'いると全員（自分も）小さくなる。最初の20秒は動けない（その間にみんなは逃げる）。20秒後に巨大なゴジラに変身して、キルできるようになる（キルの待ち時間0秒・キルされない）。この試合はゴジラ以外だれもキルできず、リアクターのサボタージュも使えない。この試合は通報も緊急ボタンも使えず、タスクを全部終わらせても勝ちにならない。生き残りが最後の1人になったら、その1人と一緒に勝利'};
 const FOUR_ROLES=['verity','horse','bbg'],FOUR_PCT=10,BBG_WAIT=20;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg';   // キルされない役職
@@ -2903,7 +2903,7 @@ function exitVent(e){if(NET.client){rpc('exitVent',[e]);return;}
   if(e===me()||canSee(me(),v.x,v.y))snd('vent');
 }
 const MUSH_T=20;
-function startSab(type){if(S&&S.br)return;if(NET.client){rpc('startSab',[type]);return;}
+function startSab(type){if(S&&S.br)return;if(S&&S.bbg&&type==='reactor')return;   // ゴジラの試合はリアクター禁止if(NET.client){rpc('startSab',[type]);return;}
   if(type==='mush'){
     if(!MAPS[MAPI].fungle||S.sab||S.sabCd>0||S.mushT>0)return;
     // 生きている全員の見た目を入れ替える（自分自身の姿にはならない）。名前も見えなくなる
@@ -2991,7 +2991,7 @@ function impThink(e){
   const ai=e.ai;
   if(impRoleThink(e))return;
   ai.sabT=(ai.sabT??rand(25,60))-.25;
-  if(ai.sabT<=0){ai.sabT=rand(40,80);if(!S.sab&&S.sabCd<=0)startSab(MAPS[MAPI].fungle&&Math.random()<.4?'mush':Math.random()<.6?'lights':'reactor');}
+  if(ai.sabT<=0){ai.sabT=rand(40,80);if(!S.sab&&S.sabCd<=0)startSab(MAPS[MAPI].fungle&&Math.random()<.4?'mush':Math.random()<.6||S.bbg?'lights':'reactor');}
   if(ai.selfReport!=null){ai.selfReport-=.25;if(ai.selfReport<=0){const b=S.bodies.find(b=>b.id===ai.selfBody);ai.selfReport=null;if(b&&dist(e,b)<400){callMeeting(e,b);return;}}}
   if(ai.ventTo!=null){const v=VENTS[ai.ventTo];setGoal(e,v.x,v.y,'vent');if(dist(e,v)<20){const vi=ai.ventTo;ai.ventTo=null;enterVent(e,vi);e.ventT=rand(1,2.5);}return;}
   if(ai.flee>0){ai.flee-=.25;if(atGoal(e))wander(e);return;}
@@ -4553,7 +4553,8 @@ function setupHud(){
   $('ventNav').hidden=true;$('sabMenu').hidden=true;$('alert').hidden=true;
   updateHud();
 }
-function updateHud(){
+function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="reactor"]');if(rb)rb.hidden=!!(S&&S.bbg);}   // ゴジラの試合はリアクターを出さない
+
   if($('meeting').hidden)$('btnQuit').style.visibility='';
   const P=me();
   $('tbFill').style.width=(S.taskDone/S.taskTotal*100)+'%';
