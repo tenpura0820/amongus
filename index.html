@@ -1264,7 +1264,7 @@ const ROLES={
   labtech:{n:'臨床検査技師',d:'2人を指定して、同じ陣営か調べられる（1回だけ・Fキー）',x:'信用できる人と怪しい人を比べると効果的'},
   stunt:{n:'スタントマン',d:'1度だけキルを防ぐ（自動）。襲われたら誰に襲われたか分かる',x:'襲ってきた相手を会議で告発しよう'},
   sheriff:{n:'シェリフ',d:'村陣営以外をキルできる（15秒ごと・Qキー）。村陣営をキルすると自分が死ぬ',x:'確信が持てるまで撃たないこと'},
-  mayor:{n:'村長',d:'インポスター以外をシェリフにできる（1回だけ・Fキー）。インポスターに渡すと自分が死ぬ',x:'タスクを終わらせるところを見た人に渡すと安全'},
+  mayor:{n:'村長',d:'すぐ近くにいる人の前でFを押すと、その人をシェリフにできる（1回だけ）。インポスターに渡すと自分が死ぬ',x:'ずっと一緒に行動して信用できた人に渡そう'},
   sci:{n:'サイエンティスト',d:'10秒間姿を消せる（リロード10秒・Fキー）',x:'消えている間は誰からも見えず、狙われない'},
   redhood:{n:'ナイス赤ずきん',d:'キルされても、自分をキルした人が死ぬと復活する（1回・自爆に巻き込まれた時は復活しない）。死んでいる間は役職が見えないが、近くの人の会話は聞こえる',x:'犯人が追放されれば戻ってこられる'},
 };
@@ -1343,7 +1343,7 @@ const NROLES={
   killer:{n:'キラー',d:'第三陣営の基本役職。キルできる（間隔長め）。キルできる敵が全員いなくなり、投票できる人が1人以下になれば単独勝利'},
   god:{n:'神',d:'全員の役職が見える。サボタージュは直せない。自分のタスクを全部終わらせて生きていれば、誰かが勝った時に横取り勝利（優先度+4）。タスクが残っていると横取りできない'},
   tuna:{n:'マグロ',d:'3秒以上止まると死ぬ。生きていれば、誰かが勝った時に横取り勝利（優先度+5）'},
-  cupid:{n:'キューピッド',d:'Fで1回だけ、指定した相手ともう1人をラバーズにする（2人目を選ばなければランダム）。ラバーズが勝てば一緒に勝利'},
+  cupid:{n:'キューピッド',d:'1回だけ、2人をラバーズにする。1人目のすぐ近くでF、次に2人目のすぐ近くでFを押す（自分で近づいて指定しないとラバーズにならない）。ラバーズが勝てば一緒に勝利'},
   arson:{n:'アーソニスト',d:'Fで近くの人にオイルをかける（15秒ごと）。生きている全員にかけたら G「燃やす」で全員を燃やして単独勝利。死んだら必ず負け'},
 };
 NROLES.teru={n:'てるてる',d:'タスクを3個終わらせたうえで、会議で追放（吊られる）されたら単独勝利。キルはできない。わざと怪しまれよう'};
@@ -3250,8 +3250,10 @@ function neuDispatch(e){
   if(e.nrole==='papa'&&e.abCd<=0&&S.t>6){const vs=papaInView(e);const nw=vs.filter(o=>!e.shot.includes(o.id)&&!e.photos.flat().includes(o.id));if(nw.length>=1&&(vs.length>=2||Math.random()<.02))papaShoot(e);}
   if(e.nrole==='killer')return neuThink(e);
   if(e.nrole==='tuna'){if(atGoal(e)||!(ai.goalKey||'').startsWith('wander')){ai.goalKey=null;wander(e);}return;}
-  if(e.nrole==='cupid'&&e.abUses>0&&S.t>20&&Math.random()<.03){
-    const c=S.ents.filter(o=>o!==e&&o.alive&&o.lover==null);if(c.length>=2){shuffle(c);makeLovers(e,c[0],c[1]);}
+  if(e.nrole==='cupid'&&e.abUses>0&&S.t>20){   // 近くまで行って、2人を順番に指定する
+    if(!ai.cupid&&Math.random()<.03){const c=shuffle(S.ents.filter(o=>o!==e&&o.alive&&o.lover==null));if(c.length>=2)ai.cupid={a:c[0].id,b:c[1].id,step:0};}
+    if(ai.cupid){const C=ai.cupid,t=S.ents[C.step?C.b:C.a];if(!t.alive||t.lover!=null){ai.cupid=null;}
+      else{setGoal(e,t.x,t.y,'cupid'+C.step+Math.floor(S.t));if(dist(e,t)<110&&canSee(e,t.x,t.y)){if(C.step===0)C.step=1;else{makeLovers(e,S.ents[C.a],t);ai.cupid=null;}}return;}}
   }
   if(e.nrole==='arson'){
     if(allDoused(e)){ignite(e);return;}
@@ -3339,9 +3341,14 @@ function roleThink(e){
   if(e.role==='mayor'&&e.abUses>0&&S.t>30&&Math.random()<.02){
     const cand=S.ents.filter(o=>o!==e&&o.alive&&e.seen[o.id]&&S.t-e.seen[o.id].t<60).sort((a,b)=>e.susp[a.id]-e.susp[b.id]);
     if(cand.length){
-      const t=cand[0];e.abUses=0;
+      const t=cand[0];ai.mayorGo=t.id;
       botSay(e,`${t.name}がインポスターじゃないことを証明するために、村長の力でシェリフをあげます。見てください！`);
-      S.chatQ.push({at:S.t+2.5,fn:()=>{
+    }
+  }
+  if(e.role==='mayor'&&e.abUses>0&&ai.mayorGo!=null){const t=S.ents[ai.mayorGo];   // 相手の近くまで行ってから任命する
+    if(!t.alive){ai.mayorGo=null;}else if(dist(e,t)>110||!canSee(e,t.x,t.y)){setGoal(e,t.x,t.y,'mayorGo'+Math.floor(S.t));return true;}
+    else{ai.mayorGo=null;e.abUses=0;
+      S.chatQ.push({at:S.t+.3,fn:()=>{
         if(!e.alive||!t.alive||S.phase!=='play')return;
         const watchers=S.ents.filter(o=>o.isBot&&o.alive&&o!==e&&o!==t&&canSee(o,e.x,e.y));
         if(mayorAppoint(e,t)){
@@ -3605,7 +3612,7 @@ function abilityReady(){const P=me();if(!P.alive)return false;if((rage096()||ten
   if(S.br&&S.br.lv===3){if(S.br.stage!=='run'||P.bitten3>0)return false;if(P.spider)return !P.grab&&(P.spCd||0)<=0&&!(P.stunS>0)&&l3Survivors().some(o=>o.bitten3<=0&&dist(o,P)<200);if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&P.irole==='bubble')return P.abCd<=0;return false;}
   if(S.br){if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&BR_IMP_AB.includes(P.irole))return P.abCd<=0&&!P.cannon&&!P.drill;
     if(P.nrole==='verity')return verityReady(P)||(P.vform>0&&!P.vMonKill&&!!S.mon&&!S.mon.dead&&dist(P,S.mon)<KILLR+60);return false;}
-  if(P.isNeu){if(P.nrole==='happy')return P.abCd<=0;if(P.nrole==='horse')return !S.horse&&P.abCd<=0;if(P.nrole==='vulture')return !!vultBody(P);if(P.nrole==='owl')return owlReady(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0;if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
+  if(P.isNeu){if(P.nrole==='happy')return P.abCd<=0;if(P.nrole==='horse')return !S.horse&&P.abCd<=0;if(P.nrole==='vulture')return !!vultBody(P);if(P.nrole==='owl')return owlReady(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0&&!!nearPick(P);if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
   if(P.isImp){const r=P.irole;
     if(r==='ventist'||r==='esci'||r==='shift'||r==='gimlet'||r==='mine'||r==='crab')return P.abCd<=0;
     if(r==='berserk')return !P.berserk;
@@ -3618,10 +3625,12 @@ function abilityReady(){const P=me();if(!P.alive)return false;if((rage096()||ten
     if(r==='snake'){const t=nearTarget(P);return !!t&&(!(t.swallow&&t.swallow.by===P.id)||P.killCd<=0);}
     if(P.irole==='fraud')return P.abCd<=0&&!!stealTarget(P);if(P.irole==='cannon')return P.abCd<=0&&!P.cannon;if(P.irole==='tele')return P.abCd<=0;if(P.irole==='bomb')return P.abUses>0;return false;}
   if(P.team!=='crew')return false;
-  if(P.role==='sci')return P.abCd<=0;if(P.role==='labtech'||P.role==='mayor')return P.abUses>0;
+  if(P.role==='sci')return P.abCd<=0;if(P.role==='labtech')return P.abUses>0;if(P.role==='mayor')return P.abUses>0&&!!nearPick(P);
   if(P.role==='sage')return P.abCd<=0;if(P.role==='doppel')return !P.dop||P.abCd<=0;if(P.role==='comet')return P.comet?!P.cgUsed:P.abUses>0;if(P.role==='heir')return P.abUses>0&&!!heirTarget(P);
   if(P.role==='qed')return P.carryBody!=null||!!qedBody(P);
   return false;}
+// 村長・キューピッド: すぐ近くにいる人を直接指定する
+function nearPick(P){let best=null,bd=130;for(const o of S.ents){if(o===P||!o.alive||o.inVent!=null||hid(o))continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function pickPlayers(box,n,onPick){
   const w=document.createElement('div');w.className='pick';box.appendChild(w);const sel=[];
   for(const o of S.ents){if(o===me()||!o.alive)continue;
@@ -3641,14 +3650,11 @@ function doAbility(){
     if(P.nrole==='verity'){verityForm(P);return;}
     if(P.nrole==='papa'){if(papaCam)papaSnap();else{papaCam={};mouseXY=mouseXY.x?mouseXY:{x:VW/2,y:VH/2};}return;}
     if(P.nrole==='arson'){douse(P,douseTarget(P));return;}
-    if(P.nrole==='cupid')openModal('キューピッド: ラバーズを作る',(box)=>{
-      const msg=document.createElement('div');msg.className='msg';msg.textContent='1人目を選ぶ（2人目を選ばなければランダム）';
-      const go=document.createElement('button');go.className='dlbtn';go.textContent='💘 ラバーズにする';go.disabled=true;go.style.marginTop='10px';
-      let cur=[];pickPlayers(box,2,s=>{cur=[...s];go.disabled=!cur.length;});box.append(go,msg);
-      go.onclick=()=>{if(!cur.length||P.abUses<=0)return;let b=cur[1];
-        if(!b){const c=S.ents.filter(o=>o!==P&&o!==cur[0]&&o.alive&&o.lover==null);b=pick(c);}
-        closeModal();if(!makeLovers(P,cur[0],b))toast('その2人はラバーズにできない');};
-    });
+    if(P.nrole==='cupid'){if(P.abUses<=0)return;const t=nearPick(P);if(!t)return toast('ラバーズにしたい人の近くでFを押してね');
+      const f=P.cupidFirst!=null?S.ents[P.cupidFirst]:null;
+      if(!f||!f.alive){P.cupidFirst=t.id;snd('click');toast(`💘 1人目: ${t.name}。次は2人目の近くでFを押してね`);return;}
+      if(t===f){P.cupidFirst=null;toast('💘 1人目の選択をやめた');return;}
+      P.cupidFirst=null;if(!makeLovers(P,f,t))toast('その2人はラバーズにできない');return;}
     return;
   }
   if(P.isImp){
@@ -3671,13 +3677,7 @@ function doAbility(){
     box.append(go,msg);
     go.onclick=()=>{if(cur.length!==2||P.abUses<=0)return;const r=labTest(P,cur[0],cur[1]);msg.textContent=`結果: ${r}`;go.disabled=true;toast('検査結果: '+r);setTimeout(done,1600);};
   });
-  if(P.role==='mayor')openModal('村長: シェリフに任命する',(box,done)=>{
-    const msg=document.createElement('div');msg.className='msg';msg.textContent='インポスターに渡すと自分が死ぬ。慎重に！';
-    const go=document.createElement('button');go.className='dlbtn';go.textContent='🎖 任命する';go.disabled=true;go.style.marginTop='10px';
-    let cur=[];pickPlayers(box,1,s=>{cur=[...s];go.disabled=cur.length!==1;});
-    box.append(go,msg);
-    go.onclick=()=>{if(!cur[0]||P.abUses<=0)return;const t=cur[0];closeModal();if(mayorAppoint(P,t))toast(`${t.name}をシェリフに任命した`);};
-  });
+  if(P.role==='mayor'){if(P.abUses<=0)return;const t=nearPick(P);if(!t)return toast('シェリフにしたい人の近くでFを押してね');if(mayorAppoint(P,t))toast(`🎖 ${t.name}をシェリフに任命した`);return;}
 }
 
 // ================= meetings =================
@@ -4287,6 +4287,8 @@ function render(dt){
      // 血しぶき
      ctx.fillStyle='#c4141c';for(let i=0;i<12;i++){const a=i/12*TAU+f.st,sp=40+((i*37)%30);ctx.beginPath();ctx.arc(Math.cos(a)*sp*p*1.6,Math.sin(a)*sp*p*.9+p*p*50+20,Math.max(0,7*q),0,TAU);ctx.fill();}
      ctx.restore();}
+  if(P.alive&&S.phase==='play'&&((P.role==='mayor'&&P.team==='crew')||P.nrole==='cupid')&&P.abUses>0){const t=nearPick(P);if(t){ctx.save();ctx.strokeStyle=P.nrole==='cupid'?'#ff7ab8':'#ffd23d';ctx.lineWidth=4;ctx.setLineDash([8,6]);ctx.beginPath();ctx.ellipse(t.x,t.y+2,38,16,0,0,TAU);ctx.stroke();ctx.restore();}
+    if(P.nrole==='cupid'&&P.cupidFirst!=null){const f=S.ents[P.cupidFirst];if(f&&f.alive){ctx.save();ctx.font='26px sans-serif';ctx.textAlign='center';ctx.fillText('💘',f.x,f.y-96);ctx.restore();}}}
   for(const a of S.anchors||[]){if(P.alive&&!canSee(P,a.x,a.y)&&P.nrole!=='warden')continue;ctx.save();ctx.fillStyle='#1d1530';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.fillRect(a.x-22,a.y-44,44,44);ctx.strokeRect(a.x-22,a.y-44,44,44);ctx.fillStyle=a.cd>0?'#5a4a7a':`rgba(150,90,255,${.6+.4*Math.sin(tm*4)})`;ctx.fillRect(a.x-14,a.y-36,28,8);ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText('⚓',a.x,a.y-12);ctx.restore();}
   for(const b of S.balloons||[]){const vis=b.age<BALLOON_HIDE||P.nrole==='happy'||S.phase==='review';if(!vis||(P.alive&&!canSee(P,b.x,b.y)))continue;const fade=b.age<BALLOON_HIDE?1:.45,bob=Math.sin(tm*2+b.x)*4;ctx.save();ctx.globalAlpha=fade;
     ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.quadraticCurveTo(b.x+8,b.y-22,b.x,b.y-44+bob);ctx.stroke();
@@ -4809,6 +4811,8 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   if(S.tr)h+=trHud();
   if(S.ents.some(e=>e.four)&&!S.bbg&&!S.horse)h+=`<li style="color:${TEAM.four.c}">⚠ 第四陣営がいるようだ…</li>`;
   if(S.s096){const B=S.s096;h+=B.rage?`<li class="sab" style="color:#e8e8f0">😱 緊急状態！ ${P.nrole==='scp096'?'顔を見た人をキルしよう':seen096(P)?'あなたは顔を見てしまった。逃げろ！':'SCP-096の顔を見ないで！'}（通報・キルはできない）</li>`:`<li style="color:#e8e8f0">🌑 ${B.grace>0?`あと${Math.ceil(B.grace)}秒は顔を見ても大丈夫。今のうちに離れよう`:P.nrole==='scp096'?'だれかに顔を見られるのを待とう':'真っ暗… SCP-096の顔を見ないように'}</li>`;}
+  if(P.nrole==='cupid'&&P.alive&&P.abUses>0)h+=`<li style="color:#ff7ab8">💘 ${P.cupidFirst!=null&&S.ents[P.cupidFirst].alive?`1人目: ${S.ents[P.cupidFirst].name} → 2人目のすぐ近くでF`:'ラバーズにしたい1人目のすぐ近くでF'}</li>`;
+  if(P.role==='mayor'&&P.team==='crew'&&P.alive&&P.abUses>0)h+=`<li style="color:#ffd23d">🎖 シェリフにしたい人のすぐ近くでF</li>`;
   if(P.nrole==='happy'){const mates=S.ents.filter(o=>o!==P&&o.alive&&o.nrole==='happy');if(mates.length)h+=`<li style="color:#ff8fd0">🎈 仲間: ${mates.map(o=>o.name).join('・')}</li>`;const n=(S.balloons||[]).filter(b=>b.by===P.id).length,tg=S.ents.filter(o=>o.alive&&o.popped&&o.nrole!=='happy');h+=`<li style="color:#ff8fd0">🎈 風船 ${n}/${BALLOON_MAX}${tg.length?`　割った人: ${tg.map(o=>o.name).join('・')}（キルすると仲間になる）`:''}</li>`;}
   else if(P.popped&&P.alive)h+=`<li class="sab" style="color:#ff8fd0">🎈 風船を割ってしまった！ ハッピーボーイに狙われている</li>`;
   if(tenseHappy()&&P.nrole!=='happy'&&!tense173())h+=`<li class="sab" style="color:#ff8fd0">🎈 ハッピーボーイの緊張状態（通報・キルはできない）</li>`;
