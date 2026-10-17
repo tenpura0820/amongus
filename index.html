@@ -301,6 +301,7 @@ button{touch-action:manipulation}
       <label class="row">バックルームになる確率<input type="range" id="inBR" min="0" max="100" value="5"><b id="vBR">5%</b></label>
       <label class="row">Lv.3で自分が蜘蛛になる<span><input type="checkbox" id="inSpiderMe"> 100%（必ず自分が噛まれる）</span></label>
       <label class="row">投票時間<input type="range" id="inVote" min="15" max="120" step="5" value="45"><b id="vVote">45s</b></label>
+      <label class="row">第四陣営が出る確率<input type="range" id="inFour" min="0" max="100" value="10"><b id="vFour">10%</b></label>
       <label class="row">第三陣営<input type="range" id="inNeu" min="0" max="12" value="5"><b id="vNeu">5</b></label>
       <label class="row">マップ<select id="inMap"><option value="-1">🎲 ランダム（バックルーム以外）</option></select></label>
       <label class="row">あなたの陣営<select id="inRole"><option value="random">ランダム</option><option value="crew">村陣営（役職ランダム）</option><option value="crew:villager">村陣営: 村人</option><option value="crew:labtech">村陣営: 臨床検査技師</option><option value="crew:stunt">村陣営: スタントマン</option><option value="crew:sheriff">村陣営: シェリフ</option><option value="crew:mayor">村陣営: 村長</option><option value="crew:sci">村陣営: サイエンティスト</option><option value="crew:redhood">村陣営: ナイス赤ずきん</option><option value="crew:mad">村陣営: 狂人</option><option value="crew:meyer">村陣営: メイヤー</option><option value="crew:balance">村陣営: 天秤</option><option value="crew:home">村陣営: 自宅警備員</option><option value="crew:nguesser">村陣営: ゲッサー</option><option value="crew:sage">村陣営: 賢者</option><option value="crew:chicken">村陣営: チキン</option><option value="crew:noct">村陣営: 夜行性</option><option value="crew:noise">村陣営: ノイズメーカー</option><option value="crew:doppel">村陣営: ドッペル</option><option value="crew:heir">村陣営: 継承者</option><option value="crew:qed">村陣営: Q,E,D</option><option value="crew:avenger">村陣営: 報復者</option><option value="crew:comet">村陣営: コメット</option><option value="crew:valty">村陣営: ヴァルティ（列車のみ）</option><option value="imp">インポスター（役職ランダム）</option><option value="imp:none">インポスター: 通常</option><option value="imp:guesser">インポスター: イビルゲッサー</option><option value="imp:vamp">インポスター: ヴァンパイア</option><option value="imp:cannon">インポスター: 波動砲</option><option value="imp:bomb">インポスター: 自爆魔</option><option value="imp:tele">インポスター: テレポーター</option><option value="imp:fraud">インポスター: 詐欺師</option><option value="imp:ventist">インポスター: イビルティスト</option><option value="imp:esci">インポスター: イビルサイエンティスト</option><option value="imp:viper">インポスター: バイパー</option><option value="imp:shift">インポスター: シェイプシフター</option><option value="imp:remote">インポスター: リモコン</option><option value="imp:rocket">インポスター: ロケット</option><option value="imp:gimlet">インポスター: ギムレット</option><option value="imp:bubble">インポスター: バブルランチャー</option><option value="imp:mine">インポスター: 扇状地</option><option value="imp:pusher">インポスター: 突き落と師</option><option value="imp:sniper">インポスター: スナイパー</option><option value="imp:snake">インポスター: ヘビ</option><option value="imp:crab">インポスター: カニ</option><option value="imp:double">インポスター: ダブルキラー</option><option value="imp:serial">インポスター: シリアルキラー</option><option value="imp:berserk">インポスター: バーサーカー</option><option value="imp:poison">インポスター: 毒（列車のみ）</option><option value="imp:kunekune">インポスター: くねくね（ファングルのみ）</option><option value="neu">第三陣営（役職ランダム）</option><option value="neu:killer">第三陣営: キラー</option><option value="neu:god">第三陣営: 神</option><option value="neu:tuna">第三陣営: マグロ</option><option value="neu:cupid">第三陣営: キューピッド</option><option value="neu:opp">第三陣営: オポチュニスト</option><option value="neu:vulture">第三陣営: ヴァルチャー</option><option value="neu:owl">第三陣営: ふくろう</option><option value="four:verity">第四陣営: Verity</option><option value="four:horse">第四陣営: クリスピーホース</option><option value="four:bbg">第四陣営: ブラックバスゴジラ</option><option value="neu:papa">第三陣営: パパラッチ</option><option value="neu:teru">第三陣営: てるてる</option><option value="neu:arson">第三陣営: アーソニスト</option></select></label>
@@ -333,7 +334,7 @@ button{touch-action:manipulation}
 
 <div id="hud" hidden>
   <div id="taskbox">
-    <div class="tbar"><i id="tbFill"></i><span>タスク合計</span></div>
+    <div class="tbar"><i id="tbFill"></i><span>タスク合計（会議の後に更新）</span></div>
     <div id="role"></div>
     <ul id="tasklist"></ul>
   </div>
@@ -678,7 +679,7 @@ function llmFacts(e){
   L.push(`あなたの役職: ${roleName(e)}（${e.isImp||e.isNeu?'':ROLES[roleKey(e)].d}）`);
   if(e.labLog.length)L.push(`あなたの記録: ${e.labLog.join(' / ')}`);
   {const td=S.ents.filter(o=>o!==e&&o.alive&&e.obs[o.id]);const done=td.filter(o=>e.obs[o.id].done>0).map(o=>`${o.name}(${e.obs[o.id].done}回)`),none=td.filter(o=>e.obs[o.id].seen>=20&&!e.obs[o.id].done).map(o=>o.name);
-   if(done.length)L.push('タスク完了を見た人: '+done.join('、'));if(none.length)L.push('長く見ているのにタスク完了を一度も見ていない人: '+none.join('、'));}
+   L.push('※ほかの人がタスクを終わらせたかどうかは、見ていても分からない（タスクで白・黒は判断できない）');}
   if(e.ai.notes&&e.ai.notes.length)L.push('あなたの推理メモ（状況証拠）: '+e.ai.notes.map(n=>n.text).join(' / '));
   if(e.ai.attackedBy!=null)L.push(`${S.ents[e.ai.attackedBy].name}にキルされかけた（スタントマンの能力で防いだ）`);
   if(e.ai.sheriffKills)L.push(`シェリフとしてキルした相手: ${e.ai.sheriffKills.map(i=>S.ents[i].name).join('、')}`);
@@ -1252,7 +1253,7 @@ function tell(e,text){if(!e)return;if(e===me())toast(text);else if(e.remote)send
 
 function readCfg(){
   return{name:($('inName').value.trim()||'あなた').slice(0,8),color:selColor,costume:selCostume,players:+$('inPlayers').value,imps:+$('inImps').value,
-    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,brPct:+$('inBR').value,spiderMe:$('inSpiderMe').checked,snakeAnim:$('inSnakeAnim').checked};
+    tasks:+$('inTasks').value,kcd:+$('inKcd').value,disc:+$('inDisc').value,vote:+$('inVote').value,neu:+$('inNeu').value,map:+$('inMap').value,roles:[...document.querySelectorAll('#roleToggles input:checked')].map(i=>i.value),iroles:[...document.querySelectorAll('#iroleToggles input:checked')].map(i=>i.value),nroles:[...document.querySelectorAll('#nroleToggles input:checked')].map(i=>i.value),voice:$('inVoice').checked,vvol:+$('inVVol').value/100,vrate:+$('inVRate').value/100,yukkuri:false,aiNames:$('inAiNames').checked,role:$('inRole').value,confirm:$('inConfirm').checked,meyerVotes:+$('inMeyer').value,vultNeed:+$('inVult').value,brPct:+$('inBR').value,fourPct:+$('inFour').value,spiderMe:$('inSpiderMe').checked,snakeAnim:$('inSnakeAnim').checked};
 }
 function maxImps(n){return n<=5?1:n<=8?2:3;}
 // 推奨構成: インポスター < 村陣営 < 第三陣営（第三陣営は全員が敵同士なので実質は村陣営が最大勢力）
@@ -1302,7 +1303,7 @@ function roleHelpHTML(){
   for(const k in IROLES)h+=card(IROLES[k].n,'#ff8a8a',IROLES[k].d,'インポスターの役職');
   h+=card('第三陣営',TEAM.neu.c,TEAM_DESC.neu);
   for(const k in NROLES)if(!FOUR_ROLES.includes(k))h+=card(NROLES[k].n,'#c58bff',NROLES[k].d,'第三陣営の役職');
-  h+=card('第四陣営',TEAM.four.c,'1試合に最大1人（10%の確率で出る。0人のことが多い）。第三陣営とも別の、独自の勝利条件で戦う');
+  h+=card('第四陣営',TEAM.four.c,'1試合に最大1人（出る確率は設定で変えられる・初期10%）。第三陣営とも別の、独自の勝利条件で戦う');
   for(const k of FOUR_ROLES)h+=card(NROLES[k].n,TEAM.four.c,NROLES[k].d,'第四陣営の役職');
   h+=card('ラバーズ',TEAM.lovers.c,LOVERS_DESC,'キューピッドが作る');
   return h;
@@ -1937,7 +1938,7 @@ function startGame(cfg){
     const want=ents[0].team==='crew'&&cfg.role==='crew:valty'?ents[0]:crew.length>=3?pick(crew.filter(e=>!(e.id===0&&cfg.role.startsWith('crew:')))):null;if(want)want.role='valty';}
   // 第四陣営: 10%で1人だけ（村陣営の誰かがなる）。「あなたの陣営」で選んだ時は必ず自分
   {const mine=cfg.role.startsWith('four:');
-   if(!MAPS[MAPI].train&&!brStart&&(mine||Math.random()*100<FOUR_PCT)){
+   if(!MAPS[MAPI].train&&!brStart&&(mine||Math.random()*100<(cfg.fourPct??FOUR_PCT))){
      const c=mine?ents[0]:pick(ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role!=='random')));
      if(c){const r=mine&&FOUR_ROLES.includes(cfg.role.slice(5))?cfg.role.slice(5):pick(FOUR_ROLES);c.team='four';c.isNeu=true;c.four=true;c.nrole=r;c.role='villager';c.sheriff=false;c.killCd=25+Math.random()*6;}}}
   // Verityがいる試合には、必ず賢者がいる
@@ -2928,10 +2929,7 @@ function completeTask(e,t){if(t.done)return;
   t.done=true;
   if(e.madmate){return;}
   if(e.alive){
-    const st=STATIONS[t.s];S.fx.push({x:st.x,y:st.y-40,t:1.2});
-    // タスク完了は見ている人に分かる（偽タスクでは起きない）
-    for(const o of S.ents){if(!o.isBot||!o.alive||o===e||!canSee(o,e.x,e.y))continue;
-      const ob=(o.obs[e.id]=o.obs[e.id]||{seen:0,done:0});ob.done++;if(o.susp[e.id]<100)o.susp[e.id]=Math.max(0,o.susp[e.id]-8);}
+    const st=STATIONS[t.s];if(e===me())S.fx.push({x:st.x,y:st.y-40,t:1.2});   // タスクを終わらせても、ほかの人には分からない
   }if(e.team==='crew'){S.taskDone++;if(S.taskDone>=S.taskTotal&&!bbgOn())endGame('crew','すべてのタスクが完了した');}}
 
 // ================= bots =================
@@ -3519,7 +3517,8 @@ function buildMeetingKnowledge(M){
     let cleared=false;
     for(const o of alive){
       if(o===e)continue;const ob=e.obs[o.id];if(!ob)continue;
-      if(ob.seen>=20&&ob.done===0&&e.susp[o.id]<100){e.susp[o.id]=Math.min(99,e.susp[o.id]+18);addNote(e,o.id,`${o.name}がタスクを終わらせるところを一回も見てない。ずっとうろうろしてるだけ`,16);}
+      if(false&&ob.seen>=20&&ob.done===0&&e.susp[o.id]<100){   // タスクは見ても分からないので、これでは疑わない
+e.susp[o.id]=Math.min(99,e.susp[o.id]+18);addNote(e,o.id,`${o.name}がタスクを終わらせるところを一回も見てない。ずっとうろうろしてるだけ`,16);}
       else if(ob.done>=2&&!cleared&&e.susp[o.id]<40&&Math.random()<.4){cleared=true;(e.ai.clears=e.ai.clears||[]).push(o.id);}
     }
   }
@@ -3791,6 +3790,7 @@ function resolveVotes(){
   S.M=null;
 }
 function finishEject(){
+  S.taskShown=S.taskDone;
   $('hud').hidden=false;
   for(const e of S.ents)if(e.nrole==='verity'&&e.alive&&!e.vUsed){e.verTurns=(e.verTurns||0)+1;if(e.verTurns===3)tell(e,'🦵 会議を3回生き残った！ F で変身できる');}
   if(papaSettle())return;
@@ -3932,7 +3932,8 @@ function showIntro(){
     :P.four?`第四陣営はこの試合であなた1人だけ。あなたの役職: ${NROLES[P.nrole].n} — ${NROLES[P.nrole].d}`
     :P.isNeu?`自分のことを最適に、周りは利用しろ。第三陣営(${S.cfg.neu}人)は全員バラバラの敵。あなたの役職: ${NROLES[P.nrole].n} — ${NROLES[P.nrole].d}`
     :`インポスターを倒して勝利しよう！ この中に${S.cfg.imps}人のインポスター${neuTxt}がいる。あなたの役職: ${roleName(P)} — ${ROLES[roleKey(P)].d}`;
-  splash(TEAM[P.team].n,sub,TEAM[P.team].c,{lineup},null);
+  const fourTxt=S.ents.some(e=>e.four)?'\n⚠ 第四陣営がいるようだ…':'';
+  splash(TEAM[P.team].n,sub+fourTxt,TEAM[P.team].c,{lineup},null);
   S.splashT=3.4;
 }
 function showKilled(k){
@@ -4405,7 +4406,7 @@ function orderThink(e){
 }
 // 発言の中身に、そのAIが実際に見たこと（記憶）で答える
 function seenText(b,x){const s_=b.seen[x.id];if(!s_)return `${x.name}はしばらく見てない`;const ago=Math.round(S.t-s_.t);return ago<5?`${x.name}はさっき${s_.room}にいた`:`${x.name}は${ago}秒前に${s_.room}で見た`;}
-function taskText(b,x){const ob=b.obs[x.id];if(!ob)return '';if(ob.done)return `タスクを${ob.done}回終わらせてるのを見た`;if(ob.seen>=20)return 'タスクしてるとこは一回も見てない';return '';}
+function taskText(b,x){return '';}   // タスクを終わらせたかどうかは、だれにも分からない
 function roomWho(b,room){const out=[];for(const id in b.seen){const s_=b.seen[id];if(s_.room===room&&S.t-s_.t<45&&+id!==b.id)out.push(S.ents[id].name);}return out.slice(0,3);}
 function contentReply(b,text){
   const t=String(text),x=findByName(text),room=findRoom(text),liar=b.team!=='crew';
@@ -4506,7 +4507,7 @@ function ruleReply(b,sp,text){
     return top&&b.susp[top.id]>=30?`${top.name}が怪しいと思う`:'まだわからない。情報ある？';
   }
   if(/こんにち|やあ|hi|hello|おはよ|よろしく|こんばん/.test(t))return pick(['やあ！','よろしく！','おつかれ！']);
-  if(about&&/タスク/.test(t)){const ob=b.obs[about.id];if(b.isImp&&about.isImp)return `${about.name}はタスクしてたよ`;return ob&&ob.done?`${about.name}がタスク終わらせるの見たよ`:ob&&ob.seen>=20?`${about.name}、タスクしてるとこ一回も見てない…`:`${about.name}はあんまり見てないなぁ`;}
+  if(about&&/タスク/.test(t)){const ob=b.obs[about.id];if(b.isImp&&about.isImp)return `${about.name}はタスクしてたよ`;return ob&&ob.seen>=20?`${about.name}はタスクの場所にいたけど、終わらせたかどうかは分からないよ`:`${about.name}はあんまり見てないなぁ`;}
   if(/タスク/.test(t))return `あと${liar?rand(1,4)|0:b.tasks.filter(x=>!x.done).length}個かな`;
   if(/ありがと|サンキュ/.test(t))return 'どういたしまして！';
   return pick(['うん','なるほど','了解','気をつけてね','タスク頑張ろう','そうなんだ']);
@@ -4557,12 +4558,13 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
 
   if($('meeting').hidden)$('btnQuit').style.visibility='';
   const P=me();
-  $('tbFill').style.width=(S.taskDone/S.taskTotal*100)+'%';
+  $('tbFill').style.width=((S.taskShown||0)/S.taskTotal*100)+'%';   // タスクバーは会議の後にだけ更新される
   const role=$('role');
   if(S.br){role.textContent='🟨 バックルーム（全員仲間）'+(P.alive?'':'（幽霊）');role.style.color='#e8d36a';}else role.textContent=TEAM[P.team].n+(P.team==='crew'||P.irole?' / '+roleName(P):'')+(P.alive?'':'（幽霊）');role.style.color=TEAM[P.team].c;
   const ul=$('tasklist');let h='';
   if(S.br)h=brHud();else if(S.tr&&!P.isImp)h=trHud();else{
   if(S.tr)h+=trHud();
+  if(S.ents.some(e=>e.four)&&!S.bbg&&!S.horse)h+=`<li style="color:${TEAM.four.c}">⚠ 第四陣営がいるようだ…</li>`;
   if(S.bbg){const B=S.bbg;h+=B.giant?`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?'キルして、生き残りを最後の1人にしよう':'ブラックバスゴジラが暴れている！ 最後の1人まで生き残れ'}（通報・緊急ボタンは使えない・タスクを終わらせても勝てない）</li>`:`<li class="sab" style="color:#5fbf6a">🦖 ${P.nrole==='bbg'?`あと${Math.ceil(B.t)}秒で巨大化（それまで動けない）`:`あと${Math.ceil(B.t)}秒でブラックバスゴジラが巨大化！ 今のうちに逃げろ！`}</li>`;}
   if(S.horse){const H=S.horse,hh=S.ents[H.by],mv=(S.veg||[]).find(v=>v.by===P.id);h+=`<li class="sab" style="color:#f0b25a">🐴 ${VEGS[H.k][0]}${VEGS[H.k][1]}を${hh.name}に持ってこい！（${Math.max(0,Math.ceil(H.t))}秒・渡した人 ${H.done.length}）${H.done&&H.done.includes(P.id)?' ✅ 渡した':''}${mv?` 持っている: ${VEGS[mv.k][0]}`:''}</li>`;}
   if(S.sab)h+=`<li class="sab">⚠ ${S.sab.type==='lights'?`${SABP.lights.n}で停電を直す`:`リアクター崩壊を止める・2人で同時に手をかざす (${Math.ceil(S.sab.t)}秒)`}</li>`;
@@ -4968,7 +4970,7 @@ function applySnap(d){
     let vch=false;x.vents.forEach(([vx,vy],i)=>{if(VENTS[i]&&(VENTS[i].x!==vx||VENTS[i].y!==vy)){VENTS[i].x=vx;VENTS[i].y=vy;vch=true;}});if(vch)drawMapCanvas();}S.booms=d.booms.map(([x,y,R,t])=>({x,y,R,t}));
   // 画面（フェーズ）の切り替え
   if(d.ph==='eject'&&S.phase!=='eject'&&d.E){$('meeting').hidden=true;$('hud').hidden=true;S.phase='eject';S.E={ej:d.E.ej>=0?S.ents[d.E.ej]:null,text:d.E.text,t:0};}
-  else if(d.ph==='play'&&(S.phase==='intro'||S.phase==='eject'||S.phase==='meeting')){
+  else if(d.ph==='play'&&(S.phase==='intro'||S.phase==='eject'||S.phase==='meeting')){if(S.phase!=='intro')S.taskShown=S.taskDone;
     if(S.phase!=='intro'){$('hud').hidden=false;$('meeting').hidden=true;S.M=null;S.E=null;}
     S.phase='play';
   }
@@ -5348,7 +5350,7 @@ let selColor=0,selCostume='none';try{const k=localStorage.getItem('amongus-costu
     if(+im.value>mx)im.value=mx;nu.max=Math.max(0,n-2);if(+nu.value+ +im.value>n-1)nu.value=Math.max(0,n-1-im.value);
     $('vImps').textContent=im.value;$('vNeu').textContent=nu.value;
     const c=n-im.value-nu.value;$('compo').textContent=`構成: インポスター${im.value}人 / 村陣営${c}人 / 第三陣営${nu.value}人（第三陣営は全員バラバラの敵）`;}
-  bind('inBR','vBR',x=>x+'%');bind('inPlayers','vPlayers');bind('inImps','vImps');bind('inNeu','vNeu');bind('inTasks','vTasks');bind('inKcd','vKcd',x=>x+'s');bind('inDisc','vDisc',x=>x+'s');bind('inVote','vVote',x=>x+'s');bind('inVVol','vVVol');bind('inVRate','vVRate');bind('inMeyer','vMeyer');bind('inVult','vVult');
+  bind('inBR','vBR',x=>x+'%');bind('inFour','vFour',x=>x+'%');bind('inPlayers','vPlayers');bind('inImps','vImps');bind('inNeu','vNeu');bind('inTasks','vTasks');bind('inKcd','vKcd',x=>x+'s');bind('inDisc','vDisc',x=>x+'s');bind('inVote','vVote',x=>x+'s');bind('inVVol','vVVol');bind('inVRate','vVRate');bind('inMeyer','vMeyer');bind('inVult','vVult');
   $('btnVoiceTest').onclick=()=>{loadVoices();const nm=['ChatGPT','Claude','Gemini'];nm.forEach((n,i)=>{const fake={isBot:true,alive:true,id:i+1,name:n};voiceOf(fake,`${n}です。よろしくね`,1,readCfg());});if(!jaVoices.length)toast('日本語の音声が見つかりません（Windowsの設定で日本語音声を追加してね）');};
   sync(true);
   loadLLM();for(const k in LLM_IDS){$(LLM_IDS[k][0]).value=LLM[k].key;$(LLM_IDS[k][1]).value=LLM[k].model;}
