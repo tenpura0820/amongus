@@ -2368,10 +2368,12 @@ function cometStep(e,dt,ix,iy){
   for(const o of S.ents){if(o===e||!o.alive||hid(o)||o.inVent!=null||o.carriedBy!=null||o.climb)continue;if(dist(e,o)<36){cometHit(e,o);return;}}
   if(Math.hypot(e.x-ox,e.y-oy)<sp*.35&&!(c.guard>0))cometHit(e,null);
 }
+// コメット中のコメットがキルした死体は、そのコメットが終わるまで通報できない
+function bodyLocked(b){if(b.noReport)return true;if(S.isClient)return !!b.cometLock;const c=b.cometBy!=null&&S.ents[b.cometBy];return !!(c&&c.alive&&c.comet);}
 function cometHit(e,o){
   if(NET.client){if(e.comet&&e.comet.guard>0){if(o&&!(e.cgHit&&e.cgHit.id===o.id&&S.t-e.cgHit.t<.5)){e.cgHit={id:o.id,t:S.t};rpc('cometHit',[e,o]);}return;}if(e.comet){e.comet=null;e.cometSent=true;rpc('cometHit',[e,o]);}return;}
   if(!e.comet||!e.alive||S.phase!=='play')return;
-  if(e.comet.guard>0){if(!o||!o.alive)return;const P=me();die(o,e);if(o===P){S.killedT=2.6;splash('激突…',`コメットの${e.name}がぶつかってきた`,'#ffb347',{body:{id:o.id}},null);}tell(o.remote?o:null,`☄ コメットの${e.name}がぶつかってきた…`);tell(e,`🛡 ${o.name}をはね飛ばした！（ガード中なので自分は無事）`);
+  if(e.comet.guard>0){if(!o||!o.alive)return;const P=me();die(o,e);{const b=S.bodies.find(b=>b.id===o.id);if(b)b.cometBy=e.id;}if(o===P){S.killedT=2.6;splash('激突…',`コメットの${e.name}がぶつかってきた`,'#ffb347',{body:{id:o.id}},null);}tell(o.remote?o:null,`☄ コメットの${e.name}がぶつかってきた…`);tell(e,`🛡 ${o.name}をはね飛ばした！（ガード中なので自分は無事）`);
     if(e===P||o===P||canSee(P,e.x,e.y)){snd('kill');S.fx.push({x:o.x,y:o.y-30,t:1.2});if(e!==P&&o!==P)toast(`☄ ${e.name}が${o.name}をはね飛ばした！`);}checkWin();return;}
   e.comet=null;
   const P=me(),seen=e===P||o===P||canSee(P,e.x,e.y);
@@ -2777,7 +2779,7 @@ function perceive(e){
   }
   if(!e.isImp&&!e.ai.body){
     if(e.nrole==='vulture'||e.nrole==='owl')return;
-    for(const b of S.bodies)if(!b.noReport&&!(e.ai.ignore&&e.ai.ignore.has(b.id))&&canSee(e,b.x,b.y)){
+    for(const b of S.bodies)if(!bodyLocked(b)&&!(e.ai.ignore&&e.ai.ignore.has(b.id))&&canSee(e,b.x,b.y)){
       e.ai.body=b;e.ai.nearBody=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&dist(o,b)<220&&canSee(e,o.x,o.y)).map(o=>o.id);break;}
   }
 }
@@ -3171,7 +3173,7 @@ function useTarget(){
   if(P.alive&&!S.tr&&dist(P,BTN)<115)return{k:'btn'};
   return null;
 }
-function reportTarget(){const P=me();if(S.br||S.tr)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(b.noReport)continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
+function reportTarget(){const P=me();if(S.br||S.tr)return null;if(!P.alive||P.inVent!=null)return null;let best=null,bd=150;for(const b of S.bodies){if(bodyLocked(b))continue;const d=dist(P,b);if(d<bd&&canSee(P,b.x,b.y)){bd=d;best=b;}}return best;}
 function killTarget(ex=0){const P0=me();if(!isKiller(P0)||!P0.alive||P0.inVent!=null)return null;const P=P0.ctrl&&S.ents[P0.ctrl.id]?S.ents[P0.ctrl.id]:P0;let best=null,bd=KILLR+ex;for(const o of S.ents){if(o===P||o===P0||!o.alive||(P0.role==='avenger'&&P0.avAwake&&!P0.sheriff&&o.id!==P0.avTarget)||(P0.isImp&&o.isImp&&!P0.frenzy)||hid(o)||isLoverPair(P0,o)||o.carriedBy!=null)continue;const d=dist(P,o);if(d<bd&&canSee(P,o.x,o.y)){bd=d;best=o;}}return best;}
 function ventTarget(){const P=me();if(S.br)return null;if(!P.isImp||!P.alive)return null;if(P.inVent!=null)return P.inVent;let best=null,bd=65;VENTS.forEach((v,i)=>{const d=dist(P,v);if(d<bd){bd=d;best=i;}});return best;}
 
@@ -3281,6 +3283,7 @@ function callMeeting(caller,body){if(S&&(S.br||S.tr))return;   // バックル�
 if(S.lockT>0){if(caller===me())toast(`🦵 変身の力で、あと${Math.ceil(S.lockT)}秒は緊急ボタンも通報もできない`);return;}
   if(NET.client){rpc('callMeeting',[caller,body?{B:body.id}:null]);return;}
   if(S.phase!=='play')return;
+  if(body&&bodyLocked(body)){if(caller===me())toast('☄ コメット中のコメットがキルした死体は、まだ通報できない');if(caller.isBot)caller.ai.body=null;return;}
   const P=me();
   closeModal();$('sabMenu').hidden=true;
   if(P.inVent!=null){P.inVent=null;}
@@ -4638,7 +4641,7 @@ function netTick(dt){
     E:S.phase==='eject'&&S.E?{text:S.E.text,ej:S.E.ej?S.E.ej.id:-1}:null,
     beams:S.beams.map(b=>[b.x,b.y,b.dx,b.dy,b.L,b.t,b.thin?1:0]),booms:S.booms.map(b=>[b.x,b.y,b.R,b.t]),flash:S.flash,
     x2:{dis:S.ents.map(e=>e.disguise?e.disguise.id:-1),car:S.ents.map(e=>e.carriedBy??-1),dr:S.ents.map(e=>e.drill?[e.drill.dx,e.drill.dy]:0),mines:S.mines.map(m=>[m.x,m.y]),bub:S.bubbles.map(b=>[b.x,b.y]),tr:S.traces.map(t=>[t.x,t.y,t.t]),sf:S.snakeFx.map(f=>[f.x,f.y,f.t,f.color]),
-      rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:0]),vents:VENTS.map(v=>[v.x,v.y]),
+      rot:S.bodies.map(b=>[b.rot??-1,b.noReport?1:bodyLocked(b)?2:0]),vents:VENTS.map(v=>[v.x,v.y]),
       bz:S.ents.map(e=>e.berserk?1:0),sp:S.ents.map(e=>e.spider?1:e.bitten3>0?2:0),cz:S.ents.map(e=>e.crazed?1:0),vf:S.ents.map(e=>e.vform>0?Math.ceil(e.vform):0),lk:S.lockT||0,trn:S.tr?{tm:Math.round(S.tr.time),f:S.tr.food.map(f=>(f.eaten?1:0)|(f.flash>0?2:0)),kn:S.tr.knife,sit:S.ents.map(e=>e.sitting?e.sitting.i:-1)}:null,br:S.br?{l3:S.br.lv===3?{st:S.br.stage,t:Math.round(S.br.t),rt:S.br.runT||0,si:S.br.si,inv:S.br.inv,it:S.br.items.map(i=>[i.x,i.y,i.got?1:0]),w:S.br.webs,wk:S.br.work?Math.ceil(S.br.work.t):0,big:S.br.big?[Math.round(S.br.big.x),Math.round(S.br.big.y)]:null,gr:S.ents.map(e=>e.grab?[e.grab.tgt,+e.grab.t.toFixed(1)]:0)}:null,lv:S.br.lv||0,esc:S.ents.map(e=>e.escaped?1:0),boat:!!S.br.boat,tr:S.br.trains?S.br.trains.map(t=>[Math.round(t.x),Math.round(t.y),t.dir,Math.round(t.s)]):null,g:S.br.got,n:S.br.need,o:S.br.open,ex:S.br.exit,c:S.br.coupons.map(c=>[c.x,c.y,c.got?1:0]),m:S.mon?[Math.round(S.mon.x),Math.round(S.mon.y),Math.ceil(S.mon.stun),S.mon.tgt??-1,S.mon.face,S.mon.dead?Math.ceil(S.mon.respawn):-1,S.mon.slowT>0?1:0]:null,t:Math.round(S.br.t||0)}:null,mu:S.mushT||0,mm:S.mushT>0?S.mushMap:null,cl:S.ents.map(e=>e.climb?1:0),crab:S.crabT||0,gd:S.ents.map(e=>e.guardT>0?1:0),dop:S.ents.map(e=>e.dop?[Math.round(e.dop.x),Math.round(e.dop.y)]:0),ns:S.noise?[S.noise.x,S.noise.y,S.noise.name]:0,cb:S.ents.map(e=>e.carryBody??-1),gl:S.bodies.map(b=>b.goal?[b.goal.x,b.goal.y,b.goal.room]:0)}};
   for(const e of S.ents){
     if(!e.remote)continue;
@@ -4757,7 +4760,7 @@ function applySnap(d){
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
     S.mines=x.mines.map(([mx,my])=>({x:mx,y:my}));S.bubbles=x.bub.map(([bx,by])=>({x:bx,y:by}));S.traces=x.tr.map(([tx,ty,tt])=>({x:tx,y:ty,t:tt}));S.snakeFx=x.sf.map(([fx,fy,ft,fc])=>({x:fx,y:fy,t:ft,color:fc}));
-    x.rot.forEach(([r,nr],i)=>{if(S.bodies[i]){S.bodies[i].rot=r<0?null:r;S.bodies[i].noReport=!!nr;}});
+    x.rot.forEach(([r,nr],i)=>{if(S.bodies[i]){S.bodies[i].rot=r<0?null:r;S.bodies[i].noReport=nr===1;S.bodies[i].cometLock=nr===2;}});
     let vch=false;x.vents.forEach(([vx,vy],i)=>{if(VENTS[i]&&(VENTS[i].x!==vx||VENTS[i].y!==vy)){VENTS[i].x=vx;VENTS[i].y=vy;vch=true;}});if(vch)drawMapCanvas();}S.booms=d.booms.map(([x,y,R,t])=>({x,y,R,t}));
   // 画面（フェーズ）の切り替え
   if(d.ph==='eject'&&S.phase!=='eject'&&d.E){$('meeting').hidden=true;$('hud').hidden=true;S.phase='eject';S.E={ej:d.E.ej>=0?S.ents[d.E.ej]:null,text:d.E.text,t:0};}
