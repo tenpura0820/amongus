@@ -1372,7 +1372,7 @@ const happyMate=(a,b)=>!!(a&&b&&a!==b&&a.nrole==='happy'&&b.nrole==='happy');   
 const tenseWarden=()=>!!(S&&S.ents&&S.ents.some(e=>e.nrole==='warden'&&e.alive));   // ウォーデンがいると、ずっと緊急状態
 const tense782=()=>!!(S&&S.s782&&S.s782.emerg&&S.ents[S.s782.id].alive);
 const tenseRoles=()=>[bbgOn()&&'bbg',rage096()&&'scp096',gagaRage()&&'gagapi',tense173()&&'scp173',tenseWarden()&&'warden',tense782()&&'scp782',tenseHappy()&&'happy'].filter(Boolean);   // 今の緊急状態（第四陣営が2人いると2つ重なることもある）
-const tenseLock=e=>{const t=tenseRoles();return t.length>0&&!t.includes(e.nrole);};   // その人はキルできない状態か
+const tenseLock=e=>{if(e.four)return false;const t=tenseRoles();return t.length>0&&!t.includes(e.nrole);};   // 第四陣営は緊急状態でもキルできる   // その人はキルできない状態か
 const tenseRole=()=>gagaRage()?'gagapi':tense173()?'scp173':tenseWarden()?'warden':tense782()?'scp782':tenseHappy()?'happy':null;   // 緊張状態の時、キルできるのはこの役職だけ
 const meetLocked=()=>!!(S&&(S.br||S.tr||bbgOn()||S.horse||rage096()||tenseRole()));   // 通報・緊急ボタンが使えない時
 const TENSE_N={bbg:'🦖 ブラックバスゴジラ',scp096:'😱 SCP-096',gagapi:'💢 ガガピー',scp782:'🦎 SCP-782',warden:'🔊 ウォーデン',scp173:'🗿 SCP-173',happy:'🎈 ハッピーボーイ'};
