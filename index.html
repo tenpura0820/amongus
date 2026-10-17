@@ -2167,10 +2167,10 @@ function makeLovers(c,a,b){if(NET.client){rpc('makeLovers',[c,a,b]);return true;
 }
 function douseTarget(e){let best=null,bd=KILLR;for(const o of S.ents){if(o===e||!o.alive||hid(o)||e.oil.has(o.id))continue;const d=dist(e,o);if(d<bd&&canSee(e,o.x,o.y)){bd=d;best=o;}}return best;}
 function douse(e,t){if(NET.client){rpc('douse',[e,t]);return;}if(!t||e.abCd>0)return;e.oil.add(t.id);e.abCd=15;if(e===me()){snd('click');toast(`🛢 ${t.name}にオイルをかけた（${e.oil.size}人）`);}}
-function allDoused(e){return S.ents.every(o=>o===e||!o.alive||e.oil.has(o.id));}
+function allDoused(e){return S.ents.every(o=>o===e||!o.alive||noKill(o)||e.oil.has(o.id));}
 function ignite(e){if(NET.client){rpc('ignite',[e]);return;}
   if(e.nrole!=='arson'||!e.alive||!allDoused(e))return;
-  const vs=S.ents.filter(o=>o!==e&&o.alive);
+  const vs=S.ents.filter(o=>o!==e&&o.alive&&!noKill(o));   // クリスピーホース・ブラックバスゴジラは燃えない
   for(const o of vs){S.booms.push({x:o.x,y:o.y-20,t:.9,R:120});o.alive=false;o.inVent=null;S.bodies.push({id:o.id,x:o.x,y:o.y,color:o.color,room:roomOf(o.x,o.y),t:S.t});}
   snd('kill');endGame('arson',`アーソニストの${e.name}が全員を燃やした`,e.id);
 }
@@ -2322,6 +2322,7 @@ function meetingReact(v,msg,killer,kind){
   M.flashId=v.id;M.flashUntil=M.t+4;
 }
 function meetingDeath(v,msg,killer,kind,secret){
+  if(noKill(v))return;
   const M=S.M;v.alive=false;v.invisT=0;v.bitten=null;if(killer)v.ai.killedBy=killer.id;reviveFor(v.id);
   if(M){delete M.votes[v.id];for(const x in M.votes)if(M.votes[x]===v.id)delete M.votes[x];if(M.sel===v.id)M.sel=null;}
   snd('kill');post(-1,msg);if(secret)post(-1,secret,null,false,true);meetingReact(v,msg,killer,kind);
@@ -2334,6 +2335,7 @@ function doGuess(g,t,k){if(NET.client){rpc('doGuess',[g,t,k]);return;}
   M.guessUsed[g.id+':'+t.id]=true;
   // 推理キルの真相は、神と撃った本人にしか分からない（みんなには「突然倒れた」としか見えない）
   const hit=guessMatches(t,k),v=hit?t:g,P=me();
+  if(hit&&noKill(t)){tell(g,`🎯 当たったけど、${NROLES[t.nrole].n}は倒せない！`);return;}
   const secret=`🎯 ${g.name}が${t.name}を「${GUESS_OPTS[k]}」と推理して${hit?'当てた':'外した'}`;
   const knows=P.nrole==='god'||P===g;
   for(const o of S.ents)if(o.remote&&(o===g||o.nrole==='god'))sendTo(o,{t:'post',who:-1,text:`（${o===g?'あなただけ':'神の目'}）${secret}`});
@@ -2379,7 +2381,7 @@ function qedBody(e){let best=null,bd=80;for(const b of S.bodies){const d=dist(e,
 // ブラックバスゴジラ: 20秒たったら巨大化（ホストだけ）
 function bbgUpdate(dt){
   const B=S.bbg;if(!B||B.giant)return;B.t-=dt;if(B.t>0)return;
-  B.giant=true;const g=S.ents[B.id];g.killCd=0;const msg=`🦖 ${g.name}がブラックバスゴジラに変身した！ 逃げろ！`;toast(msg);netBc({t:'tell',text:msg});snd('alarm');S.flash=.6;
+  B.giant=true;const g=S.ents[B.id];g.killCd=0;g.speed=210*1.1*1.1;   // プレイヤーの1.1倍の速さconst msg=`🦖 ${g.name}がブラックバスゴジラに変身した！ 逃げろ！`;toast(msg);netBc({t:'tell',text:msg});snd('alarm');S.flash=.6;
 }
 function bbgScale(e){if(!S||!S.bbg)return 1;return e.nrole==='bbg'&&S.bbg.giant&&e.alive?2.6:.6;}
 // AI: 巨大なゴジラが見えたら、遠くへ逃げる
@@ -2635,7 +2637,7 @@ function impAbility(e,arg){
     return;
   }
   if(r==='snake'){
-    const t=arg!=null?S.ents[arg]:nearTarget(e);if(!t||dist(e,t)>KILLR+10||!t.alive)return;
+    const t=arg!=null?S.ents[arg]:nearTarget(e);if(!t||dist(e,t)>KILLR+10||!t.alive||noKill(t))return;
     if(t.swallow&&t.swallow.by===e.id){
       if(e.killCd>0)return;
       if(S.cfg.snakeAnim!==false)S.snakeFx.push({x:t.x,y:t.y,t:1.2,color:t.color});
@@ -2651,7 +2653,7 @@ function remoteKill(imp,pup,v){
   return false;
 }
 function rocketGrab(e,t){
-  if(!t||!t.alive||t.carriedBy!=null||t.isImp)return;
+  if(!t||!t.alive||t.carriedBy!=null||t.isImp||noKill(t))return;
   if(sageReflect(e,t))return;
   if(t.shield>0){t.shield=0;tell(t,`スタントマン発動！ ${e.name}に持ち上げられそうになった`);return;}
   t.carriedBy=e.id;t.path=null;t.inVent=null;(e.carry=e.carry||[]).push(t.id);
@@ -3768,7 +3770,7 @@ function resolveVotes(){
   S.phase='eject';S.E={ej,text,t:0};
   if(ej&&teruReady(ej)){S.teruWin=ej.id;S.E.text+=`\n…しかし、それがてるてるの狙いだった！`;}
   if(fright.length)S.E.text+=fright.map(c=>`\n🐔 ${c.name}は票の多さに驚いて気絶した…`).join('');
-  if(ej){ej.alive=false;ej.inVent=null;reviveFor(ej.id);if(ej.lover!=null&&S.ents[ej.lover].alive&&S.ents[ej.lover].nrole!=='horse'){const L=S.ents[ej.lover];L.alive=false;S.E.text+=`\n💔 ${L.name}も後を追った…`;}}
+  if(ej){ej.alive=false;ej.inVent=null;reviveFor(ej.id);if(ej.lover!=null&&S.ents[ej.lover].alive&&!noKill(S.ents[ej.lover])){const L=S.ents[ej.lover];L.alive=false;S.E.text+=`\n💔 ${L.name}も後を追った…`;}}
   S.M=null;
 }
 function finishEject(){
@@ -4927,7 +4929,7 @@ function applySnap(d){
   else if(x.br){const want=x.br.lv===1?BR1I:BRI;const mapCh=MAPI!==want;if(mapCh)loadMap(want);const b=x.br;const first=!S.br||mapCh;S.br={lv:b.lv,path:b.lv===1?(S.br&&S.br.path&&!mapCh?S.br.path:lv1Path()):null,trains:b.tr?b.tr.map(([tx,ty,d,ts])=>({x:tx,y:ty,dir:d,s:ts,legs:performance.now()/50})):null,got:b.g,need:b.n,open:b.o,exit:b.ex,coupons:b.c.map(([cx,cy,g])=>({x:cx,y:cy,got:!!g}))};if(b.m){S.mon=S.mon||{walk:0,path:null};const pm=S.mon;if(Math.abs(pm.x-b.m[0])+Math.abs(pm.y-b.m[1])>1)pm.walk+=.3;pm.x=b.m[0];pm.y=b.m[1];pm.stun=b.m[2];pm.tgt=b.m[3]>=0?b.m[3]:null;pm.face=b.m[4];pm.dead=b.m[5]>=0;pm.respawn=Math.max(0,b.m[5]);pm.slowT=b.m[6]?1:0;}S.br.t=b.t||0;if(b.esc)S.ents.forEach((e,i)=>e.escaped=!!b.esc[i]);if(first){setupHud();}}S.mushT=x.mu||0;S.mushMap=x.mm||null;S.crabT=x.crab||0;}
   if(d.x2&&d.x2.gd){const x=d.x2;S.ents.forEach((e,i)=>{e.guardT=x.gd[i]?1:0;e.dop=x.dop[i]?{x:x.dop[i][0],y:x.dop[i][1],face:1}:null;e.carryBody=x.cb[i]>=0?x.cb[i]:null;});
     S.noise=x.ns?{x:x.ns[0],y:x.ns[1],name:x.ns[2],t:1}:null;x.gl.forEach((g,i)=>{if(S.bodies[i])S.bodies[i].goal=g?{x:g[0],y:g[1],room:g[2]}:null;});}
-  if(d.x2){const x=d.x2;S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
+  if(d.x2){const x=d.x2;S.bbg=x.bg?{id:x.bg[0],t:x.bg[1],giant:!!x.bg[2]}:null;if(S.bbg&&S.bbg.giant&&S.ents[S.bbg.id])S.ents[S.bbg.id].speed=210*1.1*1.1;S.veg=(x.hv||[]).map(([vx,vy,k,by])=>({x:vx,y:vy,k,by}));S.horse=x.ho?{by:x.ho[0],k:x.ho[1],t:x.ho[2],done:x.ho[3]||[]}:null;if(x.dlv)S.ents.forEach((e,i)=>e.deliv=x.dlv[i]);}
   if(d.x2){const x=d.x2;S.ents.forEach((e,i)=>{e.disguise=x.dis[i]>=0?{id:x.dis[i],t:1}:null;e.carriedBy=x.car[i]>=0?x.car[i]:null;e.drill=x.dr[i]?{dx:x.dr[i][0],dy:x.dr[i][1]}:null;});
     S.mines=x.mines.map(([mx,my])=>({x:mx,y:my}));S.bubbles=x.bub.map(([bx,by])=>({x:bx,y:by}));S.traces=x.tr.map(([tx,ty,tt])=>({x:tx,y:ty,t:tt}));S.snakeFx=x.sf.map(([fx,fy,ft,fc])=>({x:fx,y:fy,t:ft,color:fc}));
     x.rot.forEach(([r,nr],i)=>{if(S.bodies[i]){S.bodies[i].rot=r<0?null:r;S.bodies[i].noReport=nr===1;S.bodies[i].cometLock=nr===2;}});
