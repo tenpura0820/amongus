@@ -1361,7 +1361,7 @@ NROLES.happy={n:'ハッピーボーイ',d:'F: 今いる場所に風船を置く�
 NROLES.warden={n:'ウォーデン',d:'目が見えない（すぐ近くしか見えない）。そのかわり音が分かる：動いている人・タスクを終わらせた人・ベントを使った人の場所に🔊が出る（止まっている人は音を立てない）。ウォーデンがいる試合は、ずっと緊急状態（ウォーデン以外だれも通報・緊急ボタン・キルができない）。マップにはアンカーがあり、ほかの人が使うとウォーデンにニセの音を聞かせられる。でも25秒以内に3回使うとバレて、ウォーデンに場所と名前が知られる。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.scp782={n:'SCP-782',d:'試合が始まって10秒たつと、見えないところでどんどん大きくなっていく（見た目はふつうのまま）。大きくなるほど足も速くなる（1秒に0.2%、緊急状態のあとは0.5%）。一定の大きさ（2倍）になった瞬間、正体（大きなトカゲの怪物）を現して緊急状態になる（もう解除されない・SCP-782以外だれも通報・緊急ボタン・キルができない）。緊急状態になるとキルできるようになり、F で近くの死体を食べられる（食べると少し大きくなる）。キルされそうになったり、賢者ガードで跳ね返されたりすると、死なずに小さくなって足が遅くなる（いちばん小さい時にキルされると死ぬ）。キルした後は30秒キルできない。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.gagapi={n:'ガガピー',d:'ふだんは何もしない。生き残ったまま試合が終わると、全員が勝利（どの陣営が勝っても全員勝ち）。キルされると復活して「逆襲モード」になり、ガガピーの緊急状態になる（ガガピー以外だれも通報・緊急ボタン・キルができない）。逆襲モードではキルされず、キルの待ち時間0秒の範囲攻撃（キルボタン）で、まわりの人をまとめてキルできる。逆襲モードでは、ガガピー以外が全員いなくなると単独勝利（横取りされない）'};
-NROLES.scp939={n:'SCP-939',d:'キルできる人が分かる（名前に🔪が付く）。キルした相手の声と見た目（名前・色・衣装）になる。かわりに死体は自分の姿になるので、自分が死んだことになる。キルした相手がインポスターだった場合は、ほかの人（インポスター仲間など）からもインポスターとして見える。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
+NROLES.scp939={n:'SCP-939',d:'キルできる人が分かる（名前に🔪が付く）。キルの待ち時間は20秒。キルした相手の声と見た目（名前・色・衣装）になる。かわりに死体は自分の姿になるので、自分が死んだことになる。キルした相手がインポスターだった場合は、ほかの人（インポスター仲間など）からもインポスターとして見える。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 const FOUR_ROLES=['verity','horse','bbg','scp173','scp096','happy','warden','scp782','gagapi','scp939'],GAGA_R=260,S782_MAX=2,BALLOON_MAX=3,BALLOON_HIDE=30,FOUR_PCT=10,BBG_WAIT=20,SMOKE_R=330;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg'||o.nrole==='scp096'||(o.nrole==='gagapi'&&!!S&&!!S.gagapi&&S.gagapi.rage);
@@ -1412,7 +1412,7 @@ function mimic939(k,v){
   tell(k,`🗣 ${k.name}の声と姿を手に入れた（${was}は死んだことになった）${k.fakeImp?'。インポスターとして見られている':''}`);
   if(k===me())setupHud();tell(v.remote?v:null,'🗣 SCP-939に声と姿を奪われた…');if(v===me())setupHud();
 }
-function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'||k.nrole==='scp096'?0:k.nrole==='scp173'?0:k.nrole==='warden'?S.cfg.kcd*.35:k.nrole==='scp782'?30:k.nrole==='gagapi'?0:k.nrole==='scp939'?S.cfg.kcd:k.nrole==='happy'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
+function cooldownOf(k){return k.isImp&&S&&S.tr?S.cfg.kcd*2:k.isImp?(k.berserk?5:k.irole==='serial'?15:S.cfg.kcd):k.nrole==='verity'?0:k.nrole==='owl'?S.cfg.kcd:k.nrole==='bbg'||k.nrole==='scp096'?0:k.nrole==='scp173'?0:k.nrole==='warden'?S.cfg.kcd*.35:k.nrole==='scp782'?30:k.nrole==='gagapi'?0:k.nrole==='scp939'?20:k.nrole==='happy'?0:k.isNeu?S.cfg.kcd*1.8:SHERIFF_CD;}
 function isLoverPair(a,b){return a.lover!=null&&a.lover===b.id;}
 
 // 前の試合の残り（読み上げ・チャット・画面・遅れて届くAIの返事）を全部消す
