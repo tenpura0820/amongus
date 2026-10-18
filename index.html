@@ -1284,7 +1284,7 @@ Object.assign(ROLES,{
   valty:{n:'ヴァルティ',d:'（列車ステージ）インポスターをキルできる。クルーをキルしてしまうとキルできなくなり、キルの所有権が床に落ちる（クルーだけ拾える。拾った人はキルできるが、クルーをキルすると自分が死ぬ）',x:'インポスターだけを狙おう'},
   qed:{n:'Q,E,D',d:'F: 死体をつかんで運ぶ／下ろす。死んだ場所から一番遠い部屋まで運ぶと、その人が生き返る',x:'矢印の部屋まで運ぼう'},
 });
-ROLES.comet={n:'コメット',d:'F: 1回だけコメットになる。視界1.3倍・移動速度2倍になるが、止まれなくなる（向きは変えられる）。壁にぶつかると自分が死ぬ。だれかにぶつかると、相手と自分の両方が死ぬ。コメット中にもう一度Fで、1試合に1回だけ「ガード」：15秒間は壁に当たっても死なず、ぶつかった相手だけが死ぬ',x:'怪しい人に体当たりしよう'};
+ROLES.comet={n:'コメット',d:'F: 1回だけコメットになる（試合開始から20秒は使えない）。視界1.3倍・移動速度2倍になるが、止まれなくなる（向きは変えられる）。壁にぶつかると自分が死ぬ。だれかにぶつかると、相手と自分の両方が死ぬ。コメット中にもう一度Fで、1試合に1回だけ「ガード」：15秒間は壁に当たっても死なず、ぶつかった相手だけが死ぬ',x:'怪しい人に体当たりしよう'};
 const SPECIAL=['labtech','stunt','sheriff','mayor','sci','redhood','mad','meyer','balance','home','nguesser','sage','chicken','noct','noise','doppel','heir','qed','avenger','comet'];
 // 報復者は目覚めるまで「村人」として表示される（本人にも）
 const roleKey=e=>e.role==='avenger'&&!e.avAwake&&!(S&&S.phase==='review')?'villager':e.role;
@@ -1938,7 +1938,7 @@ function startGame(cfg){
   while(imps.length<cfg.imps)imps.push(rest.shift());
   while(neus.length<cfg.neu)neus.push(rest.shift());
   for(const e of ents)e.team='crew';
-  imps.forEach(i=>{ents[i].isImp=true;ents[i].team='imp';ents[i].killCd=20+Math.random()*6;});
+  imps.forEach(i=>{ents[i].isImp=true;ents[i].team='imp';ents[i].killCd=20;});   // インポスターの最初のキル待ちは20秒
   neus.forEach(i=>{ents[i].isNeu=true;ents[i].team='neu';ents[i].killCd=25+Math.random()*6;});
   for(const e of ents)e.tasks=shuffle(STATIONS.map((_,i)=>i)).slice(0,cfg.tasks).map(s=>({s,done:false}));
   // 村陣営の役職（有効な役職を1人ずつ割り当てる）
@@ -1979,6 +1979,7 @@ function startGame(cfg){
     const c=ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role.startsWith('crew:'))).sort((a,b)=>(a.role==='villager'?0:1)-(b.role==='villager'?0:1)||(a.id===0?1:0)-(b.id===0?1:0))[0];
     if(c)c.role='sage';
   }
+  for(const e of ents){if(e.nrole==='scp939')e.killCd=10;}   // SCP-939の最初のキル待ちは10秒
   for(const e of ents){initRole(e);if(e.role==='home')e.tasks=[];}
   for(const e of ents){if(e.role==='valty'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='stunt')e.shield=1;if(e.role==='sheriff'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='labtech'||e.role==='mayor')e.abUses=1;}
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
@@ -2420,7 +2421,7 @@ const faceOf=e=>S&&S.mushT>0&&S.mushMap&&S.mushMap[e.id]!=null&&e.alive?S.ents[S
 function nearTarget(e,r){let best=null,bd=r||KILLR;for(const o of S.ents){if(o===e||!o.alive||o.isImp||noKill(o)||hid(o)||o.carriedBy!=null)continue;const d=dist(e,o);if(d<bd&&canSee(e,o.x,o.y)){bd=d;best=o;}}return best;}
 // その場でキル（テレポートしない）。見ていた人は「見えた顔」の人を犯人だと思う
 // ===== 村陣営の追加役職 =====
-function initRole(e){e.comet=null;e.cgUsed=false;if(e.role==='comet')e.abUses=1;e.guardT=0;e.dop=null;e.heir=null;e.carryBody=null;e.eaten=0;if(e.role==='heir')e.abUses=1;if(e.role==='balance')e.abUses=1;}
+function initRole(e){e.comet=null;e.cgUsed=false;if(e.role==='comet'){e.abUses=1;e.abCd=20;}e.guardT=0;e.dop=null;e.heir=null;e.carryBody=null;e.eaten=0;if(e.role==='heir')e.abUses=1;if(e.role==='balance')e.abUses=1;}
 function voteWeight(e){return e&&e.role==='meyer'&&e.team==='crew'?(S.cfg.meyerVotes||3):1;}
 // 賢者ガード: 攻撃を跳ね返す
 function sageReflect(k,v){
@@ -2722,7 +2723,7 @@ function crewAbility(e,arg){
   if(e.role==='comet'&&e.team==='crew'&&tenseRole()&&!e.comet){tell(e,'緊張状態中は、コメットになれない');return;}
   if(e.role==='comet'&&e.team==='crew'&&S.horse&&!e.comet){tell(e,'🐴 クリスピーホースの命令中は、コメットになれない');return;}
   if(e.role==='comet'&&e.team==='crew'&&S.bbg){tell(e,'🦖 ブラックバスゴジラの試合では、コメットは使えない');return;}
-  if(e.role==='comet'&&e.team==='crew'){if(e.comet){if(e.cgUsed)return;e.cgUsed=true;e.comet.guard=15;tell(e,'🛡 コメットガード！ 15秒間は壁に当たっても死なない。ぶつかった相手だけが死ぬ');if(e===me())snd('task');return;}if(e.abUses<=0)return;const a=e.aim||{x:e.face||1,y:0},m=Math.hypot(a.x,a.y)||1;
+  if(e.role==='comet'&&e.team==='crew'){if(e.comet){if(e.cgUsed)return;e.cgUsed=true;e.comet.guard=15;tell(e,'🛡 コメットガード！ 15秒間は壁に当たっても死なない。ぶつかった相手だけが死ぬ');if(e===me())snd('task');return;}if(e.abUses<=0||e.abCd>0)return;const a=e.aim||{x:e.face||1,y:0},m=Math.hypot(a.x,a.y)||1;
     e.comet={dx:a.x/m,dy:a.y/m,tgt:arg!=null&&S.ents[arg]?arg:null};e.abUses=0;e.path=null;tell(e,'☄ コメットになった！ もう止まれない（向きだけ変えられる）');if(e===me())snd('vent');return;}
   if(e.role==='doppel'&&e.team==='crew'){
     if(!e.dop){e.dop={x:e.x,y:e.y,face:e.face};tell(e,'👥 分身を置いた（もう一度Fで入れ替え）');return;}
@@ -3499,7 +3500,7 @@ function roleThink(e){
   {const threat=S.ents.some(o=>o!==e&&o.alive&&!hid(o)&&e.susp[o.id]>=70&&dist(e,o)<260&&canSee(e,o.x,o.y));
    if(e.role==='sage'&&e.abCd<=0&&threat)crewAbility(e);
    if(e.role==='comet'&&e.comet&&!e.cgUsed)crewAbility(e);
-   if(e.role==='comet'&&e.abUses>0&&!e.comet&&S.t>15){const t=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&e.susp[o.id]>=60&&dist(e,o)<480&&canSee(e,o.x,o.y)&&cometClear(e,o)).sort((a,b)=>e.susp[b.id]-e.susp[a.id])[0];if(t){const dx=t.x-e.x,dy=t.y-e.y,m=Math.hypot(dx,dy)||1;e.aim={x:dx/m,y:dy/m};crewAbility(e,t.id);}}
+   if(e.role==='comet'&&e.abUses>0&&!e.comet&&e.abCd<=0){const t=S.ents.filter(o=>o!==e&&o.alive&&!hid(o)&&e.susp[o.id]>=60&&dist(e,o)<480&&canSee(e,o.x,o.y)&&cometClear(e,o)).sort((a,b)=>e.susp[b.id]-e.susp[a.id])[0];if(t){const dx=t.x-e.x,dy=t.y-e.y,m=Math.hypot(dx,dy)||1;e.aim={x:dx/m,y:dy/m};crewAbility(e,t.id);}}
    if(e.role==='doppel'){if(!e.dop&&S.t>12&&Math.random()<.02)crewAbility(e);else if(e.dop&&e.abCd<=0&&threat)crewAbility(e);}
    if(e.role==='heir'&&e.abUses>0&&S.t>20&&Math.random()<.02){const t=heirTarget(e);if(t)crewAbility(e,t.id);}}
   if(e.role==='sci'&&e.abCd<=0){
@@ -3813,7 +3814,7 @@ function abilityReady(){const P=me();if(!P.alive)return false;if((rage096()||ten
     if(P.irole==='fraud')return P.abCd<=0&&!!stealTarget(P);if(P.irole==='cannon')return P.abCd<=0&&!P.cannon;if(P.irole==='tele')return P.abCd<=0;if(P.irole==='bomb')return P.abUses>0;return false;}
   if(P.team!=='crew')return false;
   if(P.role==='sci')return P.abCd<=0;if(P.role==='labtech')return P.abUses>0;if(P.role==='mayor')return P.abUses>0&&!!nearPick(P);
-  if(P.team==='crew'&&CREW30[P.role]){const R30=CREW30[P.role];return !!R30.use&&P.abCd<=0&&(!R30.ready||R30.ready(P));}if(P.role==='sage')return P.abCd<=0;if(P.role==='doppel')return !P.dop||P.abCd<=0;if(P.role==='comet')return P.comet?!P.cgUsed:P.abUses>0;if(P.role==='heir')return P.abUses>0&&!!heirTarget(P);
+  if(P.team==='crew'&&CREW30[P.role]){const R30=CREW30[P.role];return !!R30.use&&P.abCd<=0&&(!R30.ready||R30.ready(P));}if(P.role==='sage')return P.abCd<=0;if(P.role==='doppel')return !P.dop||P.abCd<=0;if(P.role==='comet')return P.comet?!P.cgUsed:P.abUses>0&&P.abCd<=0;if(P.role==='heir')return P.abUses>0&&!!heirTarget(P);
   if(P.role==='qed')return P.carryBody!=null||!!qedBody(P);
   return false;}
 // 村長・キューピッド: すぐ近くにいる人を直接指定する
