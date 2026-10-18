@@ -1361,7 +1361,7 @@ NROLES.happy={n:'ハッピーボーイ',d:'F: 今いる場所に風船を置く�
 NROLES.warden={n:'ウォーデン',d:'目が見えない（すぐ近くしか見えない）。そのかわり音が分かる：動いている人・タスクを終わらせた人・ベントを使った人の場所に🔊が出る（止まっている人は音を立てない）。ウォーデンがいる試合は、ずっと緊急状態（ウォーデン以外だれも通報・緊急ボタン・キルができない）。マップにはアンカーがあり、ほかの人が使うとウォーデンにニセの音を聞かせられる。でも25秒以内に3回使うとバレて、ウォーデンに場所と名前が知られる。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.scp782={n:'SCP-782',d:'試合が始まって10秒たつと、見えないところでどんどん大きくなっていく（見た目はふつうのまま）。大きくなるほど足も速くなる（1秒に0.2%、緊急状態のあとは0.5%）。一定の大きさ（2倍）になった瞬間、正体（大きなトカゲの怪物）を現して緊急状態になる（もう解除されない・SCP-782以外だれも通報・緊急ボタン・キルができない）。緊急状態になるとキルできるようになり、F で近くの死体を食べられる（食べると少し大きくなる）。キルされそうになったり、賢者ガードで跳ね返されたりすると、死なずに小さくなって足が遅くなる（いちばん小さい時にキルされると死ぬ）。キルした後は30秒キルできない。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.gagapi={n:'ガガピー',d:'ふだんは何もしない。生き残ったまま試合が終わると、全員が勝利（どの陣営が勝っても全員勝ち）。キルされると復活して「逆襲モード」になり、ガガピーの緊急状態になる（ガガピー以外だれも通報・緊急ボタン・キルができない）。逆襲モードではキルされず、キルの待ち時間0秒の範囲攻撃（キルボタン）で、まわりの人をまとめてキルできる。逆襲モードでは、ガガピー以外が全員いなくなると単独勝利（横取りされない）'};
-NROLES.scp939={n:'SCP-939',d:'キルできる人が分かる（名前に🔪が付く）。キルの待ち時間は20秒。キルした相手の声と見た目（名前・色・衣装）になる。かわりに死体は自分の姿になるので、自分が死んだことになる。キルした相手がインポスターだった場合は、ほかの人（インポスター仲間など）からもインポスターとして見える。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
+NROLES.scp939={n:'SCP-939',d:'キルできる人が分かる（名前に🔪が付く）。キルの待ち時間は20秒（最初は10秒）。最初のキルだけは死体が残らない。キルした相手の声と見た目（名前・色・衣装）になる。かわりに死体は自分の姿になるので、自分が死んだことになる。キルした相手がインポスターだった場合は、ほかの人（インポスター仲間など）からもインポスターとして見える。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 const FOUR_ROLES=['verity','horse','bbg','scp173','scp096','happy','warden','scp782','gagapi','scp939'],GAGA_R=260,S782_MAX=2,BALLOON_MAX=3,BALLOON_HIDE=30,FOUR_PCT=10,BBG_WAIT=20,SMOKE_R=330;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg'||o.nrole==='scp096'||(o.nrole==='gagapi'&&!!S&&!!S.gagapi&&S.gagapi.rage);
@@ -1395,7 +1395,7 @@ const isKiller=e=>!(S&&S.br)&&!(S&&S.horse)&&!tenseLock(e)&&isKiller0(e);   // �
 const isKiller0=e=>(e.role==='avenger'&&e.avAwake&&e.alive&&e.avTarget!=null&&S.ents[e.avTarget].alive)||e.isImp||(e.isNeu&&e.nrole==='killer')||(e.isNeu&&e.nrole==='scp939')||(e.isNeu&&e.nrole==='owl'&&!!S&&!!S.sab&&S.sab.type==='lights')||e.sheriff||(e.nrole==='verity'&&e.vform>0)||bbgGiant(e)||(e.nrole==='happy'&&!!S&&S.ents.some(o=>o.alive&&o.popped&&o.nrole!=='happy'))||(e.nrole==='scp173'&&!e.observed&&!(S&&S.g173>0))||(e.nrole==='warden'&&!(S&&S.gWarden>0))||(e.nrole==='scp782'&&tense782())||(e.nrole==='gagapi'&&gagaRage())||(e.nrole==='scp096'&&!!S&&!!S.s096&&S.s096.marks.some(i=>S.ents[i].alive));
 const hid=o=>o.inVent!=null||o.invisT>0;
 function afterKillHooks(k){
-  if(k.nrole==='scp939'&&k.ai&&k.ai.lastVictim&&!k.ai.lastVictim.alive)mimic939(k,k.ai.lastVictim);
+  if(k.nrole==='scp939'&&k.ai&&k.ai.lastVictim&&!k.ai.lastVictim.alive){const v=k.ai.lastVictim;if(!k.k939First){k.k939First=true;S.bodies=S.bodies.filter(b=>b.id!==v.id);}mimic939(k,v);}   // 最初のキルは死体が残らない
   if(k.role==='avenger'&&k.avAwake&&k.ai&&k.ai.lastVictim&&k.ai.lastVictim.id===k.avTarget){const t=k.ai.lastVictim;
     if(k.avWhy==='lover')endGame('lovers',`報復者の${k.name}が、ラバーズをキルした${t.name}に報復した`);else endGame('crew',`報復者の${k.name}が、村長をキルした${t.name}に報復した`);return;}
   if(k.nrole==='verity'&&k.ai&&k.ai.lastVictim&&k.ai.lastVictim.isImp)k.vKilledImp=true;
