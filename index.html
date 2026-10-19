@@ -5393,7 +5393,7 @@ function loadPeer(){
     const to=setTimeout(()=>res(false),15000);sc.onload=()=>{clearTimeout(to);res(!!window.Peer);};sc.onerror=()=>{clearTimeout(to);peerLoading=null;res(false);};document.head.appendChild(sc);});
   return peerLoading;
 }
-const MY_TOKEN=(()=>{try{let t=localStorage.getItem('amgs-token');if(!t){t=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('amgs-token',t);}return t;}catch(e){return Math.random().toString(36).slice(2)+Date.now().toString(36);}})();
+const MY_TOKEN=(()=>{try{let t=sessionStorage.getItem('amgs-token');if(!t){t=Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem('amgs-token',t);}return t;}/* タブごと（同じタブなら再読み込みしても同じ） */catch(e){return Math.random().toString(36).slice(2)+Date.now().toString(36);}})();
 async function hostRoom(){
   toast('🌐 オンラインの準備中…');await loadPeer();
   if(!window.Peer)return toast('オンライン機能を読み込めませんでした（インターネット接続を確認してね）');
@@ -5409,11 +5409,11 @@ function hostRecv(conn,d){
   if(!d||!d.t)return;
   if(d.t==='hello'){
     const tok=String(d.token||'').slice(0,40);
-    if(S&&tok){const e=S.ents.find(o=>o.token===tok&&o.id!==0);if(e){   // 再接続: 前と同じキャラクターに戻す
+    if(S&&tok){const e=S.ents.find(o=>o.token===tok&&o.id!==0&&!(o.remote&&NET.conns.get(o.pid)&&NET.conns.get(o.pid).open&&o.pid!==conn.peer));if(e){   // 再接続: 前と同じキャラクターに戻す
       for(const[k,c]of NET.conns)if(c!==conn&&S.ents.find(o=>o.pid===k)===e){NET.conns.delete(k);NET.members.delete(k);try{c.close();}catch(_){}}
       NET.conns.set(conn.peer,conn);NET.members.set(conn.peer,{pid:conn.peer,name:e.name,color:e.color,costume:e.costume,token:tok});
       e.pid=conn.peer;e.remote=true;e.isBot=false;e.path=null;conn.send(startMsg(e,true));toast(`🔌 ${e.name}が再接続した`);hostLobby();return;}}
-    for(const[k,m]of NET.members)if(tok&&m.token===tok&&k!==conn.peer){NET.members.delete(k);const c=NET.conns.get(k);NET.conns.delete(k);try{c&&c.close();}catch(_){}}   // ロビーで入り直した時の古い接続
+    for(const[k,m]of NET.members)if(tok&&m.token===tok&&k!==conn.peer){const c=NET.conns.get(k);if(c&&c.open)continue;NET.members.delete(k);NET.conns.delete(k);}   // ロビーで入り直した時の、もう切れている古い接続だけ消す
     if(NET.conns.size>=14){conn.send({t:'full'});return;}
     NET.conns.set(conn.peer,conn);NET.members.set(conn.peer,{pid:conn.peer,token:tok,name:String(d.name||'ゲスト').slice(0,8),color:(d.color|0)%COLORS.length,costume:COSTUMES.some(c=>c[0]===d.costume)?d.costume:'none'});
     hostLobby();toast(`👋 ${String(d.name||'ゲスト').slice(0,8)}が部屋に入った`);
