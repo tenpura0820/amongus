@@ -4389,7 +4389,8 @@ function render(dt){
   const P=me();
   S.scale=clamp(Math.min(VW,VH)/1080,matchMedia('(pointer:coarse)').matches?.5:.4,1.1);
   const sc=S.scale;
-  const V=S.scope?{x:S.scope.x,y:S.scope.y+30}:P.ctrl&&S.ents[P.ctrl.id]?S.ents[P.ctrl.id]:P;
+  const myNeck=P.nrole==='horse'&&(S.necks||[]).find(n=>n.h===P.id),neckV=myNeck?{x:myNeck.x,y:myNeck.y+40}:null;   // クリスピーホースは、首が伸びている間は首の先から見る
+  const V=neckV?neckV:S.scope?{x:S.scope.x,y:S.scope.y+30}:P.ctrl&&S.ents[P.ctrl.id]?S.ents[P.ctrl.id]:P;
   S.cam.x+=(V.x-S.cam.x)*Math.min(1,dt*10);S.cam.y+=(V.y-30-S.cam.y)*Math.min(1,dt*10);
   const cam=S.cam;
   drawStars(cam.x,cam.y);
@@ -4435,7 +4436,7 @@ function render(dt){
   for(const f of S.fx){ctx.save();ctx.globalAlpha=Math.min(1,f.t);ctx.font='bold 34px system-ui';ctx.textAlign='center';ctx.fillStyle='#44e15a';ctx.strokeStyle='#000';ctx.lineWidth=5;const y=f.y-(1.2-f.t)*30;ctx.strokeText('✓',f.x,y);ctx.fillText('✓',f.x,y);ctx.restore();}
   // entities
   const mate=e=>P.isImp&&e.isImp&&e!==P;
-  const vis=S.ents.filter(e=>e.inVent==null&&(S.phase==='review'||e===P||(mate(e)&&e.alive===P.alive)||(e.alive?(P.alive?!hid(e)&&(canSee(P,e.x,e.y)||(S.scope&&dist(e,S.scope)<SCOPE_R)):true):!P.alive)));
+  const vis=S.ents.filter(e=>e.inVent==null&&(S.phase==='review'||e===P||(mate(e)&&e.alive===P.alive)||(e.alive?(P.alive?!hid(e)&&(canSee(P,e.x,e.y)||(S.scope&&dist(e,S.scope)<SCOPE_R)||(neckV&&Math.hypot(e.x-neckV.x,e.y-neckV.y)<420)):true):!P.alive)));
   vis.sort((a,b)=>a.y-b.y);
   if(micSpeaking&&P.inVent==null){const g=ctx.createRadialGradient(P.x,P.y-30,10,P.x,P.y-30,85);g.addColorStop(0,'rgba(255,213,61,.55)');g.addColorStop(1,'rgba(255,213,61,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(P.x,P.y-30,85,0,TAU);ctx.fill();
     ctx.strokeStyle='#ffd53d';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(P.x,P.y-28,48,56,0,0,TAU);ctx.stroke();}
