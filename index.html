@@ -354,6 +354,7 @@ button{touch-action:manipulation}
     <button class="act kill" id="btnKill"><kbd>Q</kbd><span class="ic" id="killIc">🔪</span><span id="killLabel">キル</span><span class="cd" id="killCd"></span></button>
     <button class="act sab" id="btnIgnite" hidden><kbd>G</kbd><span class="ic">🔥</span>燃やす</button>
     <button class="act ability" id="btnAbility"><kbd>F</kbd><span class="ic" id="abIc">✨</span><span id="abLabel">能力</span><span class="cd" id="abCd"></span></button>
+    <button class="act ability" id="btnAbsorb" hidden><kbd>B</kbd><span class="ic">🌀</span>吸収<span class="cd" id="absCd"></span></button>
     <button class="act report" id="btnReport"><kbd>R</kbd><span class="ic">📣</span>通報</button>
     <button class="act" id="btnUse"><kbd>E</kbd><span class="ic">✋</span>使う</button>
   </div>
@@ -1362,7 +1363,7 @@ NROLES.warden={n:'ウォーデン',d:'目が見えない（すぐ近くしか見
 NROLES.scp782={n:'SCP-782',d:'試合が始まって10秒たつと、見えないところでどんどん大きくなっていく（見た目はふつうのまま）。大きくなるほど足も速くなる（1秒に0.2%、緊急状態のあとは0.5%）。一定の大きさ（2倍）になった瞬間、正体（大きなトカゲの怪物）を現して緊急状態になる（もう解除されない・SCP-782以外だれも通報・緊急ボタン・キルができない）。緊急状態になるとキルできるようになり、F で近くの死体を食べられる（食べると少し大きくなる）。キルされそうになったり、賢者ガードで跳ね返されたりすると、死なずに小さくなって足が遅くなる（いちばん小さい時にキルされると死ぬ）。キルした後は30秒キルできない。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
 NROLES.gagapi={n:'ガガピー',d:'ふだんは何もしない。生き残ったまま試合が終わると、全員が勝利（どの陣営が勝っても全員勝ち）。キルされると復活して「逆襲モード」になり、ガガピーの緊急状態になる（ガガピー以外だれも通報・緊急ボタン・キルができない）。逆襲モードではキルされず、キルの待ち時間0秒の範囲攻撃（キルボタン）で、まわりの人をまとめてキルできる。逆襲モードでは、ガガピー以外が全員いなくなると単独勝利（横取りされない）'};
 NROLES.scp939={n:'SCP-939',d:'キルできる人が分かる（名前に🔪が付く）。キルの待ち時間は20秒（最初は10秒）。最初のキルだけは死体が残らない。キルした相手の声と見た目（名前・色・衣装）になる。かわりに死体は自分の姿になるので、自分が死んだことになる。キルした相手がインポスターだった場合は、ほかの人（インポスター仲間など）からもインポスターとして見える。キルできる敵が全員いなくなり、投票できる人が1人以下になれば勝利'};
-NROLES.ofa={n:'ワンフォーオール',d:'F「吸収」: すぐ近くの人を吸収する（1回だけ・試合開始から15秒後から）。吸収された人は死体が残らない。吸収した人の役職（能力）と陣営をそのまま奪って、その役職として戦う（インポスターを吸収すればインポスターに、シェリフを吸収すれば村陣営のシェリフになる）。吸収する前に試合が終わると負け'};
+NROLES.ofa={n:'ワンフォーオール',d:'F（吸収した後は B）「吸収」: すぐ近くの人を吸収する（何回でも・試合開始から15秒後から・吸収した後は30秒待ち）。吸収された人は死体が残らない。吸収した人の役職（能力）と陣営をそのまま奪って、その役職として戦う（また吸収すると、新しい役職と陣営に入れかわる）（インポスターを吸収すればインポスターに、シェリフを吸収すれば村陣営のシェリフになる）。吸収する前に試合が終わると負け'};
 const FOUR_ROLES=['verity','horse','bbg','scp173','scp096','happy','warden','scp782','gagapi','scp939','ofa'],GAGA_R=260,S782_MAX=2,BALLOON_MAX=3,BALLOON_HIDE=30,FOUR_PCT=10,BBG_WAIT=20,SMOKE_R=330;
 const BBG_NOKILL_AB=['cannon','bomb','sniper','gimlet','bubble','mine','pusher','snake','rocket','remote','poison','double','berserk'];
 const noKill=o=>o.nrole==='horse'||o.nrole==='bbg'||o.nrole==='scp096'||(o.nrole==='gagapi'&&!!S&&!!S.gagapi&&S.gagapi.rage);
@@ -1408,17 +1409,17 @@ function afterKillHooks(k){
 // ワンフォーオール: 吸収した人の役職と陣営を奪う。吸収された人は死体が残らない
 function ofaAbsorb(e,v){
   if(NET.client){rpc('ofaAbsorb',[e,v]);return;}
-  if(e.nrole!=='ofa'||!e.alive||e.abCd>0||!v||!v.alive||v===e||noKill(v)||S.phase!=='play'||dist(e,v)>140)return;
-  if(v.shield>0){v.shield=0;e.abCd=20;tell(v,`スタントマン発動！ ${e.name}の吸収を防いだ`);tell(e,`${v.name}に吸収を防がれた…`);return;}
+  if(!e.ofa||!e.alive||(e.ofaCd||0)>0||!v||!v.alive||v===e||noKill(v)||S.phase!=='play'||dist(e,v)>140)return;
+  if(v.shield>0){v.shield=0;e.ofaCd=20;tell(v,`スタントマン発動！ ${e.name}の吸収を防いだ`);tell(e,`${v.name}に吸収を防がれた…`);return;}
   if(v.vform>0||v.gsT>0){tell(e,`${v.name}は今は吸収できない`);return;}
   const keys=['role','irole','nrole','team','isImp','isNeu','four','sheriff','abUses','madmate','nest','nestN','photos','shot','shows','eaten','tasks','popOnce','happyConv','fakeImp','killCd','abCd','avAwake','avTarget','avWhy','mayorBy'];
   const snap={};for(const k of keys)snap[k]=v[k];const oil=v.oil?new Set(v.oil):null;
-  die(v,e);if(v.alive){tell(e,`${v.name}は吸収できなかった`);e.abCd=20;return;}   // ガガピー・SCP-782などは死なない
+  die(v,e);if(v.alive){tell(e,`${v.name}は吸収できなかった`);e.ofaCd=20;return;}   // ガガピー・SCP-782などは死なない
   S.bodies=S.bodies.filter(b=>b.id!==v.id);
-  Object.assign(e,snap);e.oil=oil;e.ofaFrom=v.id;e.killCd=Math.max(snap.killCd||0,10);e.abCd=Math.max(snap.abCd||0,5);
+  Object.assign(e,snap);e.oil=oil;e.ofaFrom=v.id;e.ofa=true;e.ofaCd=30;e.ofaN=(e.ofaN||0)+1;e.killCd=Math.max(snap.killCd||0,10);e.abCd=Math.max(snap.abCd||0,5);
   for(const k of ['s782','wd','gagapi'])if(S[k]&&S[k].id===v.id)S[k].id=e.id;   // 第四陣営の役職を奪った時
   if(e.ai){e.ai.target=null;e.ai.goalKey=null;}
-  tell(e,`🌀 ${v.name}を吸収した！ 「${roleName(e)}」の能力と陣営（${TEAM[e.team]?TEAM[e.team].n:''}）を手に入れた`);tell(v.remote?v:null,`🌀 ワンフォーオールの${e.name}に吸収された…`);
+  tell(e,`🌀 ${v.name}を吸収した！ 「${roleName(e)}」の能力と陣営（${TEAM[e.team]?TEAM[e.team].n:''}）を手に入れた（B でまた吸収できる・30秒後）`);tell(v.remote?v:null,`🌀 ワンフォーオールの${e.name}に吸収された…`);
   if(e===me()){snd('task');S.flash=.3;setupHud();}if(v===me()){S.killedT=2.6;splash('吸収された…',`ワンフォーオールの${e.name}に吸収された`,'#4ac8ff',{},null);}
   checkWin();
 }
@@ -1997,7 +1998,7 @@ function startGame(cfg){
     const c=ents.filter(e=>e.team==='crew'&&!(e.id===0&&cfg.role.startsWith('crew:'))).sort((a,b)=>(a.role==='villager'?0:1)-(b.role==='villager'?0:1)||(a.id===0?1:0)-(b.id===0?1:0))[0];
     if(c)c.role='sage';
   }
-  for(const e of ents){if(e.nrole==='scp939')e.killCd=10;if(e.nrole==='ofa')e.abCd=15;}   // SCP-939の最初のキル待ちは10秒
+  for(const e of ents){e.ofa=false;e.ofaCd=0;if(e.nrole==='scp939')e.killCd=10;if(e.nrole==='ofa'){e.ofa=true;e.ofaCd=15;}}   // SCP-939の最初のキル待ちは10秒
   for(const e of ents){initRole(e);if(e.role==='home')e.tasks=[];}
   for(const e of ents){if(e.role==='valty'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='stunt')e.shield=1;if(e.role==='sheriff'){e.sheriff=true;e.killCd=SHERIFF_CD;}if(e.role==='labtech'||e.role==='mayor')e.abUses=1;}
   S={cfg,ents,t:0,phase:'intro',bodies:[],sab:null,sabCd:20,meetingCd:15,cam:{x:BTN.x,y:BTN.y},scale:1,
@@ -2589,8 +2590,9 @@ function bbgFlee(e){
   if(!e.ai.goalKey||!e.ai.goalKey.startsWith('bbgFlee')||atGoal(e)||Math.hypot(e.ai.gx-g.x,e.ai.gy-g.y)<550){let best=null,bd=-1;for(let i=0;i<8;i++){const p=randomRoomPoint();const d=dist(p,g);if(d>bd){bd=d;best=p;}}setGoal(e,best.x,best.y,'bbgFlee'+Math.random());}
   return true;
 }
+function ofaTry(e){if(!e.ofa||e.nrole==='ofa'||(e.ofaCd||0)>0||Math.random()>.15)return false;const t=S.ents.find(o=>o!==e&&o.alive&&!noKill(o)&&!hid(o)&&o.inVent==null&&dist(e,o)<110&&canSee(e,o.x,o.y)&&noWitness(e,o));if(!t)return false;ofaAbsorb(e,t);return true;}   // 吸収した後も、ときどきまた吸収する
 function ofaThink(e){
-  if(e.abCd<=0){let t=null,bd=1e9;for(const o of S.ents){if(o===e||!o.alive||noKill(o)||hid(o)||o.inVent!=null||!canSee(e,o.x,o.y))continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
+  if((e.ofaCd||0)<=0){let t=null,bd=1e9;for(const o of S.ents){if(o===e||!o.alive||noKill(o)||hid(o)||o.inVent!=null||!canSee(e,o.x,o.y))continue;const d=dist(e,o);if(d<bd){bd=d;t=o;}}
     if(t&&noWitness(e,t)){setGoal(e,t.x,t.y,'ofa'+Math.floor(S.t*2));if(dist(e,t)<110)ofaAbsorb(e,t);return;}}
   crewThink(e);
 }
@@ -3247,7 +3249,7 @@ function crew30Meeting(M){
 function crew30Update(dt){
   const P=me();
   for(const e of S.ents){
-    if(e.jailT>0)e.jailT-=dt;if(e.cheerT>0)e.cheerT-=dt;if(e.gsT>0)e.gsT-=dt;
+    if(e.ofaCd>0)e.ofaCd-=dt;if(e.jailT>0)e.jailT-=dt;if(e.cheerT>0)e.cheerT-=dt;if(e.gsT>0)e.gsT-=dt;
     if(e.role==='snitch'&&e.team==='crew'&&e.alive&&!e.snitchOn&&e.tasks.length&&e.tasks.every(t=>t.done)){e.snitchOn=true;tell(e,'🐀 タスク完了！ インポスターの方向が分かる');if(e.isBot)for(const o of S.ents)if(o.isImp&&o.alive){e.susp[o.id]=85;addNote(e,o.id,`スニッチです。タスクを全部終わらせたら、${o.name}がインポスターだと分かった`,45);}}
     if(e.role==='twin'&&e.team==='crew'&&e.alive){if(e.twin==null){const c=S.ents.filter(o=>o!==e&&o.team==='crew'&&!o.madmate);const t=c.length?pick(c):null;e.twin=t?t.id:-1;if(t)tell(e,`👯 ${t.name}は確実に村陣営だ`);}if(e.isBot&&e.twin>=0)e.susp[e.twin]=0;}
   }
@@ -3706,7 +3708,7 @@ function botUpdate(e,dt){
     return;
   }
   e.ai.think-=dt;
-  if(e.ai.think<=0){e.ai.think=.25;perceive(e);S.br?brThink(e):bbgFlee(e)?0:horseThink(e)?0:e.crazed?crazedThink(e):e.isImp?impThink(e):e.isNeu?neuDispatch(e):crewThink(e);if(S.phase!=='play')return;if(!e.crazed)chatterThink(e);}
+  if(e.ai.think<=0){e.ai.think=.25;perceive(e);S.br?brThink(e):ofaTry(e)?0:bbgFlee(e)?0:horseThink(e)?0:e.crazed?crazedThink(e):e.isImp?impThink(e):e.isNeu?neuDispatch(e):crewThink(e);if(S.phase!=='play')return;if(!e.crazed)chatterThink(e);}
   followPath(e,dt);
   if(atGoal(e)&&e.ai.climbTo&&!e.climb){const c=e.ai.climbTo;e.ai.climbTo=null;startClimb(e,c.L,c.to);}
   if(atGoal(e)&&!e.climb){
@@ -3826,7 +3828,7 @@ function abilityReady(){const P=me();if(!P.alive)return false;if((rage096()||ten
   if(S.br&&S.br.lv===3){if(S.br.stage!=='run'||P.bitten3>0)return false;if(P.spider)return !P.grab&&(P.spCd||0)<=0&&!(P.stunS>0)&&l3Survivors().some(o=>o.bitten3<=0&&dist(o,P)<200);if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&P.irole==='bubble')return P.abCd<=0;return false;}
   if(S.br){if(P.role==='sage'&&P.team==='crew')return P.abCd<=0;if(P.isImp&&BR_IMP_AB.includes(P.irole))return P.abCd<=0&&!P.cannon&&!P.drill;
     if(P.nrole==='verity')return verityReady(P)||(P.vform>0&&!P.vMonKill&&!!S.mon&&!S.mon.dead&&dist(P,S.mon)<KILLR+60);return false;}
-  if(P.isNeu){if(P.nrole==='ofa'){const t=nearPick(P);return P.abCd<=0&&!!t&&!noKill(t);}if(P.nrole==='scp782')return tense782()&&!!vultBody(P);if(P.nrole==='happy')return P.abCd<=0;if(P.nrole==='horse')return !S.horse&&P.abCd<=0;if(P.nrole==='vulture')return P.abCd<=0&&!!vultBody(P);if(P.nrole==='owl')return owlReady(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0&&!!nearPick(P);if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
+  if(P.isNeu){if(P.nrole==='ofa'){const t=nearPick(P);return (P.ofaCd||0)<=0&&!!t&&!noKill(t);}if(P.nrole==='scp782')return tense782()&&!!vultBody(P);if(P.nrole==='happy')return P.abCd<=0;if(P.nrole==='horse')return !S.horse&&P.abCd<=0;if(P.nrole==='vulture')return P.abCd<=0&&!!vultBody(P);if(P.nrole==='owl')return owlReady(P);if(P.nrole==='verity')return verityReady(P);if(P.nrole==='papa')return P.abCd<=0;if(P.nrole==='cupid')return P.abUses>0&&!!nearPick(P);if(P.nrole==='arson')return P.abCd<=0&&!!douseTarget(P);return false;}
   if(P.isImp){const r=P.irole;
     if(r==='ventist'||r==='esci'||r==='shift'||r==='gimlet'||r==='mine'||r==='crab')return P.abCd<=0;
     if(r==='berserk')return !P.berserk;
@@ -5072,6 +5074,7 @@ function updateHud(){{const rb=document.querySelector('#sabMenu [data-sab="react
   $('btnUse').disabled=!(play&&useTarget());
   $('btnReport').disabled=!(play&&reportTarget());
   $('btnKill').hidden=!isKiller(P);
+  {const b=$('btnAbsorb');b.hidden=!(P.ofa&&P.alive&&!S.br);if(!b.hidden){const t=nearPick(P);b.disabled=!(play&&(P.ofaCd||0)<=0&&t&&!noKill(t));$('absCd').textContent=(P.ofaCd||0)>0?Math.ceil(P.ofaCd):'';}}
   if(P.nrole==='arson')$('btnIgnite').disabled=!(play&&P.alive&&allDoused(P));
   if(!$('btnAbility').hidden){$('btnAbility').disabled=!(play&&abilityReady());$('abCd').textContent=!P.alive?'':P.comet&&P.comet.guard>0?Math.ceil(P.comet.guard):P.nrole==='papa'?(papaCam?'📷':P.abCd>0?Math.ceil(P.abCd):''):P.cannon?Math.ceil(P.cannon.t):P.invisT>0?'👻':(['bubble','sniper','pusher'].includes(P.irole)&&P.killCd>0)?Math.ceil(P.killCd):(P.role==='sci'||P.role==='sage'||(P.role==='doppel'&&P.dop)||['cannon','tele','fraud','ventist','esci','shift','remote','gimlet','mine','crab'].includes(P.irole)||P.nrole==='arson')&&P.abCd>0?Math.ceil(P.abCd):'';}
   // スマホ: ボタンを「無効」にするとタップ自体が受け付けられないので、薄く表示するだけにして、押した瞬間に判定する（歩きながらでも押せる）
@@ -5339,7 +5342,7 @@ function netTick(dt){
   for(const e of S.ents){
     if(!e.remote)continue;
     sendTo(e,snap);
-    sendTo(e,{t:'me',killCd:e.killCd,abCd:e.abCd,abUses:e.abUses,shield:e.shield,role:e.role,eaten:e.eaten||0,idt:[e.team,e.isImp?1:0,e.isNeu?1:0,e.four?1:0,e.irole||'',e.nrole||'',e.sheriff?1:0],jailT:+(e.jailT||0).toFixed(1),cheerT:+(e.cheerT||0).toFixed(1),smokeCd:e.smokeCd||0,comet:e.comet?1:0,cg:e.comet&&e.comet.guard>0?+e.comet.guard.toFixed(1):0,cgUsed:!!e.cgUsed,nest:e.nest??null,nestN:e.nestN||0,tasks:e.tasks.map(t=>t.done?1:0),labLog:e.labLog,carry:e.carry||[],serialT:e.serialT||0,trTasks:e.trTasks||null,trNext:e.trNext||0,crazy:S.tr?S.tr.crazy===e.id:false,poisonT:e.poisonT||0,knife:!!e.knife,vUsedSync:!!e.vUsed,vform:e.vform||0,vMonKill:!!e.vMonKill,avAwake:!!e.avAwake,avTarget:e.avTarget??null,avWhy:e.avWhy||null,photos:e.photos||[],papaPend:e.papaPend||null,shot:e.shot||[],shows:e.shows||0,verTurns:e.verTurns||0,vUsed:!!e.vUsed,vKilledImp:!!e.vKilledImp,doubleUsed:!!e.doubleUsed,bKills:e.bKills||0,frenzy:!!e.frenzy,madT:e.madT||0,madmate:!!e.madmate,oil:e.oil?[...e.oil]:null,stillT:e.stillT,buttonUses:e.buttonUses});
+    sendTo(e,{t:'me',killCd:e.killCd,abCd:e.abCd,abUses:e.abUses,shield:e.shield,role:e.role,eaten:e.eaten||0,idt:[e.team,e.isImp?1:0,e.isNeu?1:0,e.four?1:0,e.irole||'',e.nrole||'',e.sheriff?1:0],ofa:e.ofa?+(e.ofaCd||0).toFixed(1):-1,jailT:+(e.jailT||0).toFixed(1),cheerT:+(e.cheerT||0).toFixed(1),smokeCd:e.smokeCd||0,comet:e.comet?1:0,cg:e.comet&&e.comet.guard>0?+e.comet.guard.toFixed(1):0,cgUsed:!!e.cgUsed,nest:e.nest??null,nestN:e.nestN||0,tasks:e.tasks.map(t=>t.done?1:0),labLog:e.labLog,carry:e.carry||[],serialT:e.serialT||0,trTasks:e.trTasks||null,trNext:e.trNext||0,crazy:S.tr?S.tr.crazy===e.id:false,poisonT:e.poisonT||0,knife:!!e.knife,vUsedSync:!!e.vUsed,vform:e.vform||0,vMonKill:!!e.vMonKill,avAwake:!!e.avAwake,avTarget:e.avTarget??null,avWhy:e.avWhy||null,photos:e.photos||[],papaPend:e.papaPend||null,shot:e.shot||[],shows:e.shows||0,verTurns:e.verTurns||0,vUsed:!!e.vUsed,vKilledImp:!!e.vKilledImp,doubleUsed:!!e.doubleUsed,bKills:e.bKills||0,frenzy:!!e.frenzy,madT:e.madT||0,madmate:!!e.madmate,oil:e.oil?[...e.oil]:null,stillT:e.stillT,buttonUses:e.buttonUses});
   }
 }
 // --- client ---
@@ -5410,7 +5413,7 @@ function clientRecv(d){
   if(d.t==='tell'){if(S&&d.cm)closeModal();toast(d.text);return;}
   if(!S||!S.isClient)return;
   if(d.t==='s'){applySnap(d);return;}
-  if(d.t==='me'){const P=me();if(d.role&&d.role!==P.role){P.role=d.role;setupHud();}P.eaten=d.eaten;if(d.idt&&(d.idt[0]!==P.team||(d.idt[5]||null)!==(P.nrole||null)||(d.idt[4]||null)!==(P.irole||null))){[P.team,P.isImp,P.isNeu,P.four,P.irole,P.nrole,P.sheriff]=[d.idt[0],!!d.idt[1],!!d.idt[2],!!d.idt[3],d.idt[4]||null,d.idt[5]||null,!!d.idt[6]];setupHud();}P.jailT=d.jailT;P.cheerT=d.cheerT;P.smokeCd=d.smokeCd;if(!d.comet)P.comet=null;else if(!P.comet&&P.alive&&!P.cometSent)P.comet={dx:P.aim.x,dy:P.aim.y};if(P.comet)P.comet.guard=d.cg||0;P.cgUsed=d.cgUsed;P.nest=d.nest;P.nestN=d.nestN;P.killCd=d.killCd;P.abCd=d.abCd;P.abUses=d.abUses;P.shield=d.shield;P.stillT=d.stillT;P.buttonUses=d.buttonUses;P.labLog=d.labLog||[];P.carry=d.carry||[];P.madT=d.madT;P.madmate=d.madmate;P.serialT=d.serialT;if(d.trTasks)P.trTasks=d.trTasks;P.trNext=d.trNext;if(S.tr){if(d.crazy)S.tr.crazy=P.id;else if(S.tr.crazy===P.id)S.tr.crazy=null;}P.poisonT=d.poisonT;P.knife=d.knife;P.vUsed=d.vUsedSync||P.vUsed;P.vMonKill=d.vMonKill;if(d.avAwake&&!P.avAwake){P.avAwake=true;P.avTarget=d.avTarget;P.avWhy=d.avWhy;setupHud();}P.photos=d.photos;P.papaPend=d.papaPend;P.shot=d.shot;P.shows=d.shows;P.verTurns=d.verTurns;P.vUsed=d.vUsed;P.vKilledImp=d.vKilledImp;P.doubleUsed=d.doubleUsed;P.bKills=d.bKills;P.frenzy=d.frenzy;
+  if(d.t==='me'){const P=me();if(d.role&&d.role!==P.role){P.role=d.role;setupHud();}P.eaten=d.eaten;if(d.ofa!=null){P.ofa=d.ofa>=0;P.ofaCd=Math.max(0,d.ofa);}if(d.idt&&(d.idt[0]!==P.team||(d.idt[5]||null)!==(P.nrole||null)||(d.idt[4]||null)!==(P.irole||null))){[P.team,P.isImp,P.isNeu,P.four,P.irole,P.nrole,P.sheriff]=[d.idt[0],!!d.idt[1],!!d.idt[2],!!d.idt[3],d.idt[4]||null,d.idt[5]||null,!!d.idt[6]];setupHud();}P.jailT=d.jailT;P.cheerT=d.cheerT;P.smokeCd=d.smokeCd;if(!d.comet)P.comet=null;else if(!P.comet&&P.alive&&!P.cometSent)P.comet={dx:P.aim.x,dy:P.aim.y};if(P.comet)P.comet.guard=d.cg||0;P.cgUsed=d.cgUsed;P.nest=d.nest;P.nestN=d.nestN;P.killCd=d.killCd;P.abCd=d.abCd;P.abUses=d.abUses;P.shield=d.shield;P.stillT=d.stillT;P.buttonUses=d.buttonUses;P.labLog=d.labLog||[];P.carry=d.carry||[];P.madT=d.madT;P.madmate=d.madmate;P.serialT=d.serialT;if(d.trTasks)P.trTasks=d.trTasks;P.trNext=d.trNext;if(S.tr){if(d.crazy)S.tr.crazy=P.id;else if(S.tr.crazy===P.id)S.tr.crazy=null;}P.poisonT=d.poisonT;P.knife=d.knife;P.vUsed=d.vUsedSync||P.vUsed;P.vMonKill=d.vMonKill;if(d.avAwake&&!P.avAwake){P.avAwake=true;P.avTarget=d.avTarget;P.avWhy=d.avWhy;setupHud();}P.photos=d.photos;P.papaPend=d.papaPend;P.shot=d.shot;P.shows=d.shows;P.verTurns=d.verTurns;P.vUsed=d.vUsed;P.vKilledImp=d.vKilledImp;P.doubleUsed=d.doubleUsed;P.bKills=d.bKills;P.frenzy=d.frenzy;
     if(d.oil)P.oil=new Set(d.oil);(d.tasks||[]).forEach((v,i)=>{if(P.tasks[i]&&v)P.tasks[i].done=true;});return;}
   if(d.t==='post'){if(S.M)post(d.who,d.text,null,d.llm,true);return;}
   if(d.t==='photos'){if(S.M&&Array.isArray(d.imgs))chatPhotos(d.imgs.filter(u=>typeof u==='string'&&u.startsWith('data:image/')));return;}
@@ -5591,6 +5594,7 @@ addEventListener('keydown',e=>{
   else if(e.code==='KeyP')togglePause();
   else if(e.code==='KeyI'){if(me().isImp)setChan(S.chan==='imp'?'all':'imp');}
   else if(e.code==='KeyG'){if(canAct())ignite(me());}
+  else if(e.code==='KeyB'){doAbsorb();}
   else if(e.code==='KeyH')showHelp();
   else if(e.code==='Enter'||e.code==='KeyT'){if(S.phase==='play'){$('pchatIn').focus();e.preventDefault();}}
   else if(e.code==='KeyQ')doKillBtn();
@@ -5604,6 +5608,8 @@ addEventListener('keyup',e=>{
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 document.querySelectorAll('.mic').forEach(b=>b.onclick=()=>setMic(!micOn));
 $('btnIgnite').onclick=()=>{if(canAct())ignite(me());};
+$('btnAbsorb').onclick=()=>doAbsorb();
+function doAbsorb(){if(!canAct())return;const P=me();if(!P.ofa)return;const t=nearPick(P);if(!t)return toast('🌀 吸収したい人のすぐ近くで押してね');if((P.ofaCd||0)>0)return toast(`🌀 あと${Math.ceil(P.ofaCd)}秒で吸収できる`);ofaAbsorb(P,t);}
 function quitGame(){
   if(!S)return;
   if(NET.host)netBc({t:'quit'});
